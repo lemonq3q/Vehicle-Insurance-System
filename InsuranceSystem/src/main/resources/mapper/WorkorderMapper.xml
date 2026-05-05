@@ -1,0 +1,588 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.insurancesystem.mapper.WorkorderMapper">
+    <resultMap id="WorkorderDTOResultMap" type="com.example.insurancesystem.domain.workorder.WorkorderDTO">
+        <result column="id" property="id"/>
+        <result column="code" property="code"/>
+        <result column="type" property="type"/>
+        <result column="owner_type" property="ownerType"/>
+        <result column="create_merchant_id" property="createMerchantId"/>
+        <result column="create_merchant_name" property="createMerchantName"/>
+        <result column="create_merchant_code" property="createMerchantCode"/>
+        <result column="handle_merchant_id" property="handleMerchantId"/>
+        <result column="handle_merchant_name" property="handleMerchantName"/>
+        <result column="handle_merchant_code" property="handleMerchantCode"/>
+        <result column="area_code" property="areaCode"/>
+        <result column="commercial_insurance_start_time" property="commercialInsuranceStartTime"/>
+        <result column="compulsory_insurance_start_time" property="compulsoryInsuranceStartTime"/>
+        <result column="insurance_merchant_id" property="insuranceMerchantId"/>
+        <result column="insurance_merchant_name" property="insuranceMerchantName"/>
+        <result column="insurance_merchant_code" property="insuranceMerchantCode"/>
+        <result column="remark" property="remark"/>
+        <result column="owner_phone" property="ownerPhone"/>
+        <result column="owner_id_num" property="ownerIdNum"/>
+        <result column="owner_name" property="ownerName"/>
+        <result column="quotation_no" property="quotationNo"/>
+        <result column="commercial_amount" property="commercialAmount"/>
+        <result column="compulsory_amount" property="compulsoryAmount"/>
+        <result column="vehicle_and_tax_amount" property="vehicleAndTaxAmount"/>
+        <result column="non_motor_insurance_name" property="nonMotorInsuranceName"/>
+        <result column="non_motor_coverage_amount" property="nonMotorCoverageAmount"/>
+        <result column="non_motor_amount" property="nonMotorAmount"/>
+        <result column="upstream_compute_type" property="upstreamComputeType"/>
+        <result column="upstream_commercial_percentage" property="upstreamCommercialPercentage"/>
+        <result column="upstream_compulsory_percentage" property="upstreamCompulsoryPercentage"/>
+        <result column="upstream_vehicle_and_vessel_tax_percentage" property="upstreamVehicleAndVesselTaxPercentage"/>
+        <result column="upstream_non_motor_percentage" property="upstreamNonMotorPercentage"/>
+        <result column="upstream_commercial_amount" property="upstreamCommercialAmount"/>
+        <result column="upstream_compulsory_amount" property="upstreamCompulsoryAmount"/>
+        <result column="upstream_vehicle_and_vessel_tax_amount" property="upstreamVehicleAndVesselTaxAmount"/>
+        <result column="upstream_non_motor_amount" property="upstreamNonMotorAmount"/>
+        <result column="downstream_compute_type" property="downstreamComputeType"/>
+        <result column="downstream_commercial_percentage" property="downstreamCommercialPercentage"/>
+        <result column="downstream_compulsory_percentage" property="downstreamCompulsoryPercentage"/>
+        <result column="downstream_vehicle_and_vessel_tax_percentage" property="downstreamVehicleAndVesselTaxPercentage"/>
+        <result column="downstream_non_motor_percentage" property="downstreamNonMotorPercentage"/>
+        <result column="downstream_commercial_amount" property="downstreamCommercialAmount"/>
+        <result column="downstream_compulsory_amount" property="downstreamCompulsoryAmount"/>
+        <result column="downstream_vehicle_and_vessel_tax_amount" property="downstreamVehicleAndVesselTaxAmount"/>
+        <result column="downstream_non_motor_amount" property="downstreamNonMotorAmount"/>
+        <result column="quotation_remark" property="quotationRemark"/>
+        <result column="quotation_failed_remark" property="quotationFailedRemark"/>
+        <result column="required_pay_amount" property="requiredPayAmount"/>
+        <result column="pay_name" property="payName"/>
+        <result column="pay_id_num" property="payIdNum"/>
+        <result column="pay_bank" property="payBank"/>
+        <result column="pay_bank_card_num" property="payBankCardNum"/>
+        <result column="pay_remark" property="payRemark"/>
+        <result column="pay_failed_remark" property="payFailedRemark"/>
+        <result column="underwriting_remark" property="underwritingRemark"/>
+        <result column="underwriting_failed_remark" property="underwritingFailedRemark"/>
+        <result column="commercial_policy_no" property="commercialPolicyNo"/>
+        <result column="compulsory_policy_no" property="compulsoryPolicyNo"/>
+        <result column="tracking_num" property="trackingNum"/>
+        <result column="logistics_company" property="logisticsCompany"/>
+        <result column="accept_insurance_remark" property="acceptInsuranceRemark"/>
+        <result column="accept_insurance_failed_remark" property="acceptInsuranceFailedRemark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="quotation_time" property="quotationTime"/>
+        <result column="underwriting_time" property="underwritingTime"/>
+        <result column="finish_time" property="finishTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_user_name" property="createUserName"/>
+        <result column="create_user_phone" property="createUserPhone"/>
+        <result column="handle_by" property="handleBy"/>
+        <result column="handle_user_name" property="handleUserName"/>
+        <result column="handle_user_phone" property="handleUserPhone"/>
+        <result column="status" property="status"/>
+        <result column="remind_status" property="remindStatus"/>
+        <result column="follow_up_res" property="followUpRes"/>
+        <result column="organization_name" property="organizationName"/>
+        <result column="social_credit_code" property="socialCreditCode"/>
+
+        <association property="vehicleLicense" javaType="com.example.insurancesystem.domain.workorder.VehicleLicense">
+            <result column="vl_id" property="id"/>
+            <result column="vl_workorder_id" property="workorderId"/>
+            <result column="vl_license_plate" property="licensePlate"/>
+            <result column="vl_vehicle_type" property="vehicleType"/>
+            <result column="vl_owner_name" property="ownerName"/>
+            <result column="vl_usage_nature" property="usageNature"/>
+            <result column="vl_brand_model" property="brandModel"/>
+            <result column="vl_vehicle_code" property="vehicleCode"/>
+            <result column="vl_engine_code" property="engineCode"/>
+            <result column="vl_registration_date" property="registrationDate"/>
+            <result column="vl_issue_date" property="issueDate"/>
+            <result column="vl_seats" property="seats"/>
+            <result column="vl_approved_load_capacity" property="approvedLoadCapacity"/>
+            <result column="vl_curb_weight" property="curbWeight"/>
+            <result column="vl_is_transfer" property="isTransfer"/>
+            <result column="vl_transfer_date" property="transferDate"/>
+            <result column="vl_create_time" property="createTime"/>
+            <result column="vl_update_time" property="updateTime"/>
+            <result column="vl_update_by" property="updateBy"/>
+            <result column="vl_is_delete" property="isDelete"/>
+        </association>
+
+        <association property="vehicleCertificate" javaType="com.example.insurancesystem.domain.workorder.VehicleCertificate">
+            <result column="vc_id" property="id"/>
+            <result column="vc_workorder_id" property="workorderId"/>
+            <result column="vc_brand_model" property="brandModel"/>
+            <result column="vc_vehicle_type" property="vehicleType"/>
+            <result column="vc_vehicle_code" property="vehicleCode"/>
+            <result column="vc_engine_code" property="engineCode"/>
+            <result column="vc_seats" property="seats"/>
+            <result column="vc_curb_weight" property="curbWeight"/>
+            <result column="vc_displacement" property="displacement"/>
+            <result column="vc_approved_load_capacity" property="approvedLoadCapacity"/>
+            <result column="vc_create_time" property="createTime"/>
+            <result column="vc_update_time" property="updateTime"/>
+            <result column="vc_update_by" property="updateBy"/>
+            <result column="vc_is_delete" property="isDelete"/>
+        </association>
+
+        <association property="vehicleInvoice" javaType="com.example.insurancesystem.domain.workorder.VehicleInvoice">
+            <result column="vi_id" property="id"/>
+            <result column="vi_workorder_id" property="workorderId"/>
+            <result column="vi_invoice_amount" property="invoiceAmount"/>
+            <result column="vi_buyer_name" property="buyerName"/>
+            <result column="vi_buyer_id_num" property="buyerIdNum"/>
+            <result column="vi_vehicle_type" property="vehicleType"/>
+            <result column="vi_brand_model" property="brandModel"/>
+            <result column="vi_vehicle_code" property="vehicleCode"/>
+            <result column="vi_engine_code" property="engineCode"/>
+            <result column="vi_seats" property="seats"/>
+            <result column="vi_approved_load_capacity" property="approvedLoadCapacity"/>
+            <result column="vi_create_time" property="createTime"/>
+            <result column="vi_update_time" property="updateTime"/>
+            <result column="vi_update_by" property="updateBy"/>
+            <result column="vi_is_delete" property="isDelete"/>
+        </association>
+
+        <collection property="workorderFileList" ofType="com.example.insurancesystem.domain.workorder.WorkorderFile">
+            <result column="wf_id" property="id"/>
+            <result column="wf_workorder_id" property="workorderId"/>
+            <result column="wf_file_id" property="fileId"/>
+            <result column="sf_path" property="path"/>
+            <result column="wf_img_type" property="type"/>
+            <result column="wf_create_time" property="createTime"/>
+            <result column="wf_is_delete" property="isDelete"/>
+        </collection>
+
+        <collection property="workorderInsuranceList" ofType="com.example.insurancesystem.domain.workorder.WorkorderInsurance">
+            <result column="woin_id" property="id"/>
+            <result column="woin_workorder_id" property="workorderId"/>
+            <result column="woin_insurance_id" property="insuranceId"/>
+            <result column="insurance_name" property="insuranceName"/>
+            <result column="woin_option_json" property="optionJson"/>
+            <result column="woin_deductible_option_json" property="deductibleOptionJson"/>
+        </collection>
+
+    </resultMap>
+
+
+    <select id="selectByWorkorderSearchDTO" resultMap="WorkorderDTOResultMap">
+        SELECT
+        w.id,
+        w.code,
+        w.owner_type,
+        w.type,
+        w.create_merchant_id,
+        w.handle_merchant_id,
+        w.area_code,
+        w.commercial_insurance_start_time,
+        w.compulsory_insurance_start_time,
+        w.insurance_merchant_id,
+        w.remark,
+        w.owner_phone,
+        w.owner_id_num,
+        w.owner_name,
+        w.quotation_no,
+        w.commercial_amount,
+        w.compulsory_amount,
+        w.vehicle_and_tax_amount,
+        w.non_motor_amount,
+        w.non_motor_insurance_name,
+        w.non_motor_coverage_amount,
+        w.upstream_compute_type,
+        w.upstream_commercial_percentage,
+        w.upstream_compulsory_percentage,
+        w.upstream_vehicle_and_vessel_tax_percentage,
+        w.upstream_non_motor_percentage,
+        w.upstream_commercial_amount,
+        w.upstream_compulsory_amount,
+        w.upstream_vehicle_and_vessel_tax_amount,
+        w.upstream_non_motor_amount,
+        w.downstream_compute_type,
+        w.downstream_commercial_percentage,
+        w.downstream_compulsory_percentage,
+        w.downstream_vehicle_and_vessel_tax_percentage,
+        w.downstream_non_motor_percentage,
+        w.downstream_commercial_amount,
+        w.downstream_compulsory_amount,
+        w.downstream_vehicle_and_vessel_tax_amount,
+        w.downstream_non_motor_amount,
+        w.quotation_remark,
+        w.quotation_failed_remark,
+        w.required_pay_amount,
+        w.pay_name,
+        w.pay_id_num,
+        w.pay_bank,
+        w.pay_bank_card_num,
+        w.pay_remark,
+        w.pay_failed_remark,
+        w.underwriting_remark,
+        w.underwriting_failed_remark,
+        w.commercial_policy_no,
+        w.compulsory_policy_no,
+        w.tracking_num,
+        w.logistics_company,
+        w.accept_insurance_remark,
+        w.accept_insurance_failed_remark,
+        w.create_time,
+        w.update_time,
+        w.quotation_time,
+        w.underwriting_time,
+        w.finish_time,
+        w.create_by,
+        w.handle_by,
+        w.status,
+        w.remind_status,
+        w.follow_up_res,
+        w.organization_name,
+        w.social_credit_code,
+
+        vl.id AS vl_id,
+        vl.workorder_id AS vl_workorder_id,
+        vl.license_plate AS vl_license_plate,
+        vl.vehicle_type AS vl_vehicle_type,
+        vl.owner_name AS vl_owner_name,
+        vl.usage_nature AS vl_usage_nature,
+        vl.brand_model AS vl_brand_model,
+        vl.vehicle_code AS vl_vehicle_code,
+        vl.engine_code AS vl_engine_code,
+        vl.registration_date AS vl_registration_date,
+        vl.issue_date AS vl_issue_date,
+        vl.seats AS vl_seats,
+        vl.approved_load_capacity AS vl_approved_load_capacity,
+        vl.curb_weight AS vl_curb_weight,
+        vl.is_transfer AS vl_is_transfer,
+        vl.transfer_date AS vl_transfer_date,
+        vl.create_time AS vl_create_time,
+        vl.update_time AS vl_update_time,
+        vl.update_by AS vl_update_by,
+        vl.is_delete AS vl_is_delete,
+
+        vc.id AS vc_id,
+        vc.workorder_id AS vc_workorder_id,
+        vc.brand_model AS vc_brand_model,
+        vc.vehicle_type AS vc_vehicle_type,
+        vc.vehicle_code AS vc_vehicle_code,
+        vc.engine_code AS vc_engine_code,
+        vc.seats AS vc_seats,
+        vc.curb_weight AS vc_curb_weight,
+        vc.displacement AS vc_displacement,
+        vc.approved_load_capacity AS vc_approved_load_capacity,
+        vc.create_time AS vc_create_time,
+        vc.update_time AS vc_update_time,
+        vc.update_by AS vc_update_by,
+        vc.is_delete AS vc_is_delete,
+
+        vi.id AS vi_id,
+        vi.workorder_id AS vi_workorder_id,
+        vi.invoice_amount AS vi_invoice_amount,
+        vi.buyer_name AS vi_buyer_name,
+        vi.buyer_id_num AS vi_buyer_id_num,
+        vi.vehicle_type AS vi_vehicle_type,
+        vi.brand_model AS vi_brand_model,
+        vi.vehicle_code AS vi_vehicle_code,
+        vi.engine_code AS vi_engine_code,
+        vi.seats AS vi_seats,
+        vi.approved_load_capacity AS vi_approved_load_capacity,
+        vi.create_time AS vi_create_time,
+        vi.update_time AS vi_update_time,
+        vi.update_by AS vi_update_by,
+        vi.is_delete AS vi_is_delete,
+
+        cm.name AS create_merchant_name,
+        cm.code AS create_merchant_code,
+        hm.name AS handle_merchant_name,
+        hm.code AS handle_merchant_code,
+        im.name AS insurance_merchant_name,
+        im.code AS insurance_merchant_code,
+        cu.name AS create_user_name,
+        cu.username AS create_user_phone,
+        hu.name AS handle_user_name,
+        hu.username AS handle_user_phone
+
+        FROM workorder w
+        LEFT JOIN vehicle_license vl ON w.id = vl.workorder_id AND vl.is_delete = 0
+        LEFT JOIN vehicle_certificate vc ON w.id = vc.workorder_id AND vc.is_delete = 0
+        LEFT JOIN vehicle_invoice vi ON w.id = vi.workorder_id AND vi.is_delete = 0
+        LEFT JOIN merchant cm ON w.create_merchant_id = cm.id AND cm.is_delete = 0
+        LEFT JOIN merchant hm ON w.handle_merchant_id = hm.id AND hm.is_delete = 0
+        LEFT JOIN merchant im ON w.insurance_merchant_id = im.id AND im.is_delete = 0
+        LEFT JOIN user cu ON w.create_by = cu.id AND cu.is_delete = 0
+        LEFT JOIN user hu ON w.handle_by = hu.id AND hu.is_delete = 0
+        <where>
+            w.is_delete = 0
+            <if test="id != null">
+                AND w.id = #{id}
+            </if>
+            <if test="blurParam != null and blurParam != ''">
+                AND (
+                w.code LIKE CONCAT('%', #{blurParam}, '%')
+                OR w.organization_name LIKE CONCAT('%', #{blurParam}, '%')
+                OR w.owner_name LIKE CONCAT('%', #{blurParam}, '%')
+                OR vl.license_plate LIKE CONCAT('%', #{blurParam}, '%')
+                OR vl.vehicle_code LIKE CONCAT('%', #{blurParam}, '%')
+                OR vc.vehicle_code LIKE CONCAT('%', #{blurParam}))
+            </if>
+
+            <if test="dateType != null and dateType != ''">
+                <if test="dateType == 'createTime'">
+                    <if test="beginTime != null">
+                        AND w.create_time &gt;= #{beginTime}
+                    </if>
+                    <if test="endTime != null">
+                        AND w.create_time &lt;= #{endTime}
+                    </if>
+                </if>
+                <if test="dateType == 'updateTime'">
+                    <if test="beginTime != null">
+                        AND w.update_time &gt;= #{beginTime}
+                    </if>
+                    <if test="endTime != null">
+                        AND w.update_time &lt;= #{endTime}
+                    </if>
+                </if>
+                <if test="dateType == 'finishTime'">
+                    <if test="beginTime != null">
+                        AND w.finish_time &gt;= #{beginTime}
+                    </if>
+                    <if test="endTime != null">
+                        AND w.finish_time &lt;= #{endTime}
+                    </if>
+                </if>
+            </if>
+
+            <if test="createMerchantId != null">
+                AND w.create_merchant_id = #{createMerchantId}
+            </if>
+            <if test="handleMerchantId != null">
+                AND w.handle_merchant_id = #{handleMerchantId}
+            </if>
+            <if test="handleUserId != null">
+                AND w.handle_by = #{handleUserId}
+            </if>
+            <if test="createBy != null">
+                AND w.create_by = #{createBy}
+            </if>
+            <if test="areaCode != null and areaCode != ''">
+                AND w.area_code = #{areaCode}
+            </if>
+            <if test="insuranceId != null">
+                AND w.insurance_merchant_id = #{insuranceId}
+            </if>
+            <if test="status != null">
+                AND w.status = #{status}
+            </if>
+            <if test="remindStatus != null">
+                <choose>
+                    <when test="remindStatus == 0">
+                        AND (w.remind_status = 0 OR w.remind_status IS NULL)
+                    </when>
+                    <otherwise>
+                        AND w.remind_status = #{remindStatus}
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        ORDER BY w.create_time DESC
+    </select>
+
+    <select id="selectRenewByWorkorderSearchDTO" resultMap="WorkorderDTOResultMap">
+        SELECT
+        w.id,
+        w.code,
+        w.owner_type,
+        w.type,
+        w.create_merchant_id,
+        w.handle_merchant_id,
+        w.area_code,
+        w.commercial_insurance_start_time,
+        w.compulsory_insurance_start_time,
+        w.insurance_merchant_id,
+        w.remark,
+        w.owner_phone,
+        w.owner_id_num,
+        w.owner_name,
+        w.quotation_no,
+        w.commercial_amount,
+        w.compulsory_amount,
+        w.vehicle_and_tax_amount,
+        w.non_motor_amount,
+        w.non_motor_insurance_name,
+        w.non_motor_coverage_amount,
+        w.upstream_compute_type,
+        w.upstream_commercial_percentage,
+        w.upstream_compulsory_percentage,
+        w.upstream_vehicle_and_vessel_tax_percentage,
+        w.upstream_non_motor_percentage,
+        w.upstream_commercial_amount,
+        w.upstream_compulsory_amount,
+        w.upstream_vehicle_and_vessel_tax_amount,
+        w.upstream_non_motor_amount,
+        w.downstream_compute_type,
+        w.downstream_commercial_percentage,
+        w.downstream_compulsory_percentage,
+        w.downstream_vehicle_and_vessel_tax_percentage,
+        w.downstream_non_motor_percentage,
+        w.downstream_commercial_amount,
+        w.downstream_compulsory_amount,
+        w.downstream_vehicle_and_vessel_tax_amount,
+        w.downstream_non_motor_amount,
+        w.quotation_remark,
+        w.quotation_failed_remark,
+        w.required_pay_amount,
+        w.pay_name,
+        w.pay_id_num,
+        w.pay_bank,
+        w.pay_bank_card_num,
+        w.pay_remark,
+        w.pay_failed_remark,
+        w.underwriting_remark,
+        w.underwriting_failed_remark,
+        w.commercial_policy_no,
+        w.compulsory_policy_no,
+        w.tracking_num,
+        w.logistics_company,
+        w.accept_insurance_remark,
+        w.accept_insurance_failed_remark,
+        w.create_time,
+        w.update_time,
+        w.quotation_time,
+        w.underwriting_time,
+        w.finish_time,
+        w.create_by,
+        w.handle_by,
+        w.status,
+        w.remind_status,
+        w.follow_up_res,
+        w.organization_name,
+        w.social_credit_code,
+
+        vl.id AS vl_id,
+        vl.workorder_id AS vl_workorder_id,
+        vl.license_plate AS vl_license_plate,
+        vl.vehicle_type AS vl_vehicle_type,
+        vl.owner_name AS vl_owner_name,
+        vl.usage_nature AS vl_usage_nature,
+        vl.brand_model AS vl_brand_model,
+        vl.vehicle_code AS vl_vehicle_code,
+        vl.engine_code AS vl_engine_code,
+        vl.registration_date AS vl_registration_date,
+        vl.issue_date AS vl_issue_date,
+        vl.seats AS vl_seats,
+        vl.approved_load_capacity AS vl_approved_load_capacity,
+        vl.curb_weight AS vl_curb_weight,
+        vl.is_transfer AS vl_is_transfer,
+        vl.transfer_date AS vl_transfer_date,
+        vl.create_time AS vl_create_time,
+        vl.update_time AS vl_update_time,
+        vl.update_by AS vl_update_by,
+        vl.is_delete AS vl_is_delete,
+
+        vc.id AS vc_id,
+        vc.workorder_id AS vc_workorder_id,
+        vc.brand_model AS vc_brand_model,
+        vc.vehicle_type AS vc_vehicle_type,
+        vc.vehicle_code AS vc_vehicle_code,
+        vc.engine_code AS vc_engine_code,
+        vc.seats AS vc_seats,
+        vc.curb_weight AS vc_curb_weight,
+        vc.displacement AS vc_displacement,
+        vc.approved_load_capacity AS vc_approved_load_capacity,
+        vc.create_time AS vc_create_time,
+        vc.update_time AS vc_update_time,
+        vc.update_by AS vc_update_by,
+        vc.is_delete AS vc_is_delete,
+
+        vi.id AS vi_id,
+        vi.workorder_id AS vi_workorder_id,
+        vi.invoice_amount AS vi_invoice_amount,
+        vi.buyer_name AS vi_buyer_name,
+        vi.buyer_id_num AS vi_buyer_id_num,
+        vi.vehicle_type AS vi_vehicle_type,
+        vi.brand_model AS vi_brand_model,
+        vi.vehicle_code AS vi_vehicle_code,
+        vi.engine_code AS vi_engine_code,
+        vi.seats AS vi_seats,
+        vi.approved_load_capacity AS vi_approved_load_capacity,
+        vi.create_time AS vi_create_time,
+        vi.update_time AS vi_update_time,
+        vi.update_by AS vi_update_by,
+        vi.is_delete AS vi_is_delete,
+
+        cm.name AS create_merchant_name,
+        cm.code AS create_merchant_code,
+        hm.name AS handle_merchant_name,
+        hm.code AS handle_merchant_code,
+        im.name AS insurance_merchant_name,
+        im.code AS insurance_merchant_code,
+        cu.name AS create_user_name,
+        cu.username AS create_user_phone,
+        hu.name AS handle_user_name,
+        hu.username AS handle_user_phone
+
+        FROM workorder w
+        LEFT JOIN vehicle_license vl ON w.id = vl.workorder_id AND vl.is_delete = 0
+        LEFT JOIN vehicle_certificate vc ON w.id = vc.workorder_id AND vc.is_delete = 0
+        LEFT JOIN vehicle_invoice vi ON w.id = vi.workorder_id AND vi.is_delete = 0
+        LEFT JOIN merchant cm ON w.create_merchant_id = cm.id AND cm.is_delete = 0
+        LEFT JOIN merchant hm ON w.handle_merchant_id = hm.id AND hm.is_delete = 0
+        LEFT JOIN merchant im ON w.insurance_merchant_id = im.id AND im.is_delete = 0
+        LEFT JOIN user cu ON w.create_by = cu.id AND cu.is_delete = 0
+        LEFT JOIN user hu ON w.handle_by = hu.id AND hu.is_delete = 0
+        <where>
+            w.is_delete = 0
+            <if test="id != null">
+                AND w.id = #{id}
+            </if>
+            <if test="blurParam != null and blurParam != ''">
+                AND (
+                w.code LIKE CONCAT('%', #{blurParam}, '%')
+                OR w.organization_name LIKE CONCAT('%', #{blurParam}, '%')
+                OR w.owner_name LIKE CONCAT('%', #{blurParam}, '%')
+                OR vl.license_plate LIKE CONCAT('%', #{blurParam}, '%')
+                OR vl.vehicle_code LIKE CONCAT('%', #{blurParam}, '%')
+                OR vc.vehicle_code LIKE CONCAT('%', #{blurParam}))
+            </if>
+
+            <if test="createMerchantId != null">
+                AND w.create_merchant_id = #{createMerchantId}
+            </if>
+            <if test="handleMerchantId != null">
+                AND w.handle_merchant_id = #{handleMerchantId}
+            </if>
+            <if test="handleUserId != null">
+                AND w.handle_by = #{handleUserId}
+            </if>
+            <if test="createBy != null">
+                AND w.create_by = #{createBy}
+            </if>
+            <if test="areaCode != null and areaCode != ''">
+                AND w.area_code = #{areaCode}
+            </if>
+            <if test="insuranceId != null">
+                AND w.insurance_merchant_id = #{insuranceId}
+            </if>
+            <if test="status != null">
+                AND w.status = #{status}
+            </if>
+            <if test="remindStatus != null">
+                <choose>
+                    <when test="remindStatus == 0">
+                        AND (w.remind_status = 0 OR w.remind_status IS NULL)
+                    </when>
+                    <otherwise>
+                        AND w.remind_status = #{remindStatus}
+                    </otherwise>
+                </choose>
+            </if>
+            <if test="beginTime != null and endTime != null">
+                AND (
+                (w.commercial_insurance_start_time &gt;= #{beginTime} AND w.commercial_insurance_start_time &lt;= #{endTime})
+                OR
+                (w.compulsory_insurance_start_time &gt;= #{beginTime} AND w.compulsory_insurance_start_time &lt;= #{endTime})
+                )
+            </if>
+        </where>
+        ORDER BY
+        CASE
+        WHEN w.commercial_insurance_start_time &gt;= #{beginTime} AND w.commercial_insurance_start_time &lt;= #{endTime} THEN w.commercial_insurance_start_time
+        WHEN w.compulsory_insurance_start_time &gt;= #{beginTime} AND w.compulsory_insurance_start_time &lt;= #{endTime} THEN w.compulsory_insurance_start_time
+        ELSE 9999999999
+        END ASC
+    </select>
+</mapper>

@@ -1,0 +1,244 @@
+.container_body {
+  padding: 10px;
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #DCDFE6;
+}
+
+.header_tabbur {
+  display: flex;
+  justify-content: left;
+  border-bottom: 1px solid #DCDFE6;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.header_tabbur_item {
+  padding: 0 10px 5px 10px
+}
+
+.search {
+  border-bottom: 1px solid #DCDFE6;
+  margin-bottom: 10px;
+}
+
+.params_container {
+  padding: 0 20px;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;       
+  gap: 10px;             
+}
+
+.cascade_params_container {
+  padding: 0 !important;
+}
+
+.param_item {
+  width: calc((100% - 20px) / 3);
+  min-width: 400px;
+  /* max-width: 500px; */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.radio_param_item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.form_title {
+  flex: 1;
+  margin: 0 15px;
+  text-align: right;
+  font-size: 15px;
+  /* align-items: center; */
+  
+}
+
+.cascade_form_title {
+  color: #606266;
+  font-size: 14px;
+  margin: 0 8px 0 0;
+  text-align: left;
+  flex: 2;
+}
+
+.radio_form_title {
+  width: calc((100% - 20px) / 12);
+  margin: 0 15px;
+  text-align: right;
+  font-size: 15px;
+}
+
+.form_content {
+  flex: 3;
+  max-width: 400px;
+}
+
+.cascade_form_content {
+  flex: 4;
+}
+.radio_form_content{
+  text-align: left;
+  flex: 3;
+}
+.search_title {
+  font-weight: 700;
+  text-align: left;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.operation_container {
+  margin: 10px;
+  text-align: right;
+}
+.export_icon {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-image: url("/src/assets/icons/export.png");
+  margin-right: 5px;
+}
+.table_header {
+  display: flex;
+  justify-content: space-between;
+}
+.output_button {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #606266;
+}
+.output_button:hover .export_icon{
+  background-image: url("/src/assets/icons/export_hover.png");
+}
+.output_button:hover {
+  color: #409EFF;
+}
+
+.table_container {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.pagination_container {
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+}
+
+.table_button_container {
+  display: flex;
+  justify-content: center;
+}
+
+.form_content_left {
+  min-width: 110px;
+}
+
+.form_content_right {
+  flex: 1;
+}
+
+.left_select .el-select__wrapper {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
+  border: 1px solid #DCDFE6;
+  border-right: 0;
+}
+
+.right_select {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.right_select .el-input__wrapper {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.title_container {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  border-bottom: 1px solid #DCDFE6; 
+  padding: 0 0 3px;
+}
+
+.table_form_container {
+  width: 100%;
+  border-top: 1px solid #DCDFE6;
+}
+
+.table_form_item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  border-bottom: 1px solid #DCDFE6;
+}
+
+.table_form_item_column {
+  text-align: left;
+  min-width: 20%;
+}
+
+.table_form_item_title {
+  margin-left: 5px;
+  font-weight: 700;
+}
+
+.disabled .el-upload--picture-card{
+  display: none;
+}
+
+.cascade_form .el-form-item__label{
+  
+  margin-bottom: 0;
+  margin-right: 8px;
+  line-height: 32px !important;
+  
+}
+
+.cascade_form .el-input__wrapper {
+  box-shadow: 0 0 0 0 !important;
+  background-color: transparent !important;
+}
+
+.cascade_form_container {
+  background-color: #F5FCFF;
+  padding: 12px;
+  border: 1px solid #E0EFFF;
+  border-radius: 2px;
+}
+
+.cascade_param_item {
+  min-width: 0;
+}
+
+.cascade_form .el-date-editor .el-input__prefix {
+  display: none;
+}
+
+.img_icon {
+  aspect-ratio: 1 / 1;
+  display: inline-block;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.divider {
+  border-bottom: 1px solid #DCDFE6;
+  margin: 10px 0;
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.insurancesystem.mapper.WorkorderFileMapper">
+    <update id="batchUpdateByWorkorderId">
+        UPDATE workorder_file
+        SET
+            file_id = CASE
+            <foreach collection="list" item="item" separator="">
+                WHEN type = #{item.type}
+                THEN #{item.fileId}
+            </foreach>
+            ELSE file_id
+            END,
+            update_by = #{updateBy}
+        WHERE
+            workorder_id = #{workorderId}
+            AND is_delete = 0
+            AND type IN
+            <foreach collection="list" item="item" open="(" separator="," close=")">
+                #{item.type}
+            </foreach>
+    </update>
+
+    <select id="selectByWorkorderId" resultType="com.example.insurancesystem.domain.workorder.WorkorderFile">
+        SELECT wf.id, wf.workorder_id, wf.file_id, sf.path, sf.file_name, wf.type, wf.create_time, wf.update_time, wf.update_by
+        FROM workorder_file wf
+        LEFT JOIN system_file sf ON wf.file_id = sf.id AND sf.is_delete = 0
+        WHERE
+            wf.workorder_id = #{id}
+            AND wf.is_delete = 0
+    </select>
+</mapper>

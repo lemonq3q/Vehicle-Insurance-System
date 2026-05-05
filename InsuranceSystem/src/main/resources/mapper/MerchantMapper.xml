@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.insurancesystem.mapper.MerchantMapper">
+    <select id="selectByUpstreamSearchDTO" resultType="com.example.insurancesystem.domain.merchant.UpstreamDTO">
+        SELECT id, code, name, type, location, address, contact, phone, create_time, default_area_code
+        FROM merchant
+        <where>
+            type IN ('机构', '保司')
+            AND is_delete = 0
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="blurParam !=null and blurParam != ''">
+                AND (code LIKE CONCAT('%', #{blurParam}, '%') OR
+                name LIKE CONCAT('%', #{blurParam}, '%'))
+            </if>
+            <if test="location !=null and location != ''">
+                AND location = #{location}
+            </if>
+            <if test="businessArea !=null and businessArea != ''">
+                AND id IN (
+                    SELECT merchant_id
+                    FROM merchant_area
+                    WHERE
+                        area_code = #{businessArea}
+                        AND is_delete = 0
+                )
+            </if>
+        </where>
+    </select>
+    <select id="selectByDownstreamSearchDTO" resultType="com.example.insurancesystem.domain.merchant.DownstreamDTO">
+        SELECT m.id, m.code, m.name, m.type, m.location, m.address, m.bank, m.bank_card_num, m.channel, m.default_area_code, manager.name AS store_manager, m.create_time
+        FROM merchant m
+            LEFT JOIN (
+            SELECT
+            u.merchant_id AS merchant_id,
+            ANY_VALUE(u.name) AS name
+            FROM user u
+                INNER JOIN user_role ur ON u.id = ur.user_id AND ur.is_delete = 0
+                INNER JOIN role r ON ur.role_id = r.id AND r.is_delete = 0
+            WHERE
+                u.is_delete = 0
+                AND r.name = '联系人'
+                GROUP BY u.merchant_id
+            ) manager ON m.id = manager.merchant_id
+        <where>
+            m.type IN ('车商店铺', '汽修厂', '代理人')
+            AND m.is_delete = 0
+            <if test="id !=null">
+                AND m.id = #{id}
+            </if>
+            <if test="blurParam !=null and blurParam != ''">
+                AND (m.code LIKE CONCAT('%', #{blurParam}, '%') OR
+                m.name LIKE CONCAT('%', #{blurParam}, '%'))
+            </if>
+            <if test="location !=null and location != ''">
+                AND m.location = #{location}
+            </if>
+            <if test="channel !=null and channel != ''">
+                AND m.channel = #{channel}
+            </if>
+            <if test="businessArea !=null and businessArea != ''">
+                AND m.id IN (
+                SELECT merchant_id
+                FROM merchant_area
+                WHERE
+                area_code = #{businessArea}
+                AND is_delete = 0
+                )
+            </if>
+        </where>
+    </select>
+    <select id="selectInsuranceCompanyByAreaCode" resultType="com.example.insurancesystem.domain.merchant.Merchant">
+        SELECT id, code, name, type, location, address, bank, bank_card_num, channel, contact, phone, default_area_code
+        FROM merchant
+        WHERE id in (
+            SELECT merchant_id
+            FROM merchant_area
+            WHERE
+            area_code = #{areaCode}
+            AND is_delete = 0
+            )
+        AND (type = '机构' OR  type = '保司')
+        AND is_delete = 0
+    </select>
+</mapper>

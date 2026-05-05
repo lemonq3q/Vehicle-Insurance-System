@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.insurancesystem.mapper.WorkorderInsuranceMapper">
+    <update id="batchUpdateByWorkorderId">
+        UPDATE workorder_insurance
+        SET
+            option_json = CASE
+            <foreach collection="list" item="item" separator="">
+                WHEN insurance_id = #{item.insuranceId}
+                THEN #{item.optionJson}
+            </foreach>
+            ELSE option_json
+            END,
+            deductible_option_json = CASE
+            <foreach collection="list" item="item" separator="">
+                WHEN insurance_id = #{item.insuranceId}
+                THEN #{item.deductibleOptionJson}
+            </foreach>
+            ELSE deductible_option_json
+            END,
+            update_by = #{updateBy}
+        WHERE
+            workorder_id = #{workorderId}
+            AND is_delete = 0
+            AND insurance_id IN
+            <foreach collection="list" item="item" open="(" separator="," close=")">
+                #{item.insuranceId}
+            </foreach>
+    </update>
+</mapper>

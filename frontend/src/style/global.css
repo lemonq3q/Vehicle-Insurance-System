@@ -1,0 +1,80 @@
+div {
+    box-sizing: border-box;
+    /* padding: 0.1rem; */
+}
+
+.card {
+  padding: 20px;     /* 内边距，让内容不贴边 */
+  box-sizing: border-box; /* 盒模型，避免内边距撑大卡片 */
+  
+  border-radius: 6px; 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+
+  border: 1px solid #f0f0f0; /* 轻微边框增强层次感 */
+  transition: box-shadow 0.3s ease; /* 阴影过渡动画，hover时更丝滑 */
+  background-color: #fff;
+}
+
+
+/* 去除焦点边框样式 */
+*:focus,
+*:focus-visible,
+*:focus-within {
+  outline: none !important;
+}
+
+.no_select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.router-link-active {
+  text-decoration: none
+}
+
+a {
+  text-decoration: none
+} 
+
+
+.el-upload-list__item div{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.no_wrap {
+  white-space: nowrap;
+}
+/* .el-message {
+  font-size: 14px !important;
+} */
+
+/* 覆盖浏览器自动填充的默认样式 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  /* 关键：使用内阴影覆盖蓝色背景 */
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  /* 将文字颜色设置为你需要的颜色，这里设为黑色 */
+  -webkit-text-fill-color: #000000 !important;
+  /* 过渡动画，避免闪烁 */
+  transition: background-color 5000s ease-in-out 0s;
+}
