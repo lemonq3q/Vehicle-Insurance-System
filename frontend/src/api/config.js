@@ -15,6 +15,7 @@ const notInterceptUrls = [
 // axios.defaults.baseURL = 'http://localhost:8080';
 axios.defaults.baseURL = 'http://47.100.210.159:8080';
 // axios.defaults.withCredentials = true;
+axios.defaults.timeout = 30000; // 全局30秒超时
 
 axios.interceptors.request.use(function (config) {
   const isIgnoreUrl = notInterceptUrls.some(item => config.url.includes(item));
