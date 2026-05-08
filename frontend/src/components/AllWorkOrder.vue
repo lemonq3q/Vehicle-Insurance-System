@@ -194,7 +194,7 @@
         <el-table-column prop="insuranceCompany" label="保险公司"/>
         <el-table-column prop="upstreamSumAmount" label="上游政策费用"/>
         <el-table-column prop="downstreamSumAmount" label="下游政策费用"/>
-        <el-table-column prop="handleMerchant" label="处理机构"/>
+        <!-- <el-table-column prop="handleMerchant" label="处理机构"/> -->
         <el-table-column prop="handleUser" label="处理人"/>
         <el-table-column prop="workorderStatus" label="工单状态"/>
         <el-table-column prop="createTime" label="创建时间"/>

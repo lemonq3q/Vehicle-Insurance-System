@@ -72,7 +72,7 @@
         <el-table-column prop="location" label="所在地区"/>
         <el-table-column prop="address" label="商家地址"/>
         <el-table-column prop="bankAndCardNum" label="银行卡"/>
-        <!-- <el-table-column prop="businessArea" label="业务区域"/> -->
+        <!-- <el-table-column prop="businessArea" label="业务区域" show-overflow-tooltip /> -->
         <!-- <el-table-column prop="channel" label="所属渠道"/> -->
         <el-table-column prop="storeManager" label="联系人"/>
         <el-table-column prop="createTime" label="创建时间"/>

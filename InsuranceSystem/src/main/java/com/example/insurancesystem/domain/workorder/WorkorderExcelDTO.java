@@ -31,9 +31,6 @@ public class WorkorderExcelDTO {
     @ExcelProperty("提交店铺")
     private String createMerchant;
 
-    @ExcelProperty("提交人")
-    private String createUser;
-
     @ExcelProperty("车辆类型")
     private String vehicleType;
 
@@ -159,14 +156,21 @@ public class WorkorderExcelDTO {
             this.finishDate = TimeConvertUtil.timestampConvert(workorderDTO.getFinishTime());
         }
 
-        this.organizationName = workorderDTO.getOrganizationName();
+        this.organizationName = workorderDTO.getInsuranceMerchantName();
         this.createMerchant = workorderDTO.getCreateMerchantName();
-        this.createUser = workorderDTO.getCreateUserName();
 
-        // 车辆类型
-        this.vehicleType = workorderDTO.getType() == 0 ? "旧车" : "新车";
         if (workorderDTO.getVehicleLicense() != null) {
             this.vehicleType = workorderDTO.getVehicleLicense().getVehicleType();
+        }
+        if (this.vehicleType == null || this.vehicleType.isBlank()) {
+            this.vehicleType = workorderDTO.getVehicleInvoice() != null ? workorderDTO.getVehicleInvoice().getVehicleType() : "";
+        }
+        if (this.vehicleType == null || this.vehicleType.isBlank()) {
+            this.vehicleType = workorderDTO.getVehicleCertificate() != null ? workorderDTO.getVehicleCertificate().getVehicleType() : "";
+        }
+
+        if (workorderDTO.getVehicleLicense() != null) {
+            this.licensePlate = workorderDTO.getVehicleLicense().getLicensePlate();
         }
 
         // 车架号
@@ -176,8 +180,17 @@ public class WorkorderExcelDTO {
         if ((this.vin == null || this.vin.isEmpty()) && workorderDTO.getVehicleInvoice() != null) {
             this.vin = workorderDTO.getVehicleInvoice().getVehicleCode();
         }
+        if ((this.vin == null || this.vin.isEmpty()) && workorderDTO.getVehicleLicense() != null) {
+            this.vin = workorderDTO.getVehicleLicense().getVehicleCode();
+        }
 
-        this.owner = workorderDTO.getOwnerName();
+        if(workorderDTO.getOwnerName() != null && !workorderDTO.getOwnerName().isEmpty()){
+            this.owner = workorderDTO.getOwnerName();
+        }
+        else {
+            this.owner = workorderDTO.getOrganizationName();
+        }
+
         this.ownerPhone = workorderDTO.getOwnerPhone();
 
         // 起保日期（修复原bug：交强险日期被覆盖）

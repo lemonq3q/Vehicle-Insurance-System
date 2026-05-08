@@ -122,9 +122,9 @@
         <el-table-column prop="finialOwnerName" label="车主"/>
         <el-table-column prop="createMerchant" label="提交店铺"/>
         <el-table-column prop="createUser" label="提交人"/>
-        <!-- <el-table-column prop="areaCode" label="投保区域"/> -->
+        <!-- <el-table-column prop="areaCode" label="投保区域" show-overflow-tooltip /> -->
         <el-table-column prop="insuranceCompany" label="保险公司"/>
-        <el-table-column prop="handleMerchant" label="处理机构"/>
+        <!-- <el-table-column prop="handleMerchant" label="处理机构"/> -->
         <el-table-column prop="handleUser" label="处理人"/>
         <el-table-column prop="createTime" label="创建时间"/>
         <el-table-column prop="updateTime" label="最后跟进时间"/>

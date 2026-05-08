@@ -69,9 +69,9 @@
         <el-table-column prop="code" label="机构编号"/>
         <el-table-column prop="name" label="机构名称"/>
         <el-table-column prop="type" label="类型"/>
-        <el-table-column prop="location" label="所在地区"/>
-        <el-table-column prop="address" label="机构地址"/>
-        <el-table-column prop="businessArea" label="业务区域"/>
+        <el-table-column prop="location" label="所在地区" show-overflow-tooltip />
+        <el-table-column prop="address" label="机构地址" show-overflow-tooltip />
+        <el-table-column prop="businessArea" label="业务区域" show-overflow-tooltip />
         <!-- <el-table-column prop="businessChannel" label="业务渠道"/> -->
         <el-table-column prop="contact" label="联系人"/>
         <el-table-column prop="phone" label="联系电话"/>
