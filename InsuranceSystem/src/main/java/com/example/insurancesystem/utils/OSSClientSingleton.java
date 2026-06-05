@@ -11,8 +11,8 @@ public class OSSClientSingleton {
 
     private static volatile OSS ossClient;
 
-    private static final String OUT_ENDPOINT = "oss-cn-hangzhou.aliyuncs.com";
-    private static final String INTERNAL_ENDPOINT = "oss-cn-hangzhou-internal.aliyuncs.com";
+    private static final String OUT_ENDPOINT = "https://oss-cn-hangzhou.aliyuncs.com";
+    private static final String INTERNAL_ENDPOINT = "https://oss-cn-hangzhou-internal.aliyuncs.com";
     private static final String REGION = "cn-hangzhou";
 
     // 私有构造函数防止外部实例化

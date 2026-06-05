@@ -1,13 +1,13 @@
 package com.example.insurancesystem.controller;
 
+import com.example.insurancesystem.domain.SystemFile;
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.service.OCRService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/ocr")
@@ -17,27 +17,27 @@ public class OCRController {
     private OCRService ocrService;
 
     @PostMapping("/idCard")
-    public ResponseResult idCardRecognition(@RequestParam("file") MultipartFile file){
-        return ocrService.idCardRecognition(file);
+    public ResponseResult idCardRecognition(@RequestBody SystemFile systemFile){
+        return ocrService.idCardRecognition(systemFile);
     }
 
     @PostMapping("/vehicleCertificate")
-    public ResponseResult vehicleCertificateRecognition(@RequestParam("file") MultipartFile file){
-        return ocrService.vehicleCertificateRecognition(file);
+    public ResponseResult vehicleCertificateRecognition(@RequestBody SystemFile systemFile){
+        return ocrService.vehicleCertificateRecognition(systemFile);
     }
 
     @PostMapping("/vehicleInvoice")
-    public ResponseResult vehicleInvoiceRecognition(@RequestParam("file") MultipartFile file){
-        return ocrService.vehicleInvoiceRecognition(file);
+    public ResponseResult vehicleInvoiceRecognition(@RequestBody SystemFile systemFile){
+        return ocrService.vehicleInvoiceRecognition(systemFile);
     }
 
     @PostMapping("/vehicleLicense")
-    public ResponseResult vehicleLicenseRecognition(@RequestParam("file") MultipartFile file){
-        return ocrService.vehicleLicenseRecognition(file);
+    public ResponseResult vehicleLicenseRecognition(@RequestBody SystemFile systemFile){
+        return ocrService.vehicleLicenseRecognition(systemFile);
     }
 
     @PostMapping("/businessLicense")
-    public ResponseResult businessLicenseRecognition(@RequestParam("file") MultipartFile file){
-        return ocrService.businessLicenseRecognition(file);
+    public ResponseResult businessLicenseRecognition(@RequestBody SystemFile systemFile){
+        return ocrService.businessLicenseRecognition(systemFile);
     }
 }

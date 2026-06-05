@@ -7,4 +7,6 @@ public interface FileService {
     ResponseResult uploadFile(MultipartFile file);
 
     ResponseResult ossUploadFile(MultipartFile file);
+
+    ResponseResult createOssUploadSign(String fileName, String contentType);
 }

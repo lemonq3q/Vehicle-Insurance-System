@@ -25,4 +25,10 @@ public class FileController {
     public ResponseResult uploadFileTest(@RequestParam("file") MultipartFile file) {
         return fileService.ossUploadFile(file);
     }
+
+    @PostMapping("/oss/sign")
+    public ResponseResult createOssUploadSign(@RequestParam("fileName") String fileName,
+                                              @RequestParam(value = "contentType", required = false) String contentType) {
+        return fileService.createOssUploadSign(fileName, contentType);
+    }
 }

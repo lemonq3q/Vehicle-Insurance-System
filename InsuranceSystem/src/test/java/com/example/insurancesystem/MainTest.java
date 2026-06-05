@@ -1,5 +1,6 @@
 package com.example.insurancesystem;
 
+import com.aliyun.oss.OSS;
 import com.example.insurancesystem.domain.IdCard;
 import com.example.insurancesystem.domain.PageTest;
 import com.example.insurancesystem.domain.merchant.Merchant;
@@ -42,6 +43,13 @@ public class MainTest {
     @Autowired
     private OCRUtil ocrUtil;
 
+
+    @Test
+    public void testOSS(){
+        String objectName = "test_oss.png";
+        String sign = OSSUtil.generatePutSignedUrl(objectName, 5*60*1000L, "image/png");
+        System.out.println(sign);
+    }
 
     @Test
     public void testAllText(){

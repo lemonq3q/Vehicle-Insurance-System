@@ -958,10 +958,9 @@ import { validatePhoneNumber, validFileSize } from '@/utils/validate';
 import { insertWorkorder, selectWorkorderById, updateWorkorderBaseInfo } from '@/api/workorder';
 import Message from '@/utils/message';
 import { imgRecognition } from '@/api/ocr';
-import { upload } from '@/api/file';
 import { selectAllInsurance } from '@/api/insurance';
 import { jsonStrToObj, transNumStrToNum } from '@/utils/convert';
-import { downloadByUrl } from '@/api/file';
+import { downloadByUrl, uploadToOss } from '@/api/file';
 import { isNumber } from '@/utils/validate';
 import { selectDownstreamOption } from '@/api/downstream';
 import { selectUserOptionByMerchantId } from '@/api/user';
@@ -1356,6 +1355,8 @@ const handleSubmit = (formEl) => {
         await waitFileUpload();
       }catch(e){
         Message.error('文件上传超时，请稍后再试');
+        Loading.close();
+        return;
       }
       if (type == 'add'){
         addSubmit();
@@ -1694,6 +1695,55 @@ const handleReset = () => {
   buildInfo();
 }
 
+const ensureUploadPreviewUrl = (uploadFile) => {
+  if (uploadFile.url != null && uploadFile.url !== '') {
+    return uploadFile.url;
+  }
+  if (uploadFile.raw) {
+    uploadFile.url = URL.createObjectURL(uploadFile.raw);
+    return uploadFile.url;
+  }
+  return '';
+}
+
+const buildUploadFileItem = (uploadFile, fileInfo) => {
+  return {
+    ...uploadFile,
+    id: fileInfo?.id,
+    name: fileInfo?.fileName || uploadFile.name,
+    url: ensureUploadPreviewUrl(uploadFile)
+  };
+}
+
+const handleSingleFileUpload = async (uploadFile) => {
+  const rawFile = uploadFile?.raw;
+  if (!rawFile) {
+    throw new Error('未获取到待上传文件');
+  }
+  const { fileInfo } = await uploadToOss(rawFile);
+  if (!fileInfo) {
+    throw new Error('上传成功但未返回文件信息');
+  }
+  return {
+    fileInfo,
+    uploadFileItem: buildUploadFileItem(uploadFile, fileInfo)
+  };
+}
+
+const handleOcrFileUpload = async (uploadFile, ocrType) => {
+  const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+  const response = await imgRecognition(fileInfo, ocrType);
+  const res = response.data;
+  if (res.code != 200){
+    throw new Error(res.msg || 'OCR识别失败，请重新上传');
+  }
+  return {
+    fileInfo: res.data?.fileInfo || fileInfo,
+    recognitionData: res.data?.recognitionData,
+    uploadFileItem
+  };
+}
+
 const clearUploadState = (type) => {
   const fileIdMap = {
     idCardFront: 'idCardFrontId',
@@ -1739,17 +1789,12 @@ const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.idCardFront = true;
-    const rawFile = uploadFile.raw;
-    const response = await upload(rawFile);
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.idCardFrontId = res.data.id;
-      return;
-    }
-    handleUploadFail('idCardFront', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    workorderFileId.idCardFrontId = fileInfo.id;
+    file.idCardFront = [uploadFileItem];
   }
-  catch{
-    handleUploadFail('idCardFront');
+  catch(error){
+    handleUploadFail('idCardFront', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.idCardFront = false;
@@ -1764,18 +1809,13 @@ const handleIdCardBackChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.idCardBack = true;
-    const rawFile = uploadFile.raw;
-    const response = await imgRecognition(rawFile, "idCard");
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.idCardBackId = res.data.fileInfo.id;
-      buildIdCardInfo(res.data.recognitionData);
-      return;
-    }
-    handleUploadFail('idCardBack', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "idCard");
+    workorderFileId.idCardBackId = fileInfo.id;
+    file.idCardBack = [uploadFileItem];
+    buildIdCardInfo(recognitionData);
   }
-  catch{
-    handleUploadFail('idCardBack');
+  catch(error){
+    handleUploadFail('idCardBack', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.idCardBack = false;
@@ -1796,18 +1836,13 @@ const handleLicenseFrontChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.licenseFront = true;
-    const rawFile = uploadFile.raw;
-    const response = await imgRecognition(rawFile, "vehicleLicense");
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.licenseFrontId = res.data.fileInfo.id;
-      buildLicenseInfo(res.data.recognitionData);
-      return;
-    }
-    handleUploadFail('licenseFront', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleLicense");
+    workorderFileId.licenseFrontId = fileInfo.id;
+    file.licenseFront = [uploadFileItem];
+    buildLicenseInfo(recognitionData);
   }
-  catch{
-    handleUploadFail('licenseFront');
+  catch(error){
+    handleUploadFail('licenseFront', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.licenseFront = false;
@@ -1822,18 +1857,13 @@ const handleLicenseBackChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.licenseBack = true;
-    const rawFile = uploadFile.raw;
-    const response = await imgRecognition(rawFile, "vehicleLicense");
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.licenseBackId = res.data.fileInfo.id;
-      buildLicenseInfo(res.data.recognitionData);
-      return;
-    }
-    handleUploadFail('licenseBack', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleLicense");
+    workorderFileId.licenseBackId = fileInfo.id;
+    file.licenseBack = [uploadFileItem];
+    buildLicenseInfo(recognitionData);
   }
-  catch{
-    handleUploadFail('licenseBack');
+  catch(error){
+    handleUploadFail('licenseBack', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.licenseBack = false;
@@ -1864,18 +1894,13 @@ const handleCertificateChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.certificate = true;
-    const rawFile = uploadFile.raw;
-    const response = await imgRecognition(rawFile, "vehicleCertificate");
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.certificateId = res.data.fileInfo.id;
-      buildCertificateInfo(res.data.recognitionData);
-      return;
-    }
-    handleUploadFail('certificate', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleCertificate");
+    workorderFileId.certificateId = fileInfo.id;
+    file.certificate = [uploadFileItem];
+    buildCertificateInfo(recognitionData);
   }
-  catch{
-    handleUploadFail('certificate');
+  catch(error){
+    handleUploadFail('certificate', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.certificate = false;
@@ -1895,18 +1920,13 @@ const handleInvoiceChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.invoice = true;
-    const rawFile = uploadFile.raw;
-    const response = await imgRecognition(rawFile, "vehicleInvoice");
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.invoiceId = res.data.fileInfo.id;
-      buildInvoiceInfo(res.data.recognitionData);
-      return;
-    }
-    handleUploadFail('invoice', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleInvoice");
+    workorderFileId.invoiceId = fileInfo.id;
+    file.invoice = [uploadFileItem];
+    buildInvoiceInfo(recognitionData);
   }
-  catch{
-    handleUploadFail('invoice');
+  catch(error){
+    handleUploadFail('invoice', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.invoice = false;
@@ -1926,18 +1946,13 @@ const handleBusinessLicenseChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.businessLicense = true;
-    const rawFile = uploadFile.raw;
-    const response = await imgRecognition(rawFile, "businessLicense");
-    const res = response.data;
-    if (res.code == 200){
-      workorderFileId.businessLicenseId = res.data.fileInfo.id;
-      buildBusinessLicenseInfo(res.data.recognitionData);
-      return;
-    }
-    handleUploadFail('businessLicense', res.msg || '图片上传失败，请重新上传');
+    const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "businessLicense");
+    workorderFileId.businessLicenseId = fileInfo.id;
+    file.businessLicense = [uploadFileItem];
+    buildBusinessLicenseInfo(recognitionData);
   }
-  catch{
-    handleUploadFail('businessLicense');
+  catch(error){
+    handleUploadFail('businessLicense', error.message || '图片上传失败，请重新上传');
   }
   finally{
     loadingFlag.businessLicense = false;
@@ -1988,27 +2003,7 @@ const handleDownload = (ElUploadFile, type) => {
 }
 
 const handleRemove = (ElUploadFile, type) => {
-  if (type == 'idCardFront'){
-    file.idCardFront = [];
-  }
-  if (type == 'idCardBack'){
-    file.idCardBack = [];
-  }
-  if (type == 'licenseFront'){
-    file.licenseFront = [];
-  }
-  if (type == 'licenseBack'){
-    file.licenseBack = [];
-  }
-  if (type == 'certificate'){
-    file.certificate = [];
-  }
-  if (type == 'invoice'){
-    file.invoice = [];
-  }
-  if (type == 'businessLicense'){
-    file.businessLicense = [];
-  }
+  clearUploadState(type);
 }
 
 const handleNumberInputChange = (event, type) => {

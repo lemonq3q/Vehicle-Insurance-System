@@ -1,16 +1,16 @@
 package com.example.insurancesystem.service;
 
+import com.example.insurancesystem.domain.SystemFile;
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
-import org.springframework.web.multipart.MultipartFile;
 
 public interface OCRService {
-    ResponseResult idCardRecognition(MultipartFile file);
+    ResponseResult idCardRecognition(SystemFile systemFile);
 
-    ResponseResult vehicleCertificateRecognition(MultipartFile file);
+    ResponseResult vehicleCertificateRecognition(SystemFile systemFile);
 
-    ResponseResult vehicleInvoiceRecognition(MultipartFile file);
+    ResponseResult vehicleInvoiceRecognition(SystemFile systemFile);
 
-    ResponseResult vehicleLicenseRecognition(MultipartFile file);
+    ResponseResult vehicleLicenseRecognition(SystemFile systemFile);
 
-    ResponseResult businessLicenseRecognition(MultipartFile file);
+    ResponseResult businessLicenseRecognition(SystemFile systemFile);
 }

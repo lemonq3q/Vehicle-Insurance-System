@@ -1,6 +1,7 @@
 package com.example.insurancesystem.utils;
 
 import com.aliyun.oss.*;
+import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.aliyun.oss.model.PutObjectResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +63,34 @@ public class OSSUtil {
         }
     }
 
+    public static String generatePutSignedUrl(String objectName, long expire, String contentType) {
+        OSS ossClient = OSSClientSingleton.getInstance();
+        try {
+            Date expiration = new Date(new Date().getTime() + expire);
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(BUCKET_NAME, objectName, HttpMethod.PUT);
+            request.setExpiration(expiration);
+            if (contentType != null && !contentType.trim().isEmpty()) {
+                request.setContentType(contentType.trim());
+            }
+            URL url = ossClient.generatePresignedUrl(request);
+            return url == null ? null : url.toString();
+        } catch (OSSException oe) {
+            System.out.println("Caught an OSSException, which means your request made it to OSS, "
+                    + "but was rejected with an error response for some reason.");
+            System.out.println("Error Message:" + oe.getErrorMessage());
+            System.out.println("Error Code:" + oe.getErrorCode());
+            System.out.println("Request ID:" + oe.getRequestId());
+            System.out.println("Host ID:" + oe.getHostId());
+            return null;
+        } catch (ClientException ce) {
+            System.out.println("Caught an ClientException, which means the client encountered "
+                    + "a serious internal problem while trying to communicate with OSS, "
+                    + "such as not being able to access the network.");
+            System.out.println("Error Message:" + ce.getMessage());
+            return null;
+        }
+    }
+
     public String getTmpUrl(String objectName) {
         String tmpUrl = redisCache.getCacheObject("oss:" + objectName);
         if (tmpUrl != null && !tmpUrl.isEmpty()){
@@ -72,8 +101,10 @@ public class OSSUtil {
         try {
             // 设置预签名URL过期时间，单位为毫秒。设置过期时间为24小时。
             Date expiration = new Date(new Date().getTime() + 60 * 60 * 24 * 1000L);
-            // 生成以GET方法访问的预签名URL。本示例没有额外请求头，其他人可以直接通过浏览器访问相关内容。
-            URL url = ossClient.generatePresignedUrl(BUCKET_NAME, objectName, expiration);
+            // 统一使用 GeneratePresignedUrlRequest，避免 V4 签名下 GET/PUT 生成方式不一致。
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(BUCKET_NAME, objectName, HttpMethod.GET);
+            request.setExpiration(expiration);
+            URL url = ossClient.generatePresignedUrl(request);
             tmpUrl = url.toString();
             redisCache.setCacheObject("oss:" + objectName, tmpUrl, 23, TimeUnit.HOURS);
         } catch (OSSException oe) {

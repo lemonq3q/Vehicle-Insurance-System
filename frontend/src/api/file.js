@@ -1,7 +1,13 @@
 import Message from "@/utils/message";
 import axios from "./config"
+import axiosLib from "axios";
 
 const rootUrl = "/file";
+const ossRequest = axiosLib.create({
+  baseURL: "",
+  timeout: 60000
+});
+
 export function upload(file) {
   const formData = new FormData();
   formData.append('file', file);
@@ -10,6 +16,69 @@ export function upload(file) {
       'Content-Type': 'multipart/form-data'
     }
   });
+}
+
+export function createOssUploadSign(fileMetadata) {
+  return axios.post(`${rootUrl}/oss/sign`, null, {
+    params: {
+      fileName: fileMetadata.fileName,
+      suffix: fileMetadata.suffix,
+      size: fileMetadata.size,
+      contentType: fileMetadata.mimeType
+    }
+  });
+}
+
+export async function uploadToSignedUrl(signedUrl, file, contentType) {
+  return ossRequest.put(signedUrl, file, {
+    headers: {
+      'Content-Type': contentType || 'application/octet-stream'
+    }
+  });
+}
+
+export async function uploadToOss(file) {
+  const metadata = extractFileMetadata(file);
+  let signRes;
+
+  try {
+    signRes = await createOssUploadSign(metadata);
+  } catch (error) {
+    throw new Error('获取上传凭证失败，请重试');
+  }
+
+  const signData = signRes?.data;
+  if (signData?.code !== 200 || !signData?.data?.signedUrl || !signData?.data?.fileInfo) {
+    throw new Error(signData?.msg || '获取上传凭证失败，请重试');
+  }
+
+  try {
+    await uploadToSignedUrl(
+      signData.data.signedUrl,
+      file,
+      signData.data.contentType || metadata.mimeType
+    );
+  } catch (error) {
+    throw new Error('上传到OSS失败，请重试');
+  }
+
+  return {
+    ...signData.data,
+    metadata
+  };
+}
+
+export function extractFileMetadata(file) {
+  const originalName = file?.name || `upload_${Date.now()}`;
+  const dotIndex = originalName.lastIndexOf('.');
+  const suffix = dotIndex >= 0 ? originalName.substring(dotIndex + 1) : '';
+
+  return {
+    fileName: originalName,
+    suffix,
+    size: file?.size || 0,
+    mimeType: file?.type || 'application/octet-stream'
+  };
 }
 
 /**

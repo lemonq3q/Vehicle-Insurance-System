@@ -2077,9 +2077,8 @@ import collapseIcon from '@/assets/icons/collapse.png';
 import { convertDateToSecondTimestamp, formatSecondTimestamp } from '@/utils/time';
 import { selectWorkorderById } from '@/api/workorder';
 import { selectAllInsurance } from '@/api/insurance';
-import { downloadByUrl } from '@/api/file';
+import { downloadByUrl, uploadToOss } from '@/api/file';
 import { validateAmount, validFileSize } from '@/utils/validate';
-import { upload } from '@/api/file';
 import { updateQuotation, updateNoCascade, updateAcceptInsurance } from '@/api/workorder';
 import Message from '@/utils/message';
 import { UploadFilled } from '@element-plus/icons-vue';
@@ -3006,6 +3005,8 @@ const handleSubmit = async (formEl, type) => {
         await waitFileUpload();
       } catch(e) {
         Message.error('文件上传超时，请稍后再试');
+        Loading.close();
+        return;
       }
 
       if (type == 'quotation'){
@@ -3044,20 +3045,70 @@ const handleResetForm = () => {
   buildInfo();
 }
 
+const ensureUploadPreviewUrl = (uploadFile) => {
+  if (uploadFile.url != null && uploadFile.url !== '') {
+    return uploadFile.url;
+  }
+  if (uploadFile.raw) {
+    uploadFile.url = URL.createObjectURL(uploadFile.raw);
+    return uploadFile.url;
+  }
+  return '';
+}
+
+const buildUploadFileItem = (uploadFile, fileInfo) => {
+  return {
+    ...uploadFile,
+    id: fileInfo?.id,
+    name: fileInfo?.fileName || uploadFile.name,
+    url: ensureUploadPreviewUrl(uploadFile)
+  };
+}
+
+const handleSingleFileUpload = async (uploadFile) => {
+  const rawFile = uploadFile?.raw;
+  if (!rawFile) {
+    throw new Error('未获取到待上传文件');
+  }
+  const { fileInfo } = await uploadToOss(rawFile);
+  if (!fileInfo) {
+    throw new Error('上传成功但未返回文件信息');
+  }
+  return {
+    fileInfo,
+    uploadFileItem: buildUploadFileItem(uploadFile, fileInfo)
+  };
+}
+
+const clearSingleUploadState = (listKey, fileIdKey, message) => {
+  fileStore[listKey] = [];
+  workorderFileIds[fileIdKey] = undefined;
+  if (message) {
+    Message.error(message);
+  }
+}
+
+const removeUploadFileByUid = (listKey, uploadFile, message) => {
+  fileStore[listKey] = fileStore[listKey].filter(item => item.uid !== uploadFile.uid);
+  if (message) {
+    Message.error(message);
+  }
+}
+
 const handleQuotationChange = async (uploadFile, uploadFiles) => {
-  fileStore.quotationFile = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  fileStore.quotationFile = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.quotation = true;
-    const rawFile = uploadFile.raw;
-    await upload(rawFile).then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileIds.quotationFile = res.data.id;
-      }
-    });
+    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    workorderFileIds.quotationFile = fileInfo.id;
+    fileStore.quotationFile = [uploadFileItem];
+  }
+  catch(error){
+    clearSingleUploadState('quotationFile', 'quotationFile', error.message || '文件上传失败，请重试');
   }
   finally{
     loadingFlag.quotation = false;
@@ -3066,19 +3117,19 @@ const handleQuotationChange = async (uploadFile, uploadFiles) => {
 }
 
 const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) => {
-  fileStore.acceptInsuranceCommercialFile = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  fileStore.acceptInsuranceCommercialFile = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.commercial = true;
-    const rawFile = uploadFile.raw;
-    await upload(rawFile).then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileIds.acceptInsuranceCommercialFile = res.data.id;
-      }
-    });
+    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    workorderFileIds.acceptInsuranceCommercialFile = fileInfo.id;
+    fileStore.acceptInsuranceCommercialFile = [uploadFileItem];
+  }
+  catch(error){
+    clearSingleUploadState('acceptInsuranceCommercialFile', 'acceptInsuranceCommercialFile', error.message || '文件上传失败，请重试');
   }
   finally{
     loadingFlag.commercial = false;
@@ -3086,19 +3137,19 @@ const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) =>
 }
 
 const handleAcceptInsuranceCompulsoryChange = async (uploadFile, uploadFiles) => {
-  fileStore.acceptInsuranceCompulsoryFile = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  fileStore.acceptInsuranceCompulsoryFile = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.compulsory = true;
-    const rawFile = uploadFile.raw;
-    await upload(rawFile).then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileIds.acceptInsuranceCompulsoryFile = res.data.id;
-      }
-    });
+    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    workorderFileIds.acceptInsuranceCompulsoryFile = fileInfo.id;
+    fileStore.acceptInsuranceCompulsoryFile = [uploadFileItem];
+  }
+  catch(error){
+    clearSingleUploadState('acceptInsuranceCompulsoryFile', 'acceptInsuranceCompulsoryFile', error.message || '文件上传失败，请重试');
   }
   finally{
     loadingFlag.compulsory = false;
@@ -3107,20 +3158,23 @@ const handleAcceptInsuranceCompulsoryChange = async (uploadFile, uploadFiles) =>
 
 const handleAcceptInsuranceOtherChange = async (uploadFile, uploadFiles) => {
   let oriLength = uploadFiles.length;
-  fileStore.acceptInsuranceOtherFile = validFileSize(uploadFiles);
-  if (uploadFiles.length != oriLength){
+  const validFiles = validFileSize(uploadFiles);
+  fileStore.acceptInsuranceOtherFile = validFiles;
+  if (validFiles.length != oriLength){
     return;
   }
   try{
     loadingFlag.other++;
-    const rawFile = uploadFile.raw;
-    await upload(rawFile).then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileIds.acceptInsuranceOtherFile.push(res.data.id);
-        uploadFile.id = res.data.id;
-      }
-    });
+    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    workorderFileIds.acceptInsuranceOtherFile.push(fileInfo.id);
+    const fileIndex = fileStore.acceptInsuranceOtherFile.findIndex(item => item.uid === uploadFile.uid);
+    if (fileIndex >= 0) {
+      fileStore.acceptInsuranceOtherFile.splice(fileIndex, 1, uploadFileItem);
+    }
+    uploadFile.id = fileInfo.id;
+  }
+  catch(error){
+    removeUploadFileByUid('acceptInsuranceOtherFile', uploadFile, error.message || '文件上传失败，请重试');
   }
   finally{
     loadingFlag.other--;
