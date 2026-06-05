@@ -61,6 +61,8 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler);
         // 允许跨域
         http.cors();
+//        // 显式关闭跨域支持
+//        http.cors().disable();
         return http.build();
     }
 }

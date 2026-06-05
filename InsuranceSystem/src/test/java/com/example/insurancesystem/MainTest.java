@@ -1,5 +1,6 @@
 package com.example.insurancesystem;
 
+import com.example.insurancesystem.domain.IdCard;
 import com.example.insurancesystem.domain.PageTest;
 import com.example.insurancesystem.domain.merchant.Merchant;
 import com.example.insurancesystem.domain.merchant.MerchantArea;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static com.example.insurancesystem.utils.AreaConverterUtil.fuzzySearchCode;
 
@@ -39,6 +41,25 @@ public class MainTest {
 
     @Autowired
     private OCRUtil ocrUtil;
+
+
+    @Test
+    public void testAllText(){
+        String url = "https://lemonqwq.oss-cn-hangzhou.aliyuncs.com/%" +
+                "E8%A1%8C%E9%A9%B6%E8%AF%81%E6%AD%A3%E9%9D%A2.pn" +
+                "g?Expires=1779550090&OSSAccessKeyId=TMP.3Ky7Etar" +
+                "CVQKZdZNhhRKA6ACVpTVim1MJ6aWE8eRSbRLGuDnSQuTKkjPh" +
+                "4Uma9Vpvh6cAXAFMfXT61GtEfigccTGPqyufy&Signature=W" +
+                "VrDZ%2BVfw50ceeV7Ic1EVMfpIsc%3D";
+        String type = "VehicleLicense";
+        String result = ocrUtil.recognizeAllText(url, type);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testPasswordEncoder() {
+        System.out.println(passwordEncoder.encode("123456"));
+    }
 
     @Test
     public void testBCryptPasswordEncoder() {

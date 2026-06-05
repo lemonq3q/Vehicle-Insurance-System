@@ -1,5 +1,6 @@
 package com.example.insurancesystem.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,5 +28,15 @@ public class JsonUtil {
         }
 
         return resultMap;
+    }
+
+    public String parseObjectToJson(Object object){
+        try {
+            // return objectMapper.writeValueAsString(object);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

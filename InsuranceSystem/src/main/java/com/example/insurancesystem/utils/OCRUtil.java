@@ -9,9 +9,12 @@ import com.example.insurancesystem.domain.IdCard;
 import com.example.insurancesystem.domain.workorder.VehicleCertificate;
 import com.example.insurancesystem.domain.workorder.VehicleInvoice;
 import com.example.insurancesystem.domain.workorder.VehicleLicense;
+import com.example.insurancesystem.handler.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -277,5 +280,55 @@ public class OCRUtil {
         }
         return vehicleInvoice;
     }
+
+    /**
+     *
+     * @param url
+     * @param type IdCard BusinessLicense CarInvoice VehicleCertification VehicleLicense
+     * @return
+     */
+
+    private static final List<String> typeList = Arrays.asList("IdCard", "BusinessLicense", "CarInvoice", "VehicleCertification", "VehicleLicense");
+
+    public String recognizeAllText(String url, String type){
+
+        if(!typeList.contains(type)){
+            System.out.println("输入的类型不在支持范围内");
+            return null;
+        }
+
+        try {
+            Client client = createClient();
+            RecognizeAllTextRequest request = new RecognizeAllTextRequest();
+            request.setUrl(url);
+            request.setType(type);
+            RuntimeOptions runtime = new com.aliyun.teautil.models.RuntimeOptions();
+            RecognizeAllTextResponse resp = client.recognizeAllTextWithOptions(request, runtime);
+
+            if (resp != null && resp.getBody() != null && resp.getBody().getData() != null){
+                String resultJson = jsonUtil.parseObjectToJson(resp.getBody().getData());
+                return resultJson;
+            }
+
+            return null;
+
+        } catch (TeaException error) {
+            // 此处仅做打印展示，请谨慎对待异常处理，在工程项目中切勿直接忽略异常。
+            // 错误 message
+            System.out.println(error.getMessage());
+            // 诊断地址
+            System.out.println(error.getData().get("Recommend"));
+            return null;
+        } catch (Exception _error) {
+            TeaException error = new TeaException(_error.getMessage(), _error);
+            // 此处仅做打印展示，请谨慎对待异常处理，在工程项目中切勿直接忽略异常。
+            // 错误 message
+            System.out.println(error.getMessage());
+            // 诊断地址
+            System.out.println(error.getData().get("Recommend"));
+            return null;
+        }
+    }
+
 
 }

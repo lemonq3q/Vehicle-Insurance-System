@@ -1,7 +1,7 @@
 <template>
   <div class="header">
     <!-- 操作按钮 -->
-    <h3>保险工单管理系统</h3>
+    <h3 style="min-width: 160px; text-align: left;">保险工单管理系统</h3>
     <div class="header_right">
       <div class="header_notice_wrapper">
         <SystemNotice />

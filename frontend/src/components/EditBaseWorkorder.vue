@@ -1694,20 +1694,62 @@ const handleReset = () => {
   buildInfo();
 }
 
+const clearUploadState = (type) => {
+  const fileIdMap = {
+    idCardFront: 'idCardFrontId',
+    idCardBack: 'idCardBackId',
+    licenseFront: 'licenseFrontId',
+    licenseBack: 'licenseBackId',
+    certificate: 'certificateId',
+    invoice: 'invoiceId',
+    businessLicense: 'businessLicenseId'
+  };
+  file[type] = [];
+  const fileIdKey = fileIdMap[type];
+  if (fileIdKey) {
+    workorderFileId[fileIdKey] = undefined;
+  }
+}
+
+const handleUploadFail = (type, message = '图片上传失败，请重新上传') => {
+  clearUploadState(type);
+  if (type == 'idCardBack'){
+    showFlag.idCardRecognition = false;
+  }
+  if (type == 'licenseFront' || type == 'licenseBack'){
+    showFlag.licenseRecognition = false;
+  }
+  if (type == 'certificate'){
+    showFlag.certificateRecognition = false;
+  }
+  if (type == 'invoice'){
+    showFlag.invoiceRecognition = false;
+  }
+  if (type == 'businessLicense'){
+    showFlag.businessLicenseRecognition = false;
+  }
+  Message.error(message);
+}
+
 const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
-  file.idCardFront = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.idCardFront = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.idCardFront = true;
     const rawFile = uploadFile.raw;
-    await upload(rawFile).then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.idCardFrontId = res.data.id;
-      }
-    });
+    const response = await upload(rawFile);
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.idCardFrontId = res.data.id;
+      return;
+    }
+    handleUploadFail('idCardFront', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('idCardFront');
   }
   finally{
     loadingFlag.idCardFront = false;
@@ -1715,23 +1757,27 @@ const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
 }
 
 const handleIdCardBackChange = async (uploadFile, uploadFiles) => {
-  file.idCardBack = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.idCardBack = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.idCardBack = true;
     const rawFile = uploadFile.raw;
-    await imgRecognition(rawFile, "idCard").then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.idCardBackId = res.data.fileInfo.id;
-        buildIdCardInfo(res.data.recognitionData);
-      }
-    });
+    const response = await imgRecognition(rawFile, "idCard");
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.idCardBackId = res.data.fileInfo.id;
+      buildIdCardInfo(res.data.recognitionData);
+      return;
+    }
+    handleUploadFail('idCardBack', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('idCardBack');
   }
   finally{
-    showFlag.idCardRecognition = true;
     loadingFlag.idCardBack = false;
   }
 }
@@ -1743,45 +1789,53 @@ const buildIdCardInfo = (data) => {
 }
 
 const handleLicenseFrontChange = async (uploadFile, uploadFiles) => {
-  file.licenseFront = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.licenseFront = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.licenseFront = true;
     const rawFile = uploadFile.raw;
-    await imgRecognition(rawFile, "vehicleLicense").then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.licenseFrontId = res.data.fileInfo.id;
-        buildLicenseInfo(res.data.recognitionData);
-      }
-    });
+    const response = await imgRecognition(rawFile, "vehicleLicense");
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.licenseFrontId = res.data.fileInfo.id;
+      buildLicenseInfo(res.data.recognitionData);
+      return;
+    }
+    handleUploadFail('licenseFront', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('licenseFront');
   }
   finally{
-    showFlag.licenseRecognition = true;
     loadingFlag.licenseFront = false;
   }
 }
 
 const handleLicenseBackChange = async (uploadFile, uploadFiles) => {
-  file.licenseBack = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.licenseBack = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.licenseBack = true;
     const rawFile = uploadFile.raw;
-    await imgRecognition(rawFile, "vehicleLicense").then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.licenseBackId = res.data.fileInfo.id;
-        buildLicenseInfo(res.data.recognitionData);
-      }
-    });
+    const response = await imgRecognition(rawFile, "vehicleLicense");
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.licenseBackId = res.data.fileInfo.id;
+      buildLicenseInfo(res.data.recognitionData);
+      return;
+    }
+    handleUploadFail('licenseBack', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('licenseBack');
   }
   finally{
-    showFlag.licenseRecognition = true;
     loadingFlag.licenseBack = false;
   }
 }
@@ -1803,23 +1857,27 @@ const buildLicenseInfo = (data) => {
 }
 
 const handleCertificateChange = async (uploadFile, uploadFiles) => {
-  file.certificate = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.certificate = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.certificate = true;
     const rawFile = uploadFile.raw;
-    await imgRecognition(rawFile, "vehicleCertificate").then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.certificateId = res.data.fileInfo.id;
-        buildCertificateInfo(res.data.recognitionData);
-      }
-    });
+    const response = await imgRecognition(rawFile, "vehicleCertificate");
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.certificateId = res.data.fileInfo.id;
+      buildCertificateInfo(res.data.recognitionData);
+      return;
+    }
+    handleUploadFail('certificate', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('certificate');
   }
   finally{
-    showFlag.certificateRecognition = true;
     loadingFlag.certificate = false;
   }
 }
@@ -1830,23 +1888,27 @@ const buildCertificateInfo = (data) => {
 }
 
 const handleInvoiceChange = async (uploadFile, uploadFiles) => {
-  file.invoice = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.invoice = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.invoice = true;
     const rawFile = uploadFile.raw;
-    await imgRecognition(rawFile, "vehicleInvoice").then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.invoiceId = res.data.fileInfo.id;
-        buildInvoiceInfo(res.data.recognitionData);
-      }
-    });
+    const response = await imgRecognition(rawFile, "vehicleInvoice");
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.invoiceId = res.data.fileInfo.id;
+      buildInvoiceInfo(res.data.recognitionData);
+      return;
+    }
+    handleUploadFail('invoice', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('invoice');
   }
   finally{
-    showFlag.invoiceRecognition = true;
     loadingFlag.invoice = false;
   }
 }
@@ -1857,23 +1919,27 @@ const buildInvoiceInfo = (data) => {
 }
 
 const handleBusinessLicenseChange = async (uploadFile, uploadFiles) => {
-  file.businessLicense = validFileSize(uploadFiles);
-  if (uploadFiles.length == 0){
+  const validFiles = validFileSize(uploadFiles);
+  file.businessLicense = validFiles;
+  if (validFiles.length == 0){
     return;
   }
   try{
     loadingFlag.businessLicense = true;
     const rawFile = uploadFile.raw;
-    await imgRecognition(rawFile, "businessLicense").then(res=>{
-      res = res.data;
-      if (res.code == 200){
-        workorderFileId.businessLicenseId = res.data.fileInfo.id;
-        buildBusinessLicenseInfo(res.data.recognitionData);
-      }
-    });
+    const response = await imgRecognition(rawFile, "businessLicense");
+    const res = response.data;
+    if (res.code == 200){
+      workorderFileId.businessLicenseId = res.data.fileInfo.id;
+      buildBusinessLicenseInfo(res.data.recognitionData);
+      return;
+    }
+    handleUploadFail('businessLicense', res.msg || '图片上传失败，请重新上传');
+  }
+  catch{
+    handleUploadFail('businessLicense');
   }
   finally{
-    showFlag.businessLicenseRecognition = true;
     loadingFlag.businessLicense = false;
   }
 }

@@ -61,7 +61,7 @@ public class WorkorderServiceImpl implements WorkorderService {
 
     private static final Long  EXPIRATION_TIME = 365L;
 
-    private static final Long REMIND_TIME = 3000L;
+    private static final Long REMIND_TIME = 30L;
 
     @Override
     public ResponseResult select(WorkorderSearchDTO params) {

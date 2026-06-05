@@ -227,7 +227,7 @@ export function validateAmount(rule, value) {
   });
 }
 
-export function validFileSize(uploadFiles, maxSize = 10 * 1024 * 1024){
+export function validFileSize(uploadFiles, maxSize = 20 * 1024 * 1024){
   const validFiles = []; 
   let hasInvalidFile = false; 
   for (const item of uploadFiles) {
