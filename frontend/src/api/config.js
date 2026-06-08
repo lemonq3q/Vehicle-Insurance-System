@@ -4,6 +4,7 @@ import router from '@/router';
 import Storage from '@/utils/storage';
 
 export const EXCEL_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const REFRESHED_TOKEN_HEADER = 'new-token';
 
 const notInterceptUrls = [
   '/auth/login',
@@ -12,8 +13,8 @@ const notInterceptUrls = [
   '/auth/forget'
 ];
 
-axios.defaults.baseURL = 'http://localhost:8080';
-// axios.defaults.baseURL = 'http://47.100.210.159:8080';
+// axios.defaults.baseURL = 'http://localhost:8080';
+axios.defaults.baseURL = 'http://47.100.210.159:8080';
 // axios.defaults.baseURL = 'https://47.97.126.52:443/api';
 // axios.defaults.withCredentials = true;
 axios.defaults.timeout = 60000; // 全局60秒超时
@@ -44,6 +45,11 @@ axios.interceptors.response.use(function (response) {
   const isIgnoreUrl = notInterceptUrls.some(item => response.config.url.includes(item));
   if (isIgnoreUrl) {
     return response;
+  }
+
+  const refreshedToken = response.headers[REFRESHED_TOKEN_HEADER];
+  if (refreshedToken) {
+    Storage.set('token', refreshedToken, 60 * 60 * 24);
   }
 
   const isExcelResponse = 

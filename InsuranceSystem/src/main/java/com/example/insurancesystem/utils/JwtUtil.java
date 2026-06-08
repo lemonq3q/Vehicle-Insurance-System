@@ -15,6 +15,11 @@ public class JwtUtil {
 
     public static final Long JWT_TTL = 60 * 60 * 1000L;
 
+    public static final Long LOGIN_JWT_TTL = 7 * 24 * 60 * 60 * 1000L;
+
+    // 阈值比token逻辑过期时间长一些，避免token逻辑上没过期但是实际jwt已经过期的情况
+    public static final Long JWT_REFRESH_THRESHOLD = 25 * 60 * 60 * 1000L;
+
     public static final String JWT_KEY = "lmy";
 
     public static String getUUID(){

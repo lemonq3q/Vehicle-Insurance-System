@@ -1,6 +1,5 @@
 package com.example.insurancesystem.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -17,6 +16,8 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedMethods("*")
                 // 设置允许的header属性
                 .allowedHeaders("*")
+                // 暴露续签后的token响应头，便于前端自动替换
+                .exposedHeaders("new-token")
                 // 跨域允许时间
                 .maxAge(3600);
     }

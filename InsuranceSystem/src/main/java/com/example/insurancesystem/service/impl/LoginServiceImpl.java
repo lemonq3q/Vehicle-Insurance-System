@@ -45,7 +45,7 @@ public class LoginServiceImpl implements LoginService {
         // 用jti来作为会话级标识
         String jti = JwtUtil.getUUID();
         // jwt有效时间设为一周
-        String jwt = JwtUtil.createJWT(userid, 7 * 24 * 60 * 60 * 1000L, jti);
+        String jwt = JwtUtil.createJWT(userid, JwtUtil.LOGIN_JWT_TTL, jti);
         loginUser.setSessionId(jti);
         UserDTO userDTO = new UserDTO(loginUser.getUser().getId(), loginUser.getUser().getUsername(), loginUser.getUser().getName(), loginUser.getPermissions());
         Map<String, Object> map = new HashMap<>();
