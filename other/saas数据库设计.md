@@ -173,11 +173,11 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 4. `tenant_member.joined_by_invite_id` 记录来源邀请码。
 5. `tenant_invite_code.used_count + 1`。
 
-### 3.3 套餐、订单与订阅
+### 3.3 套餐、企业余额、订单与订阅
 
 #### saas_plan 套餐表
 
-后台系统维护。
+后台系统维护。套餐只配置客户可理解的商业指标，例如人数、时长和价格；OCR 次数、请求次数等细粒度技术指标只进入后台监控，不作为套餐展示项。
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
@@ -188,8 +188,6 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 | billing_period | varchar(20) | MONTH, YEAR, DAY |
 | duration_days | int | 有效天数 |
 | user_limit | int | 最大成员数 |
-| ocr_quota | int | OCR 次数额度，null 表示不限 |
-| request_quota | int | 请求次数额度，null 表示不限 |
 | price | decimal(12,2) | 售价 |
 | original_price | decimal(12,2) | 原价 |
 | status | tinyint | 1 上架，0 下架 |
@@ -206,24 +204,100 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 | uk_saas_plan_code | code | 套餐编码唯一 |
 | idx_saas_plan_status | status,sort_no | 前台套餐列表 |
 
+#### saas_wallet 企业钱包表
+
+企业余额绑定企业，不绑定个人用户。原因是套餐、订阅、成员人数和业务使用权都属于企业级资源；企业拥有者转让后，余额也应继续属于该企业。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | 钱包 ID |
+| enterprise_id | bigint | 企业 ID |
+| balance_amount | decimal(12,2) | 可用余额 |
+| frozen_amount | decimal(12,2) | 冻结金额，预留 |
+| currency | varchar(10) | 币种，默认 CNY |
+| status | tinyint | 1 正常，0 冻结 |
+| created_at | datetime | 创建时间 |
+| updated_at | datetime | 更新时间 |
+| updated_by | bigint | 更新人 |
+| deleted | tinyint | 软删除 |
+
+#### saas_recharge_order 充值订单表
+
+用户向企业钱包充值时创建充值订单。充值订单表示“外部支付换余额”，套餐订单表示“企业余额购买服务”，两者不要混用。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | 充值订单 ID |
+| recharge_no | varchar(64) | 充值订单号 |
+| enterprise_id | bigint | 企业 ID |
+| user_id | bigint | 充值操作人 |
+| amount | decimal(12,2) | 充值金额 |
+| pay_channel | varchar(32) | 支付渠道 |
+| pay_trade_no | varchar(100) | 第三方交易号 |
+| status | tinyint | 1 待支付，2 已支付，3 已取消，4 支付失败 |
+| paid_at | datetime | 支付时间 |
+| created_at | datetime | 创建时间 |
+| updated_at | datetime | 更新时间 |
+| deleted | tinyint | 软删除 |
+
+充值成功后必须在同一事务中：
+
+1. 更新 `saas_recharge_order.status = 2`。
+2. 增加 `saas_wallet.balance_amount`。
+3. 写入一条 `saas_wallet_transaction` 入账流水。
+
+#### saas_wallet_transaction 企业钱包流水表
+
+流水表记录企业余额每一次变化，只追加，不修改，不软删除。充值、购买套餐、手动续费、自动续费、套餐变更补差价、套餐变更退差价都必须写流水。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | 流水 ID |
+| enterprise_id | bigint | 企业 ID |
+| wallet_id | bigint | 钱包 ID |
+| user_id | bigint | 操作用户；自动续费可为空 |
+| transaction_no | varchar(64) | 流水号 |
+| direction | varchar(10) | IN 增加，OUT 减少 |
+| transaction_type | varchar(32) | RECHARGE, BUY_PLAN, RENEW_PLAN, AUTO_RENEW, CHANGE_PLAN, REFUND, ADJUST |
+| amount | decimal(12,2) | 本次变动金额，始终为正数 |
+| balance_before | decimal(12,2) | 变动前余额 |
+| balance_after | decimal(12,2) | 变动后余额 |
+| related_order_id | bigint | 关联套餐订单 |
+| related_recharge_order_id | bigint | 关联充值订单 |
+| related_subscription_id | bigint | 关联订阅 |
+| remark | varchar(500) | 说明 |
+| created_at | datetime | 创建时间 |
+
 #### saas_order 套餐订单表
 
-企业拥有者购买套餐时创建订单。
+企业购买订阅、续费订阅、自动续费、变更套餐都必须创建套餐订单。订单是业务动作凭证，余额流水是资金变化凭证，两者通过 `wallet_transaction_id` 关联。
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | id | bigint PK | 订单 ID |
 | order_no | varchar(64) | 订单号 |
+| order_type | varchar(32) | BUY, RENEW, AUTO_RENEW, CHANGE_PLAN |
 | enterprise_id | bigint | 企业 ID |
 | buyer_user_id | bigint | 购买人，必须是当前拥有者 |
 | plan_id | bigint | 套餐 ID |
 | plan_snapshot_json | json | 下单时套餐快照 |
 | buy_user_limit | int | 购买人数 |
 | buy_duration_days | int | 购买时长 |
-| amount | decimal(12,2) | 应付金额 |
+| pay_type | varchar(32) | BALANCE, ONLINE |
+| amount | decimal(12,2) | 应付金额，保留兼容字段 |
+| price_amount | decimal(12,2) | 原始套餐金额 |
+| discount_amount | decimal(12,2) | 折扣金额 |
+| credit_amount | decimal(12,2) | 原套餐剩余价值抵扣 |
+| payable_amount | decimal(12,2) | 最终应付金额 |
+| refund_amount | decimal(12,2) | 应退回企业余额金额 |
 | paid_amount | decimal(12,2) | 实付金额 |
 | pay_channel | varchar(32) | 支付渠道 |
 | pay_trade_no | varchar(100) | 第三方交易号 |
+| wallet_transaction_id | bigint | 关联扣款或退款流水 |
+| original_subscription_id | bigint | 变更套餐时关联原订阅 |
+| old_plan_id | bigint | 变更前套餐 |
+| new_plan_id | bigint | 变更后套餐 |
+| auto_renew | tinyint | 是否自动续费订单 |
 | status | tinyint | 1 待支付，2 已支付，3 已取消，4 已退款，5 已关闭 |
 | paid_at | datetime | 支付时间 |
 | created_at | datetime | 创建时间 |
@@ -240,7 +314,7 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 
 #### saas_subscription 企业订阅表
 
-支付成功后创建或续期订阅。
+订单支付成功后创建、续期或变更订阅。订阅只保留当前套餐、人数、有效期和自动续费配置；订阅变化历史通过每次创建的 `saas_order` 和 `saas_wallet_transaction` 追溯，不再单独建表记录。
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
@@ -250,10 +324,13 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 | order_id | bigint | 来源订单 |
 | status | tinyint | 1 生效中，2 已过期，3 已暂停，4 已取消 |
 | user_limit | int | 当前人数上限 |
-| ocr_quota | int | 当前周期 OCR 额度 |
-| request_quota | int | 当前周期请求额度 |
 | start_at | datetime | 生效时间 |
 | end_at | datetime | 到期时间 |
+| auto_renew_enabled | tinyint | 是否开启自动续费 |
+| auto_renew_plan_id | bigint | 自动续费用套餐，默认当前套餐 |
+| next_renew_at | datetime | 下次自动续费时间 |
+| last_renew_order_id | bigint | 最近一次续费订单 |
+| cancel_auto_renew_at | datetime | 取消自动续费时间 |
 | created_at | datetime | 创建时间 |
 | updated_at | datetime | 更新时间 |
 
@@ -263,19 +340,22 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 | --- | --- | --- |
 | idx_sub_enterprise_status | enterprise_id,status,end_at | 鉴权和到期校验 |
 
-#### saas_subscription_change_log 订阅变更记录
+套餐变更计算规则：
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| id | bigint PK | 记录 ID |
-| enterprise_id | bigint | 企业 ID |
-| subscription_id | bigint | 订阅 ID |
-| order_id | bigint | 订单 ID |
-| change_type | varchar(32) | CREATE, RENEW, UPGRADE, DOWNGRADE, EXPIRE, CANCEL |
-| before_json | json | 变更前 |
-| after_json | json | 变更后 |
-| changed_at | datetime | 变更时间 |
-| changed_by | bigint | 操作人 |
+1. 变更立即生效，订阅 `end_at` 默认不变。
+2. 原套餐剩余价值 = 原套餐价格 * 剩余天数 / 原套餐周期天数。
+3. 新套餐剩余期间价值 = 新套餐价格 * 剩余天数 / 新套餐周期天数。
+4. 差额 = 新套餐剩余期间价值 - 原套餐剩余价值。
+5. 差额大于 0 时，从企业钱包扣款并写 `CHANGE_PLAN` 出账流水。
+6. 差额小于 0 时，退回企业钱包并写 `CHANGE_PLAN` 入账流水。
+7. 降级后若当前成员数超过新套餐人数上限，则不允许变更，需先减少成员或选择更高套餐。
+
+自动续费规则：
+
+1. 企业拥有者可开启或关闭自动续费。
+2. 到达 `next_renew_at` 时，系统创建 `order_type=AUTO_RENEW` 的套餐订单。
+3. 企业钱包余额充足则自动扣款、写流水、延长订阅。
+4. 企业钱包余额不足则订单保持待支付或失败状态，订阅到期后企业进入欠费限制。
 
 ### 3.4 后台系统与平台权限
 
@@ -454,7 +534,7 @@ Redis key 设计：
 2. 使用 `INSERT ... ON DUPLICATE KEY UPDATE count_value = VALUES(count_value)` 写入日表。
 3. 同步累加或重算月表。
 4. 归档成功后保留 Redis key 2 到 7 天再删除，便于重跑。
-5. 订阅额度校验可优先读取 Redis 当日/月实时计数，再叠加 MySQL 历史归档数据。
+5. 用量数据只作为后台监控和运营分析，不作为套餐中展示给客户的额度指标。
 
 ## 4. 非 SaaS 功能表设计
 
@@ -802,10 +882,12 @@ Redis key 设计：
 
 | 表 | 用途 |
 | --- | --- |
-| saas_plan | 增删改查套餐、价格、人数、时长、额度 |
+| saas_plan | 增删改查套餐、价格、人数、时长、上架状态 |
 | saas_order | 查看套餐订单 |
+| saas_recharge_order | 查看充值订单 |
+| saas_wallet | 查看企业钱包余额 |
+| saas_wallet_transaction | 查看企业余额流水 |
 | saas_subscription | 查看企业当前订阅 |
-| saas_subscription_change_log | 查看订阅变更历史 |
 
 ### 5.2 企业监控
 
@@ -837,7 +919,7 @@ Redis key 设计：
 
 ### 6.1 第一阶段：补 SaaS 外壳
 
-1. 新增 `tenant_user`、`platform_user`、`platform_user_role`、`tenant_enterprise`、`tenant_member`、`tenant_invite_code`、`saas_plan`、`saas_order`、`saas_subscription`。
+1. 新增 `tenant_user`、`platform_user`、`platform_user_role`、`tenant_enterprise`、`tenant_member`、`tenant_invite_code`、`saas_plan`、`saas_wallet`、`saas_recharge_order`、`saas_wallet_transaction`、`saas_order`、`saas_subscription`。
 2. 迁移现有企业客户账号到 `tenant_user`，后台开发者、客服、运营账号单独初始化到 `platform_user`。
 3. 创建一个默认企业，将现有用户挂到 `tenant_member`。
 4. 现有 `merchant` 暂不拆，只给 `workorder`、`merchant`、`system_file` 等核心表增加 `enterprise_id`。
@@ -873,7 +955,7 @@ SaaS 功能：
 | 门户账号 | tenant_user |
 | 企业租户 | tenant_enterprise, tenant_member, tenant_owner_transfer_log |
 | 邀请码 | tenant_invite_code |
-| 套餐订单 | saas_plan, saas_order, saas_subscription, saas_subscription_change_log |
+| 套餐订单与余额 | saas_plan, saas_wallet, saas_recharge_order, saas_wallet_transaction, saas_order, saas_subscription |
 | 后台平台账号 | platform_user, platform_user_role |
 | 后台权限 | auth_role, auth_permission, auth_role_permission |
 | 用量统计 | saas_usage_daily, saas_usage_monthly, saas_usage_archive_job |
