@@ -9,6 +9,7 @@ import com.example.insurancesystem.mapper.MerchantAreaMapper;
 import com.example.insurancesystem.mapper.MerchantMapper;
 import com.example.insurancesystem.service.UpstreamService;
 import com.example.insurancesystem.utils.SystemCommonUtil;
+import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -128,15 +129,16 @@ public class UpstreamServiceImpl implements UpstreamService {
 
     @Override
     public ResponseResult insert(UpstreamDTO params) {
-        String code = SystemCommonUtil.buildCode();
         Long userId = SystemCommonUtil.getNowUserId();
 
         Merchant upstream = new Merchant(params);
         upstream.setEnterpriseId(1L);
         upstream.setCategoryId(upstreamMapper.selectCategoryIdByCode(MerchantCategoryCode.INSURANCE_ORG));
         upstream.setUpdateBy(userId);
-        upstream.setCode(code);
-        int x = upstreamMapper.insert(upstream);
+        int x = UniqueCodeRetryUtil.insertWithGeneratedCode(
+                UniqueCodeRetryUtil.MERCHANT_CODE_CONSTRAINT,
+                upstream::setCode,
+                () -> upstreamMapper.insert(upstream));
 
         if (params.getBusinessArea() != null && !params.getBusinessArea().isEmpty()) {
             List<MerchantArea> upstreamAreas = params.getBusinessArea().stream()

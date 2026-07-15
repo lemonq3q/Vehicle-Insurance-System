@@ -15,6 +15,7 @@ import com.example.insurancesystem.mapper.UserRoleMapper;
 import com.example.insurancesystem.service.DownstreamService;
 import com.example.insurancesystem.service.MerchantStaffService;
 import com.example.insurancesystem.utils.SystemCommonUtil;
+import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -86,15 +87,16 @@ public class DownstreamServiceImp implements DownstreamService {
     @Override
     @Transactional
     public ResponseResult insert(DownstreamDTO params) {
-        String code = SystemCommonUtil.buildCode();
         Long userId = SystemCommonUtil.getNowUserId();
 
         Merchant downstream = new Merchant(params);
         downstream.setEnterpriseId(1L);
         downstream.setCategoryId(resolveCategoryId(params.getType()));
         downstream.setUpdateBy(userId);
-        downstream.setCode(code);
-        int x = merchantMapper.insert(downstream);
+        int x = UniqueCodeRetryUtil.insertWithGeneratedCode(
+                UniqueCodeRetryUtil.MERCHANT_CODE_CONSTRAINT,
+                downstream::setCode,
+                () -> merchantMapper.insert(downstream));
 
         if (params.getBusinessArea() != null && !params.getBusinessArea().isEmpty()) {
             List<MerchantArea> downstreamAreas = params.getBusinessArea().stream()

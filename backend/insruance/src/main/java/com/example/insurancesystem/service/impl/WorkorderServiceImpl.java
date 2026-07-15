@@ -14,6 +14,7 @@ import com.example.insurancesystem.service.InsuranceService;
 import com.example.insurancesystem.service.WorkorderService;
 import com.example.insurancesystem.utils.OSSUtil;
 import com.example.insurancesystem.utils.SystemCommonUtil;
+import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.github.pagehelper.PageHelper;
 import org.apache.commons.collections4.map.HashedMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -172,7 +173,6 @@ public class WorkorderServiceImpl implements WorkorderService {
         if (workorder.getUpstreamComputeType() == null) workorder.setUpstreamComputeType(0);
         if (workorder.getDownstreamComputeType() == null) workorder.setDownstreamComputeType(0);
         workorder.setCreateBy(nowUserId);
-        workorder.setCode(SystemCommonUtil.buildCode());
 
         // 自动添加商户信息
         Long createMerchantId = workorder.getCreateMerchantId();
@@ -205,7 +205,10 @@ public class WorkorderServiceImpl implements WorkorderService {
         workorder.setUpdateBy(nowUserId);
         workorder.setHandleBy(nowUserId);
         workorder.setStatus(2);  // 自动接单，进入待报价阶段
-        int x = workorderMapper.insert(workorder);
+        int x = UniqueCodeRetryUtil.insertWithGeneratedCode(
+                UniqueCodeRetryUtil.WORKORDER_CODE_CONSTRAINT,
+                workorder::setCode,
+                () -> workorderMapper.insert(workorder));
         saveAggregate(workorder);
 
         List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();

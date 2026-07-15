@@ -49,7 +49,7 @@ SELECT m.id,1,CASE WHEN m.code_count>1 THEN CONCAT(LEFT(m.code,88),'_',m.id) ELS
        CASE WHEN c.direction='UPSTREAM' THEN m.phone END,
        m.bank,m.bank_card_num,m.channel,m.phone,m.default_area_code,
        FROM_UNIXTIME(m.create_time),FROM_UNIXTIME(m.update_time),m.update_by,m.is_delete
-FROM (SELECT source.*,COUNT(*) OVER(PARTITION BY code,is_delete) code_count FROM insurance.merchant source) m
+FROM (SELECT source.*,COUNT(*) OVER(PARTITION BY code) code_count FROM insurance.merchant source) m
 JOIN biz_merchant_category c ON c.code=CASE
   WHEN m.type IN ('机构','保司') THEN 'INSURANCE_ORG'
   WHEN m.type='汽修厂' THEN 'AUTO_REPAIR'

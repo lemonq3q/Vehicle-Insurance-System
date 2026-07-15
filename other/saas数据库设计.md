@@ -608,7 +608,7 @@ Redis key 设计：
 
 | 名称 | 字段 | 说明 |
 | --- | --- | --- |
-| uk_biz_merchant_code | enterprise_id,code,deleted | 企业内商户编码唯一 |
+| uk_biz_merchant_enterprise_code | enterprise_id,code | 企业内商户编码永久唯一，软删除后也不复用 |
 | idx_biz_merchant_category | enterprise_id,category_id,deleted | 按分类查询商户 |
 | idx_biz_merchant_name | enterprise_id,name | 模糊查询可后续换全文索引 |
 
@@ -703,7 +703,7 @@ Redis key 设计：
 | --- | --- | --- |
 | id | bigint PK | 工单 ID |
 | enterprise_id | bigint | 企业 ID |
-| code | varchar(100) | 工单编号 |
+| code | varchar(100) NOT NULL | 工单编号 |
 | type | tinyint | 0 旧车，1 新车 |
 | owner_type | tinyint | 0 个人，1 组织 |
 | owner_name | varchar(100) | 车主姓名 |
@@ -731,7 +731,7 @@ Redis key 设计：
 
 | 名称 | 字段 | 说明 |
 | --- | --- | --- |
-| uk_workorder_code | enterprise_id,code,deleted | 企业内工单号唯一 |
+| uk_biz_workorder_enterprise_code | enterprise_id,code | 企业内工单号永久唯一，软删除后也不复用 |
 | idx_workorder_status | enterprise_id,status,created_at | 工单列表 |
 | idx_workorder_create_merchant | enterprise_id,create_merchant_id,created_at | 下游商户工单 |
 | idx_workorder_source_staff | enterprise_id,source_staff_id,created_at | 商户人员来源工单 |

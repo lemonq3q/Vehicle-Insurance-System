@@ -40,7 +40,7 @@ ALTER TABLE `biz_merchant`
   DROP COLUMN `org_type`,
   DROP COLUMN `contact`,
   DROP COLUMN `phone`,
-  ADD UNIQUE KEY `uk_biz_merchant_code` (`enterprise_id`,`code`,`deleted`),
+  ADD UNIQUE KEY `uk_biz_merchant_enterprise_code` (`enterprise_id`,`code`),
   ADD KEY `idx_biz_merchant_category` (`enterprise_id`,`category_id`,`deleted`),
   ADD KEY `idx_biz_merchant_name` (`enterprise_id`,`name`);
 
