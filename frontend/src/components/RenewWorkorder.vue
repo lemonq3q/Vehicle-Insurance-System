@@ -135,12 +135,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="followUpRes" label="续保备注" min-width="140"/>
-        <el-table-column label="操作" min-width="240">
+        <el-table-column label="操作" min-width="330">
           <template #default="scope">
             <div class="table_button_container">
               <el-button size="small" type="default" @click="handleDetail(scope.$index, scope.row)">详情</el-button>
-              <el-button size="small" type="success" @click="handleAccept(scope.$index, scope.row)">{{ scope.row.status == 1?'接单':'转移' }}</el-button>
-              <el-button size="small" type="warning" @click="handleFollow(scope.$index, scope.row)">跟进</el-button>
+              <el-button size="small" type="success" @click="handleFollow(scope.$index, scope.row)">跟进</el-button>
+              <el-button size="small" type="danger" plain @click="handleDisableReminder(scope.row)">不再提醒</el-button>
             </div>
           </template>
         </el-table-column>
@@ -224,7 +224,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
-import { selectRenew, acceptWorkorder, updateNoCascade, selectRenewCount } from '@/api/workorder';
+import { selectRenew, acceptWorkorder, updateNoCascade, selectRenewCount, disableRenewReminder } from '@/api/workorder';
 import { getCascadeArea } from '@/utils/ChinaCitys';
 import { formatSecondTimestamp } from '@/utils/time';
 import { useRouter } from 'vue-router';
@@ -234,6 +234,7 @@ import { selectInusranceCompanyOptions } from '@/api/upstream';
 import Message from '@/utils/message';
 import Loading from '@/utils/loading';
 import { useStore } from 'vuex';
+import { ElMessageBox } from 'element-plus';
 
 const router = useRouter();
 const store = useStore();
@@ -374,12 +375,6 @@ const handleDetail = (index, row) => {
   });
 };
 
-const handleAccept = (index, row) => {
-  dialog.value = true;
-  acceptOrderParams.id = row.id;
-  acceptOrderParams.handleBy = undefined;
-  acceptOrderParams.status = row.status;
-}
 
 const handleAccpetSubmit = (formEl) => {
   if (!formEl) return;
@@ -441,6 +436,33 @@ const handleFollowUpdate = async () => {
   }
 }
 
+const handleDisableReminder = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `关闭后，工单“${row.code}”以后每年都不会再进入续保提醒，是否继续？`,
+      '确认不再提醒',
+      {
+        confirmButtonText: '不再提醒',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+    Loading.open();
+    const res = await disableRenewReminder(row.id);
+    if (res.data.code === 200) {
+      Message.success('已关闭该工单的续保提醒');
+      await getData();
+      await refreshRenewCount();
+    }
+  }
+  catch (error) {
+    if (error !== 'cancel' && error !== 'close') throw error;
+  }
+  finally {
+    Loading.close();
+  }
+}
+
 const refreshRenewCount = async () => {
   try{
     await selectRenewCount().then(res => {
@@ -451,9 +473,9 @@ const refreshRenewCount = async () => {
         const allCount = res.data?.allCount;
         const hasMsg = selfCount > 0 || (allCount != null && allCount > 0);
         if (hasMsg) {
-          let content = `你有 ${selfCount} 个工单30天内到期`;
+          let content = `你有 ${selfCount} 个工单进入续保窗口`;
           if (allCount != null) {
-            content = `我的工单：${selfCount} 个；全部工单：${allCount} 个（30天内到期）`;
+            content = `我的工单：${selfCount} 个；全部工单：${allCount} 个（当前续保窗口）`;
           }
           store.commit('notice/upsertNotice', {
             key: 'renew',

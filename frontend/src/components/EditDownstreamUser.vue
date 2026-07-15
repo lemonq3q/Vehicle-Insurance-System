@@ -82,10 +82,9 @@
 import { reactive, ref, onMounted } from 'vue';
 // import { useRoute } from 'vue-router';
 import { validateIdNum, validatePhoneNumber, validateText } from '@/utils/validate';
-import { insertUser, selectUserById, updateUser } from '@/api/user';
+import { insertMerchantStaff, selectMerchantStaffById, selectMerchantStaffRoles, updateMerchantStaff } from '@/api/merchantStaff';
 import Message from '@/utils/message';
 import router from '@/router';
-import { selectAllRole } from '@/api/role';
 import { selectDownstreamOption } from '@/api/downstream';
 import Loading from '@/utils/loading';
 
@@ -170,7 +169,7 @@ const addSubmit = async () => {
   try{
     Loading.open();
     let data = buildInsertData();
-    await insertUser(data).then(res=>{
+    await insertMerchantStaff(data).then(res=>{
       res = res.data;
       if (res.code == 200){
         Message.success("添加成功");
@@ -205,7 +204,7 @@ const buildUserInfo = () => {
 const getDataById = async () => {
   try{
     Loading.open();
-    await selectUserById(id).then(res=>{
+    await selectMerchantStaffById(id).then(res=>{
       res = res.data;
       if(res.code == 200){
         oriUserInfo.value = res.data;
@@ -224,7 +223,7 @@ const updateSubmit = async () => {
     let data = buildInsertData();
     data.id = id;
     data.code = oriUserInfo.value.code;
-    await updateUser(data).then(res => {
+    await updateMerchantStaff(data).then(res => {
       res = res.data;
       if (res.code == 200){
         Message.success("更新成功");
@@ -248,7 +247,7 @@ const handleBack = () => {
 const getRoleOption = async () => {
   try{
     roleLoading.value = true;
-    await selectAllRole().then(res=>{
+    await selectMerchantStaffRoles().then(res=>{
       res = res.data;
       if (res.code == 200){
         roleOptions.value = res.data.map(item => {
@@ -258,7 +257,6 @@ const getRoleOption = async () => {
           }
           return option;
         });
-        roleOptions.value = roleOptions.value.filter(item => item.label != 'admin' && item.label != '出单员');
       }
     });
   }

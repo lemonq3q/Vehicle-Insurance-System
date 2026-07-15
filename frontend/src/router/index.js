@@ -1,24 +1,25 @@
-import AcceptWorkOrder from '@/components/AcceptWorkOrder.vue';
-import AllWorkOrder from '@/components/AllWorkOrder.vue';
-import DetailWorkorder from '@/components/DetailWorkorder.vue';
-import DispatchWorkOrder from '@/components/DispatchWorkOrder.vue';
-import RenewWorkorder from '@/components/RenewWorkorder.vue';
-import DownstreamMerchant from '@/components/DownstreamMerchant.vue';
-import DownstreamUser from '@/components/DownstreamUser.vue';
-import EditBaseWorkorder from '@/components/EditBaseWorkorder.vue';
-import EditDownstreamMerchant from '@/components/EditDownstreamMerchant.vue';
-import EditDownstreamUser from '@/components/EditDownstreamUser.vue';
-import EditSystemUser from '@/components/EditSystemUser.vue';
-import EditUpstream from '@/components/EditUpstream.vue';
-import PersonalCenter from '@/components/PersonalCenter.vue';
-import UpStream from '@/components/UpStream.vue';
-import UserApproval from '@/components/UserApproval.vue';
-import UserManagement from '@/components/UserManagement.vue';
-import HomePage from '@/page/HomePage.vue';
-import LoginPage from '@/page/LoginPage.vue';
 import Storage from '@/utils/storage';
 
 import { createRouter, createWebHistory } from 'vue-router';
+
+const HomePage = () => import('@/page/HomePage.vue');
+const LoginPage = () => import('@/page/LoginPage.vue');
+const AcceptWorkOrder = () => import('@/components/AcceptWorkOrder.vue');
+const AllWorkOrder = () => import('@/components/AllWorkOrder.vue');
+const DetailWorkorder = () => import('@/components/DetailWorkorder.vue');
+const DispatchWorkOrder = () => import('@/components/DispatchWorkOrder.vue');
+const RenewWorkorder = () => import('@/components/RenewWorkorder.vue');
+const DownstreamMerchant = () => import('@/components/DownstreamMerchant.vue');
+const DownstreamUser = () => import('@/components/DownstreamUser.vue');
+const EditBaseWorkorder = () => import('@/components/EditBaseWorkorder.vue');
+const EditDownstreamMerchant = () => import('@/components/EditDownstreamMerchant.vue');
+const EditDownstreamUser = () => import('@/components/EditDownstreamUser.vue');
+const EditSystemUser = () => import('@/components/EditSystemUser.vue');
+const EditUpstream = () => import('@/components/EditUpstream.vue');
+const PersonalCenter = () => import('@/components/PersonalCenter.vue');
+const UpStream = () => import('@/components/UpStream.vue');
+const UserApproval = () => import('@/components/UserApproval.vue');
+const UserManagement = () => import('@/components/UserManagement.vue');
 
 const routes = [
   {

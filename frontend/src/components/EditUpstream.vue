@@ -135,7 +135,7 @@ const rules = reactive({
   ],
   phone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { min: 1, max: 100, message: '输入内容过长', trigger: 'blur' },
+    { min: 1, max: 20, message: '输入内容过长', trigger: 'blur' },
     { validator: validatePhoneNumber, trigger: 'blur' }
   ],
   businessArea: [

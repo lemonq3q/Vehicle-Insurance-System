@@ -390,7 +390,7 @@
           <div class="img_detail_show_right">
             <div>
               <span class="form_text workorder_detail_form_title">计算方式:</span>
-              <span class="form_gap">{{ oriInfo.upstreamComputeType==0?"税前":"税后" }}</span>
+              <span class="form_gap">{{ (oriInfo.upstreamComputeType ?? 0)==0?"税前":"税后" }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">商业比例/金额:</span>
@@ -419,7 +419,7 @@
           <div class="img_detail_show_right">
             <div>
               <span class="form_text workorder_detail_form_title">计算方式:</span>
-              <span class="form_gap">{{ oriInfo.downstreamComputeType==0?"税前":"税后" }}</span>
+              <span class="form_gap">{{ (oriInfo.downstreamComputeType ?? 0)==0?"税前":"税后" }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">商业比例/金额:</span>
@@ -1739,10 +1739,10 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item prop="payIdNum" label="收款人证件号码">
+            <el-form-item prop="payIdNum" label="收款人联系方式">
               <el-input
               v-model="info.payIdNum"
-              placeholder="请输入收款人证件号码"
+              placeholder="请输入收款人联系方式"
               />
             </el-form-item>
           </el-col>
@@ -1853,7 +1853,7 @@
             <el-form-item prop="payIdNum" label="收款人联系方式">
               <el-input
               v-model="info.payIdNum"
-              placeholder="请输入收款人证件号码"
+              placeholder="请输入收款人联系方式"
               />
             </el-form-item>
           </el-col>
@@ -2641,8 +2641,8 @@ const buildPage = async () => {
 
 const buildInfo = () => {
   console.log(oriInfo.value);
-  info.upstreamComputeType = oriInfo.value.upstreamComputeType;
-  info.downstreamComputeType = oriInfo.value.downstreamComputeType;
+  info.upstreamComputeType = oriInfo.value.upstreamComputeType ?? 0;
+  info.downstreamComputeType = oriInfo.value.downstreamComputeType ?? 0;
   info.commercialInsuranceStartTime = new Date(oriInfo.value.commercialInsuranceStartTime * 1000);
   info.compulsoryInsuranceStartTime = new Date(oriInfo.value.compulsoryInsuranceStartTime * 1000);
   info.quotationNo = oriInfo.value.quotationNo;

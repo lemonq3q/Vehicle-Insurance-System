@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.insurancesystem.mapper.MerchantStaffMapper">
+    <sql id="staffColumns">
+        s.id, s.name, s.phone AS username, s.email, s.id_num,
+        CASE sr.role_code WHEN 'CONTACT' THEN 1001 WHEN 'PAYEE' THEN 1003 ELSE 1002 END AS role_id,
+        CASE sr.role_code WHEN 'CONTACT' THEN '联系人' WHEN 'PAYEE' THEN '收款人' ELSE '店员' END AS role_name,
+        s.merchant_id, m.name AS merchant_name, m.code AS merchant_code, s.status,
+        UNIX_TIMESTAMP(s.created_at) AS create_time
+    </sql>
+    <sql id="staffFrom">
+        FROM biz_merchant_staff s
+        JOIN biz_merchant m ON m.id = s.merchant_id AND m.deleted = 0
+        LEFT JOIN biz_merchant_staff_role sr ON sr.staff_id = s.id AND sr.deleted = 0
+    </sql>
+    <select id="selectStaff" resultType="com.example.insurancesystem.domain.user.MerchantUserDTO">
+        SELECT <include refid="staffColumns"/> <include refid="staffFrom"/>
+        <where>
+            s.deleted = 0
+            <if test="blurParam != null and blurParam != ''">
+                AND (s.name LIKE CONCAT('%', #{blurParam}, '%') OR s.phone LIKE CONCAT('%', #{blurParam}, '%'))
+            </if>
+            <if test="merchantId != null">AND s.merchant_id = #{merchantId}</if>
+            <if test="roleId != null">
+                AND sr.role_code = CASE #{roleId} WHEN 1001 THEN 'CONTACT' WHEN 1003 THEN 'PAYEE' ELSE 'CLERK' END
+            </if>
+            <if test="status != null">AND s.status = #{status}</if>
+        </where>
+        ORDER BY s.id DESC
+    </select>
+    <select id="selectStaffById" resultType="com.example.insurancesystem.domain.user.MerchantUserDTO">
+        SELECT <include refid="staffColumns"/> <include refid="staffFrom"/>
+        WHERE s.id = #{id} AND s.deleted = 0
+        LIMIT 1
+    </select>
+    <select id="selectOptionsByMerchantId" resultType="com.example.insurancesystem.domain.user.MerchantUserDTO">
+        SELECT <include refid="staffColumns"/> <include refid="staffFrom"/>
+        WHERE s.merchant_id = #{merchantId} AND s.deleted = 0 AND s.status = 1
+        ORDER BY FIELD(sr.role_code, 'CONTACT', 'PAYEE', 'CLERK'), s.id
+    </select>
+    <select id="countRole" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM biz_merchant_staff_role
+        WHERE merchant_id = #{merchantId} AND role_code = #{roleCode} AND deleted = 0
+        <if test="excludeStaffId != null">AND staff_id != #{excludeStaffId}</if>
+    </select>
+</mapper>

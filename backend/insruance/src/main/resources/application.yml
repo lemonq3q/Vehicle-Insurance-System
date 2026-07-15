@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: InsuranceSystem
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/insurance_saas?characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      username: root
+      password: 20040619Lmy
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true  # 自动转换驼峰命名
+
+server:
+  port: 8080
+

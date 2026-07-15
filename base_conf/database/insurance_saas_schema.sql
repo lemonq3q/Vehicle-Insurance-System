@@ -342,35 +342,142 @@ CREATE TABLE IF NOT EXISTS `saas_usage_archive_job` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用量归档任务表';
 
+CREATE TABLE IF NOT EXISTS `biz_merchant_category` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `code` varchar(50) NOT NULL COMMENT '稳定分类编码',
+  `name` varchar(100) NOT NULL COMMENT '展示名称',
+  `direction` varchar(20) NOT NULL COMMENT 'UPSTREAM DOWNSTREAM',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1启用 0禁用',
+  `sort_no` int NOT NULL DEFAULT 0 COMMENT '排序',
+  `remark` varchar(500) DEFAULT NULL COMMENT '说明',
+  `created_at` datetime DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
+  `updated_by` bigint DEFAULT NULL COMMENT '更新人',
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_biz_merchant_category_code` (`code`,`deleted`),
+  KEY `idx_biz_merchant_category_direction` (`direction`,`status`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户分类表';
+
+DROP TRIGGER IF EXISTS `trg_biz_merchant_category_bi`;
+CREATE TRIGGER `trg_biz_merchant_category_bi` BEFORE INSERT ON `biz_merchant_category`
+FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP);
+DROP TRIGGER IF EXISTS `trg_biz_merchant_category_bu`;
+CREATE TRIGGER `trg_biz_merchant_category_bu` BEFORE UPDATE ON `biz_merchant_category`
+FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
+
+INSERT INTO `biz_merchant_category` (`code`,`name`,`direction`,`status`,`sort_no`,`remark`)
+VALUES
+  ('INSURANCE_ORG','保险机构','UPSTREAM',1,10,'原 merchant.type=机构'),
+  ('DEALER_STORE','车商店铺','DOWNSTREAM',1,20,'原 merchant.type=车商店铺'),
+  ('AUTO_REPAIR','汽修厂','DOWNSTREAM',1,30,'原 merchant.type=汽修厂'),
+  ('AGENT','代理人','DOWNSTREAM',1,40,'原 merchant.type=代理人');
+
 CREATE TABLE IF NOT EXISTS `biz_merchant` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `enterprise_id` bigint DEFAULT NULL COMMENT '所属企业租户',
   `code` varchar(100) DEFAULT NULL COMMENT '商户编码',
   `name` varchar(100) DEFAULT NULL COMMENT '商户名称',
-  `merchant_type` varchar(32) DEFAULT NULL COMMENT 'UPSTREAM DOWNSTREAM',
-  `org_type` varchar(20) DEFAULT NULL COMMENT '机构类型',
+  `category_id` bigint DEFAULT NULL COMMENT '商户分类ID',
   `location` varchar(20) DEFAULT NULL COMMENT '所在地区',
   `address` varchar(100) DEFAULT NULL COMMENT '地址',
-  `bank` varchar(100) DEFAULT NULL COMMENT '开户行',
-  `bank_card_num` varchar(50) DEFAULT NULL COMMENT '银行账号',
+  `contact` varchar(100) DEFAULT NULL COMMENT '上游机构联系人',
+  `phone` varchar(20) DEFAULT NULL COMMENT '上游机构联系电话',
+  `bank` varchar(100) DEFAULT NULL COMMENT '商户开户行',
+  `bank_card_num` varchar(100) DEFAULT NULL COMMENT '商户银行卡号',
   `channel` varchar(100) DEFAULT NULL COMMENT '渠道',
-  `contact` varchar(100) DEFAULT NULL COMMENT '联系人',
-  `phone` varchar(20) DEFAULT NULL COMMENT '电话',
+  `service_phone` varchar(20) DEFAULT NULL COMMENT '商户公共服务电话',
   `default_area_code` varchar(20) DEFAULT NULL COMMENT '默认区域',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `updated_by` bigint DEFAULT NULL COMMENT '更新人',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_biz_merchant_code` (`enterprise_id`,`code`,`deleted`),
+  KEY `idx_biz_merchant_category` (`enterprise_id`,`category_id`,`deleted`),
+  KEY `idx_biz_merchant_name` (`enterprise_id`,`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='业务商户表';
 
 CREATE TABLE IF NOT EXISTS `biz_merchant_archive` LIKE `biz_merchant`;
+ALTER TABLE `biz_merchant_archive`
+  DROP INDEX `uk_biz_merchant_code`,
+  DROP INDEX `idx_biz_merchant_category`,
+  DROP INDEX `idx_biz_merchant_name`,
+  ADD KEY `idx_biz_merchant_archive_category` (`enterprise_id`,`category_id`,`deleted`);
 
 DROP TRIGGER IF EXISTS `trg_biz_merchant_bi`;
 CREATE TRIGGER `trg_biz_merchant_bi` BEFORE INSERT ON `biz_merchant`
 FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP);
 DROP TRIGGER IF EXISTS `trg_biz_merchant_bu`;
 CREATE TRIGGER `trg_biz_merchant_bu` BEFORE UPDATE ON `biz_merchant`
+FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS `biz_merchant_staff` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
+  `merchant_id` bigint DEFAULT NULL COMMENT '所属业务商户ID',
+  `name` varchar(100) DEFAULT NULL COMMENT '姓名',
+  `phone` varchar(20) DEFAULT NULL COMMENT '业务联系手机号',
+  `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
+  `id_num` varchar(100) DEFAULT NULL COMMENT '证件号',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1在用 0停用',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `created_at` datetime DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
+  `updated_by` bigint DEFAULT NULL COMMENT '更新人',
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_merchant_staff_list` (`enterprise_id`,`merchant_id`,`status`,`deleted`),
+  KEY `idx_merchant_staff_phone` (`enterprise_id`,`phone`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户人员表';
+
+CREATE TABLE IF NOT EXISTS `biz_merchant_staff_archive` LIKE `biz_merchant_staff`;
+ALTER TABLE `biz_merchant_staff_archive`
+  ADD COLUMN `archive_batch_no` varchar(64) DEFAULT NULL COMMENT '归档批次号',
+  ADD COLUMN `archived_at` datetime DEFAULT NULL COMMENT '归档时间',
+  ADD COLUMN `archive_reason` varchar(500) DEFAULT NULL COMMENT '归档原因';
+
+DROP TRIGGER IF EXISTS `trg_biz_merchant_staff_bi`;
+CREATE TRIGGER `trg_biz_merchant_staff_bi` BEFORE INSERT ON `biz_merchant_staff`
+FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP);
+DROP TRIGGER IF EXISTS `trg_biz_merchant_staff_bu`;
+CREATE TRIGGER `trg_biz_merchant_staff_bu` BEFORE UPDATE ON `biz_merchant_staff`
+FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS `biz_merchant_staff_role` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
+  `merchant_id` bigint DEFAULT NULL COMMENT '商户ID',
+  `staff_id` bigint DEFAULT NULL COMMENT '商户人员ID',
+  `role_code` varchar(32) NOT NULL COMMENT 'CONTACT CLERK PAYEE',
+  `is_default` tinyint NOT NULL DEFAULT 0 COMMENT '是否默认，仅PAYEE有意义',
+  `created_at` datetime DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
+  `updated_by` bigint DEFAULT NULL COMMENT '更新人',
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
+  `contact_merchant_key` bigint GENERATED ALWAYS AS (CASE WHEN `role_code` = 'CONTACT' AND `deleted` = 0 THEN `merchant_id` ELSE NULL END) STORED,
+  `default_payee_merchant_key` bigint GENERATED ALWAYS AS (CASE WHEN `role_code` = 'PAYEE' AND `is_default` = 1 AND `deleted` = 0 THEN `merchant_id` ELSE NULL END) STORED,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_merchant_staff_role` (`enterprise_id`,`staff_id`,`role_code`,`deleted`),
+  UNIQUE KEY `uk_merchant_contact` (`contact_merchant_key`),
+  UNIQUE KEY `uk_merchant_default_payee` (`default_payee_merchant_key`),
+  KEY `idx_merchant_staff_role_list` (`enterprise_id`,`merchant_id`,`role_code`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商户人员业务角色表';
+
+CREATE TABLE IF NOT EXISTS `biz_merchant_staff_role_archive` LIKE `biz_merchant_staff_role`;
+ALTER TABLE `biz_merchant_staff_role_archive`
+  DROP INDEX `uk_merchant_staff_role`,
+  DROP INDEX `uk_merchant_contact`,
+  DROP INDEX `uk_merchant_default_payee`,
+  ADD COLUMN `archive_batch_no` varchar(64) DEFAULT NULL COMMENT '归档批次号',
+  ADD COLUMN `archived_at` datetime DEFAULT NULL COMMENT '归档时间',
+  ADD COLUMN `archive_reason` varchar(500) DEFAULT NULL COMMENT '归档原因';
+
+DROP TRIGGER IF EXISTS `trg_biz_merchant_staff_role_bi`;
+CREATE TRIGGER `trg_biz_merchant_staff_role_bi` BEFORE INSERT ON `biz_merchant_staff_role`
+FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP);
+DROP TRIGGER IF EXISTS `trg_biz_merchant_staff_role_bu`;
+CREATE TRIGGER `trg_biz_merchant_staff_role_bu` BEFORE UPDATE ON `biz_merchant_staff_role`
 FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS `biz_merchant_area` (
@@ -406,11 +513,16 @@ CREATE TABLE IF NOT EXISTS `biz_workorder` (
   `organization_name` varchar(100) DEFAULT NULL COMMENT '组织名称',
   `social_credit_code` varchar(100) DEFAULT NULL COMMENT '统一社会信用代码',
   `create_merchant_id` bigint DEFAULT NULL COMMENT '创建方下游商户',
+  `source_staff_id` bigint DEFAULT NULL COMMENT '业务来源商户人员',
   `handle_merchant_id` bigint DEFAULT NULL COMMENT '处理方商户',
   `insurance_merchant_id` bigint DEFAULT NULL COMMENT '承保上游机构',
   `area_code` varchar(20) DEFAULT NULL COMMENT '业务区域',
+  `commercial_insurance_start_time` bigint DEFAULT NULL COMMENT '商业险起保时间（Unix秒）',
+  `compulsory_insurance_start_time` bigint DEFAULT NULL COMMENT '交强险起保时间（Unix秒）',
   `status` tinyint DEFAULT 1 COMMENT '工单状态',
   `remind_status` tinyint DEFAULT 0 COMMENT '续保跟进状态',
+  `renewal_status_cycle` int NOT NULL DEFAULT 0 COMMENT '当前续保状态所属年度周期，0表示未记录',
+  `renewal_reminder_disabled` tinyint NOT NULL DEFAULT 0 COMMENT '是否永久关闭续保提醒：0否 1是',
   `follow_up_res` varchar(1000) DEFAULT NULL COMMENT '跟进结果',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   `created_by` bigint DEFAULT NULL COMMENT '创建用户',
@@ -419,10 +531,14 @@ CREATE TABLE IF NOT EXISTS `biz_workorder` (
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_workorder_source_staff` (`enterprise_id`,`source_staff_id`,`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工单主表';
 
 CREATE TABLE IF NOT EXISTS `biz_workorder_archive` LIKE `biz_workorder`;
+ALTER TABLE `biz_workorder_archive`
+  DROP INDEX `idx_workorder_source_staff`,
+  ADD KEY `idx_workorder_archive_source_staff` (`enterprise_id`,`source_staff_id`,`created_at`);
 
 DROP TRIGGER IF EXISTS `trg_biz_workorder_bi`;
 CREATE TRIGGER `trg_biz_workorder_bi` BEFORE INSERT ON `biz_workorder`
@@ -494,19 +610,28 @@ CREATE TABLE IF NOT EXISTS `biz_workorder_payment` (
   `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
   `workorder_id` bigint DEFAULT NULL COMMENT '工单ID',
   `required_pay_amount` decimal(12,2) DEFAULT NULL COMMENT '应付金额',
-  `pay_name` varchar(100) DEFAULT NULL COMMENT '付款人',
-  `pay_id_num` varchar(100) DEFAULT NULL COMMENT '付款证件号',
-  `pay_bank` varchar(100) DEFAULT NULL COMMENT '付款银行',
-  `pay_bank_card_num` varchar(100) DEFAULT NULL COMMENT '付款卡号',
+  `payee_staff_id` bigint DEFAULT NULL COMMENT '默认收款人员ID',
+  `payee_name` varchar(100) DEFAULT NULL COMMENT '收款人姓名快照',
+  `payee_phone` varchar(20) DEFAULT NULL COMMENT '收款人手机号快照',
+  `payee_id_num` varchar(100) DEFAULT NULL COMMENT '收款人证件号快照',
+  `merchant_bank` varchar(100) DEFAULT NULL COMMENT '创建方商户开户行快照',
+  `merchant_bank_card_num` varchar(100) DEFAULT NULL COMMENT '创建方商户银行卡号快照',
   `pay_remark` varchar(500) DEFAULT NULL COMMENT '支付备注',
   `pay_failed_remark` varchar(500) DEFAULT NULL COMMENT '支付失败原因',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_workorder_payment_workorder` (`enterprise_id`,`workorder_id`,`deleted`),
+  KEY `idx_workorder_payment_payee` (`enterprise_id`,`payee_staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工单支付表';
 
 CREATE TABLE IF NOT EXISTS `biz_workorder_payment_archive` LIKE `biz_workorder_payment`;
+ALTER TABLE `biz_workorder_payment_archive`
+  DROP INDEX `idx_workorder_payment_workorder`,
+  DROP INDEX `idx_workorder_payment_payee`,
+  ADD KEY `idx_workorder_payment_archive_workorder` (`enterprise_id`,`workorder_id`,`deleted`),
+  ADD KEY `idx_workorder_payment_archive_payee` (`enterprise_id`,`payee_staff_id`);
 
 DROP TRIGGER IF EXISTS `trg_biz_workorder_payment_bi`;
 CREATE TRIGGER `trg_biz_workorder_payment_bi` BEFORE INSERT ON `biz_workorder_payment`
@@ -675,9 +800,9 @@ CREATE TABLE IF NOT EXISTS `biz_insurance_product` (
   `name` varchar(100) DEFAULT NULL COMMENT '名称',
   `type` tinyint DEFAULT NULL COMMENT '险种类型',
   `options_json` json DEFAULT NULL COMMENT '可选项',
-  `default_option_json` json DEFAULT NULL COMMENT '默认选项',
+  `default_option_json` varchar(100) DEFAULT NULL COMMENT '默认选项值',
   `deductible_options_json` json DEFAULT NULL COMMENT '免赔选项',
-  `default_deductible_option_json` json DEFAULT NULL COMMENT '默认免赔选项',
+  `default_deductible_option_json` varchar(100) DEFAULT NULL COMMENT '默认免赔选项值',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
@@ -700,8 +825,8 @@ CREATE TABLE IF NOT EXISTS `biz_workorder_insurance` (
   `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
   `workorder_id` bigint DEFAULT NULL COMMENT '工单ID',
   `insurance_id` bigint DEFAULT NULL COMMENT '险种ID',
-  `option_json` json DEFAULT NULL COMMENT '投保险种选项',
-  `deductible_option_json` json DEFAULT NULL COMMENT '免赔选项',
+  `option_json` varchar(100) DEFAULT NULL COMMENT '投保险种选项值',
+  `deductible_option_json` varchar(100) DEFAULT NULL COMMENT '免赔选项值',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `updated_by` bigint DEFAULT NULL COMMENT '更新人',

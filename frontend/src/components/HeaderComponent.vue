@@ -73,7 +73,10 @@ import { jsonStrToObj } from '@/utils/convert';
 import SystemNotice from '@/components/SystemNotice.vue';
 
 const store = useStore();
-const username = computed(() => jsonStrToObj(localStorage.getItem('userInfo')).name);
+const username = computed(() => {
+  const user = jsonStrToObj(localStorage.getItem('userInfo')) ?? {};
+  return user.name || user.realName || user.username || '';
+});
 const router = useRouter();
 // const dialogVisible = ref(false);
 // const passwordRef = ref();
@@ -113,9 +116,9 @@ const refreshRenewCount = async () => {
         const allCount = res.data?.allCount;
         const hasMsg = selfCount > 0 || (allCount != null && allCount > 0);
         if (hasMsg) {
-          let content = `你有 ${selfCount} 个工单30天内到期`;
+          let content = `你有 ${selfCount} 个工单进入续保窗口`;
           if (allCount != null) {
-            content = `我的工单：${selfCount} 个；全部工单：${allCount} 个（30天内到期）`;
+            content = `我的工单：${selfCount} 个；全部工单：${allCount} 个（当前续保窗口）`;
           }
           store.commit('notice/upsertNotice', {
             key: 'renew',

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.insurancesystem.mapper.MerchantMapper">
+    <sql id="activeMerchant">
+        FROM biz_merchant m
+        JOIN biz_merchant_category c ON c.id = m.category_id AND c.deleted = 0 AND c.status = 1
+    </sql>
+
+    <select id="selectCategoryIdByCode" resultType="java.lang.Long">
+        SELECT id FROM biz_merchant_category WHERE code = #{code} AND status = 1 AND deleted = 0 LIMIT 1
+    </select>
+
+    <select id="selectByUpstreamSearchDTO" resultType="com.example.insurancesystem.domain.merchant.UpstreamDTO">
+        SELECT m.id, m.code, m.name, c.name AS type, m.location, m.address,
+               m.contact, m.phone,
+               UNIX_TIMESTAMP(m.created_at) AS create_time, m.default_area_code
+        <include refid="activeMerchant"/>
+        <where>
+            c.direction = 'UPSTREAM' AND m.deleted = 0
+            <if test="id != null">AND m.id = #{id}</if>
+            <if test="blurParam != null and blurParam != ''">
+                AND (m.code LIKE CONCAT('%', #{blurParam}, '%') OR m.name LIKE CONCAT('%', #{blurParam}, '%'))
+            </if>
+            <if test="location != null and location != ''">AND m.location = #{location}</if>
+            <if test="businessArea != null and businessArea != ''">
+                AND EXISTS (SELECT 1 FROM biz_merchant_area ma WHERE ma.merchant_id = m.id AND ma.area_code = #{businessArea} AND ma.deleted = 0)
+            </if>
+        </where>
+    </select>
+
+    <select id="selectByDownstreamSearchDTO" resultType="com.example.insurancesystem.domain.merchant.DownstreamDTO">
+        SELECT m.id, m.code, m.name, c.name AS type, m.location, m.address, m.bank, m.bank_card_num,
+               m.channel, m.default_area_code, contact.name AS store_manager,
+               UNIX_TIMESTAMP(m.created_at) AS create_time
+        <include refid="activeMerchant"/>
+        LEFT JOIN (
+            SELECT s.merchant_id, s.name
+            FROM biz_merchant_staff s
+            JOIN biz_merchant_staff_role sr ON sr.staff_id = s.id AND sr.role_code = 'CONTACT' AND sr.deleted = 0
+            WHERE s.deleted = 0
+        ) contact ON contact.merchant_id = m.id
+        <where>
+            c.direction = 'DOWNSTREAM' AND m.deleted = 0
+            <if test="id != null">AND m.id = #{id}</if>
+            <if test="blurParam != null and blurParam != ''">
+                AND (m.code LIKE CONCAT('%', #{blurParam}, '%') OR m.name LIKE CONCAT('%', #{blurParam}, '%'))
+            </if>
+            <if test="location != null and location != ''">AND m.location = #{location}</if>
+            <if test="channel != null and channel != ''">AND m.channel = #{channel}</if>
+            <if test="businessArea != null and businessArea != ''">
+                AND EXISTS (SELECT 1 FROM biz_merchant_area ma WHERE ma.merchant_id = m.id AND ma.area_code = #{businessArea} AND ma.deleted = 0)
+            </if>
+        </where>
+    </select>
+
+    <select id="selectInsuranceCompanyByAreaCode" resultType="com.example.insurancesystem.domain.merchant.Merchant">
+        SELECT m.id, m.enterprise_id, m.code, m.name, m.category_id, c.name AS type, m.location,
+               m.address, m.bank, m.bank_card_num, m.channel, m.service_phone, m.default_area_code,
+               m.updated_by, m.deleted AS is_delete
+        <include refid="activeMerchant"/>
+        WHERE c.direction = 'UPSTREAM' AND m.deleted = 0
+          AND EXISTS (SELECT 1 FROM biz_merchant_area ma WHERE ma.merchant_id = m.id AND ma.area_code = #{areaCode} AND ma.deleted = 0)
+    </select>
+</mapper>

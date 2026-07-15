@@ -17,6 +17,10 @@ export function selectRenewCount() {
   return axios.get(url);
 }
 
+export function disableRenewReminder(id) {
+  return axios.put(`${rootUrl}/renew/${id}/disable-reminder`);
+}
+
 export function selectWorkorderById(id){
   let url = `${rootUrl}/${id}`;
   return axios.get(url);

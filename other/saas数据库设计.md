@@ -6,26 +6,32 @@
 
 当前设计中比较影响 SaaS 化的问题如下：
 
-1. `user` 表同时承载系统用户、商户用户、登录账号、企业归属关系，只有一个 `merchant_id`，无法表达一个账号加入企业、企业拥有者、企业内角色、成员状态、邀请来源等 SaaS 成员关系。
-2. `merchant` 表同时表达上游机构、下游商户等业务实体，且 `user.merchant_id` 直接绑定商户，导致“企业租户”和“业务商户”概念混在一起。SaaS 化后应新增 `tenant_enterprise` 作为租户企业，原 `merchant` 仅保留为车险业务中的上游/下游渠道主体。
-3. 角色权限虽然有 `role/menu/role_menu` 表，但代码和前端仍大量按角色名称硬编码，例如 `admin`、`出单员`、`收款人` 等，并且 `role_menu` 当前只有出单员的权限数据，权限体系不完整。
-4. `menu` 表只有 `perms`，缺少权限名称、权限类型、前端路由、父子层级、归属系统等字段，不利于同时维护门户平台、车险系统和后台系统的权限。
-5. 几乎所有业务表只有主键索引，没有租户、工单编号、用户、商户、时间等常用查询索引；SaaS 化后如果不补充 `enterprise_id` 和复合索引，会很容易出现跨租户查询风险和性能问题。
-6. 当前表普遍使用 `bigint` 毫秒时间戳，建议新表统一改为 `datetime`，便于 MySQL 查询、分区和归档；旧表可以迁移时逐步改造。
-7. `workorder` 表字段过宽，混合了车主信息、报价、支付、核保、物流、上下游费用等多个阶段数据；短期可增加租户隔离字段，长期建议拆成工单主表、报价表、支付表、核保表、物流表和费用明细表。
-8. OCR 和请求量目前没有企业维度的持久化统计表；`RequestCountFilter` 只统计当前活跃请求数，不能满足后台系统按企业、日期、接口维度监控用量。
-9. 归档表采用同结构 `_archive`，但缺少归档批次、归档时间、归档原因，不利于追溯。新增 SaaS 用量归档表时应补齐这些字段。
+1. `merchant.type` 同时承担上下游方向和机构类别两个含义，代码通过 `m.type IN ('车商店铺', '汽修厂', '代理人')` 等中文名称判断上下游。新增或改名商户类型时必须同步修改 SQL，且无法通过外键或字典约束类型。SaaS 化后应将“上下游方向”和“商户类别”集中到商户分类表管理，业务 SQL 不再维护中文名称列表。
+2. `user` 表同时保存真实登录用户和车商店铺人员等业务抽象对象，并通过 `role/user_role` 中的 `admin`、`出单员`、`联系人`、`店员`、`收款人` 区分。联系人、店员、收款人不参与系统登录和操作权限，不应继续占用系统用户表及权限角色表。
+3. `merchant` 表同时表达上游机构、下游商户等业务实体，且 `user.merchant_id` 直接绑定商户，导致“企业租户”“业务商户”“商户人员”三个概念混在一起。SaaS 化后应新增 `tenant_enterprise` 作为租户企业，`biz_merchant` 表示业务渠道主体，`biz_merchant_staff` 表示商户人员。
+4. 角色权限虽然有 `role/menu/role_menu` 表，但代码和前端仍大量按角色名称硬编码，例如 `admin`、`出单员`、`收款人` 等，并且 `role_menu` 当前只有出单员的权限数据，权限体系不完整。系统权限角色和商户人员业务角色必须分开建模。
+5. `menu` 表只有 `perms`，缺少权限名称、权限类型、前端路由、父子层级、归属系统等字段，不利于同时维护门户平台、车险系统和后台系统的权限。
+6. 几乎所有业务表只有主键索引，没有租户、工单编号、用户、商户、时间等常用查询索引；SaaS 化后如果不补充 `enterprise_id` 和复合索引，会很容易出现跨租户查询风险和性能问题。
+7. 当前表普遍使用 `bigint` 毫秒时间戳，建议新表统一改为 `datetime`，便于 MySQL 查询、分区和归档；旧表可以迁移时逐步改造。
+8. `workorder` 表字段过宽，混合了车主信息、报价、支付、核保、物流、上下游费用等多个阶段数据；短期可增加租户隔离字段，长期建议拆成工单主表、报价表、支付表、核保表、物流表和费用明细表。
+9. OCR 和请求量目前没有企业维度的持久化统计表；`RequestCountFilter` 只统计当前活跃请求数，不能满足后台系统按企业、日期、接口维度监控用量。
+10. 归档表采用同结构 `_archive`，但缺少归档批次、归档时间、归档原因，不利于追溯。新增 SaaS 用量归档表时应补齐这些字段。
+
+本次对真实数据库的只读核对结果进一步证明了上述混用：`insurance.merchant` 中同时存在 `机构`、`车商店铺`、`汽修厂` 和空类型；`insurance.role` 中同时存在系统权限角色 `admin`、`出单员` 和商户人员角色 `联系人`、`店员`、`收款人`。有效商户人员数据还存在同一商户多联系人、多个收款人的历史情况，迁移时必须先处理冲突，不能直接依赖旧角色名称完成无校验迁移。
 
 ## 2. 总体设计原则
 
-1. 企业账号与企业成员分离：`tenant_user` 只表示企业客户侧自然人账号，`tenant_member` 表示账号在某个企业内的身份和状态。
-2. 后台监控平台账号独立管理：开发者、客服、运营人员使用 `platform_user`，不与企业客户账号共表，避免内部权限和客户权限混淆。
-3. 租户企业与业务商户分离：`tenant_enterprise` 是 SaaS 租户；`biz_merchant` 是车险业务中的上游/下游渠道。
-4. 企业内角色固定为三类：企业拥有者、管理员、出单员。企业拥有者不可直接修改角色，只能通过转让产生；转让后原拥有者自动变为管理员。
-5. 一个企业只能有一个有效拥有者。建议通过业务事务保证，同时增加唯一约束辅助控制。
-6. 所有车险业务数据必须带 `enterprise_id`，查询必须默认按当前企业过滤。
-7. 套餐、订单、订阅和用量统计归属 SaaS 平台层；工单、商户、保险配置归属车险业务层。
-8. 请求量、OCR 次数等高频统计先写 Redis，夜间批量归档到 MySQL 汇总表；重要订单、订阅和权限变更必须实时写 MySQL。
+1. 登录账号与业务人员分离：`tenant_user` 只保存真实登录账号；联系人、店员、收款人等不登录系统的商户人员保存到 `biz_merchant_staff`，二者之间不建立默认继承关系。
+2. 企业账号与企业成员分离：`tenant_user` 只表示企业客户侧自然人账号，`tenant_member` 表示账号在某个企业内的身份和状态。
+3. 后台监控平台账号独立管理：开发者、客服、运营人员使用 `platform_user`，不与企业客户账号共表，避免内部权限和客户权限混淆。
+4. 租户企业与业务商户分离：`tenant_enterprise` 是 SaaS 租户；`biz_merchant` 是车险业务中的渠道主体；`biz_merchant_staff` 是依附于业务商户的人员档案。
+5. 商户方向与商户类别分离：`biz_merchant_category.direction` 表示 `UPSTREAM/DOWNSTREAM`，`code/name` 表示机构、车商店铺、汽修厂、代理人等类别，禁止再通过中文名称列表判断上下游。
+6. 权限角色与业务角色分离：`auth_role/auth_permission` 只处理系统操作权限；`biz_merchant_staff_role` 只描述联系人、店员、收款人等业务身份，不关联菜单和权限。
+7. 企业内角色固定为三类：企业拥有者、管理员、出单员。企业拥有者不可直接修改角色，只能通过转让产生；转让后原拥有者自动变为管理员。
+8. 一个企业只能有一个有效拥有者。建议通过业务事务保证，同时增加唯一约束辅助控制。
+9. 所有车险业务数据必须带 `enterprise_id`，查询必须默认按当前企业过滤。
+10. 套餐、订单、订阅和用量统计归属 SaaS 平台层；工单、商户、保险配置归属车险业务层。
+11. 请求量、OCR 次数等高频统计先写 Redis，夜间批量归档到 MySQL 汇总表；重要订单、订阅和权限变更必须实时写 MySQL。
 
 ## 3. SaaS 功能表设计
 
@@ -466,6 +472,8 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 
 后台平台角色不应与企业角色混用：平台用户只从 `platform_user` 登录，通过 `platform_user_role` 绑定 `auth_role.role_scope=PLATFORM` 的角色；企业用户只从 `tenant_user` 登录，通过 `tenant_member.role_code` 获得企业内角色。
 
+联系人、店员、收款人不是 `auth_role`，也不是 `tenant_member.role_code`。这些角色只写入 `biz_merchant_staff_role`，不生成登录账号、不进入 JWT、不关联 `auth_permission`，不能作为 `@PreAuthorize` 或前端菜单判断依据。
+
 ### 3.5 用量统计、Redis 缓存与夜间归档
 
 高频计数建议写 Redis，夜间汇总入库。
@@ -538,11 +546,44 @@ Redis key 设计：
 
 ## 4. 非 SaaS 功能表设计
 
-### 4.1 车险业务商户与渠道
+### 4.1 车险业务商户、分类与人员
+
+本节将旧库中混在 `merchant.type` 和 `user/role/user_role` 内的概念拆为四层：商户分类、业务商户、商户人员、人员业务角色。车商店铺人员是主要使用场景，但表结构也允许机构、汽修厂等其他商户维护联系人或收款人。
+
+#### biz_merchant_category 商户分类表
+
+集中维护商户类别以及该类别所属的上下游方向。类别名称仅用于展示，程序和 SQL 使用稳定的 `code` 或关联 ID，不使用中文名称列表判断上下游。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | 分类 ID |
+| code | varchar(50) | 稳定分类编码 |
+| name | varchar(100) | 展示名称 |
+| direction | varchar(20) | UPSTREAM, DOWNSTREAM |
+| status | tinyint | 1 启用，0 禁用 |
+| sort_no | int | 排序 |
+| remark | varchar(500) | 说明 |
+| created_at | datetime | 创建时间 |
+| updated_at | datetime | 更新时间 |
+| updated_by | bigint | 更新人，指向真实系统用户 |
+| deleted | tinyint | 软删除 |
+
+建议约束与初始数据：
+
+| code | name | direction | 旧 `merchant.type` 映射 |
+| --- | --- | --- | --- |
+| INSURANCE_ORG | 保险机构 | UPSTREAM | 机构 |
+| DEALER_STORE | 车商店铺 | DOWNSTREAM | 车商店铺 |
+| AUTO_REPAIR | 汽修厂 | DOWNSTREAM | 汽修厂 |
+| AGENT | 代理人 | DOWNSTREAM | 代理人 |
+
+- 唯一键：`code, deleted`；索引：`direction, status, deleted`。
+- 旧类型为空或无法映射的数据先进入迁移异常清单，不自动猜测分类。
+- 上下游查询统一关联分类表并使用 `direction`，例如查询所有下游商户只判断 `direction='DOWNSTREAM'`，不再维护 `IN ('车商店铺', ...)`。
 
 #### biz_merchant 业务商户表
 
-由现有 `merchant` 改造，增加 `enterprise_id` 和明确的商户类型。
+由现有 `merchant` 改造。商户保存机构主体信息以及商户自己的开户行、银行卡号，分类通过 `category_id` 关联；联系人和人员手机号不再以 `contact/phone` 作为唯一事实来源。
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
@@ -550,15 +591,13 @@ Redis key 设计：
 | enterprise_id | bigint | 所属企业租户 |
 | code | varchar(100) | 商户编码 |
 | name | varchar(100) | 商户名称 |
-| merchant_type | varchar(32) | UPSTREAM, DOWNSTREAM |
-| org_type | varchar(20) | 机构、车商店铺等原 type |
+| category_id | bigint | 商户分类 ID，关联 `biz_merchant_category` |
 | location | varchar(20) | 所在地区 |
 | address | varchar(100) | 地址 |
-| bank | varchar(100) | 开户行 |
-| bank_card_num | varchar(50) | 银行账号 |
+| bank | varchar(100) | 商户开户行 |
+| bank_card_num | varchar(100) | 商户银行卡号，建议加密存储、脱敏展示 |
 | channel | varchar(100) | 渠道 |
-| contact | varchar(100) | 联系人 |
-| phone | varchar(20) | 电话 |
+| service_phone | varchar(20) | 商户公共服务电话，可为空，不代表联系人手机号 |
 | default_area_code | varchar(20) | 默认区域 |
 | created_at | datetime | 创建时间 |
 | updated_at | datetime | 更新时间 |
@@ -570,7 +609,7 @@ Redis key 设计：
 | 名称 | 字段 | 说明 |
 | --- | --- | --- |
 | uk_biz_merchant_code | enterprise_id,code,deleted | 企业内商户编码唯一 |
-| idx_biz_merchant_type | enterprise_id,merchant_type,deleted | 上下游列表 |
+| idx_biz_merchant_category | enterprise_id,category_id,deleted | 按分类查询商户 |
 | idx_biz_merchant_name | enterprise_id,name | 模糊查询可后续换全文索引 |
 
 #### biz_merchant_area 商户业务区域表
@@ -589,6 +628,70 @@ Redis key 设计：
 | deleted | tinyint | 软删除 |
 
 建议唯一键：`enterprise_id, merchant_id, area_code, deleted`。
+
+#### biz_merchant_staff 商户人员表
+
+保存车商店铺等业务商户的人员档案。该表中的人员是业务联系人，不是系统登录用户，不保存密码，不参与企业成员数计算，也不拥有系统操作权限。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | 商户人员 ID |
+| enterprise_id | bigint | 企业 ID |
+| merchant_id | bigint | 所属业务商户 ID |
+| name | varchar(100) | 姓名 |
+| phone | varchar(20) | 手机号，仅用于业务联系 |
+| email | varchar(100) | 邮箱，可为空 |
+| id_num | varchar(100) | 证件号，按需加密或脱敏 |
+| status | tinyint | 1 在用，0 停用 |
+| remark | varchar(500) | 备注 |
+| created_at | datetime | 创建时间 |
+| updated_at | datetime | 更新时间 |
+| updated_by | bigint | 更新人，指向 `tenant_user` |
+| deleted | tinyint | 软删除 |
+
+建议索引：
+
+| 名称 | 字段 | 说明 |
+| --- | --- | --- |
+| idx_merchant_staff_list | enterprise_id,merchant_id,status,deleted | 商户人员列表 |
+| idx_merchant_staff_phone | enterprise_id,phone,deleted | 企业内按手机号检索 |
+
+`phone` 不作为全平台登录账号，因此不要求跨企业全局唯一。同一商户是否允许重复手机号由业务校验；迁移旧数据时不得因为手机号与 `tenant_user` 相同就自动合并两类对象。
+
+#### biz_merchant_staff_role 商户人员业务角色表
+
+一个人员可以同时承担多个业务角色。该表只表达业务职责，不关联 `auth_role`、`auth_permission` 或菜单。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | 关联 ID |
+| enterprise_id | bigint | 企业 ID |
+| merchant_id | bigint | 商户 ID，与人员所属商户一致 |
+| staff_id | bigint | 商户人员 ID |
+| role_code | varchar(32) | CONTACT, CLERK, PAYEE |
+| is_default | tinyint | 是否默认；仅 PAYEE 有意义 |
+| created_at | datetime | 创建时间 |
+| updated_at | datetime | 更新时间 |
+| updated_by | bigint | 更新人，指向 `tenant_user` |
+| deleted | tinyint | 软删除 |
+
+角色语义：
+
+| 角色 | role_code | 约束与用途 |
+| --- | --- | --- |
+| 联系人 | CONTACT | 每个商户最多一个有效联系人 |
+| 店员 | CLERK | 普通业务人员，可存在多个 |
+| 收款人 | PAYEE | 可存在多个，但每个商户最多一个默认收款人 |
+
+建议约束：
+
+1. 唯一键 `enterprise_id, staff_id, role_code, deleted`，避免同一人员重复绑定同一角色。
+2. 增加生成列 `contact_merchant_key`：仅当 `role_code='CONTACT' AND deleted=0` 时取 `merchant_id`，否则为 null；对该列建唯一索引，保证每个商户最多一个有效联系人。
+3. 增加生成列 `default_payee_merchant_key`：仅当 `role_code='PAYEE' AND is_default=1 AND deleted=0` 时取 `merchant_id`，否则为 null；对该列建唯一索引，保证每个商户最多一个默认收款人。
+4. 创建或更换联系人、默认收款人时必须使用事务；先解除旧角色或旧默认标记，再设置新记录。
+5. 出单时只读取创建方商户的有效默认收款人。未配置默认收款人时应明确提示补充资料，不再按“收款人、联系人、任意人员”的顺序静默回退。
+
+按当前 `insurance_saas` 的业务归档约定，应同步建立 `biz_merchant_staff_archive` 和 `biz_merchant_staff_role_archive`；归档表保存业务字段以及归档批次、归档时间、归档原因。`biz_merchant_category` 属于低频配置字典，优先保留变更日志，不参与普通业务数据夜间归档。
 
 ### 4.2 车险工单
 
@@ -609,6 +712,7 @@ Redis key 设计：
 | organization_name | varchar(100) | 组织名称 |
 | social_credit_code | varchar(100) | 统一社会信用代码 |
 | create_merchant_id | bigint | 创建方下游商户 |
+| source_staff_id | bigint | 业务来源人员，关联 `biz_merchant_staff`，可为空 |
 | handle_merchant_id | bigint | 处理方商户 |
 | insurance_merchant_id | bigint | 承保上游机构 |
 | area_code | varchar(20) | 业务区域 |
@@ -616,9 +720,9 @@ Redis key 设计：
 | remind_status | tinyint | 续保跟进状态 |
 | follow_up_res | varchar(1000) | 跟进结果 |
 | remark | varchar(500) | 备注 |
-| created_by | bigint | 创建用户 |
-| handle_by | bigint | 处理用户 |
-| updated_by | bigint | 更新用户 |
+| created_by | bigint | 实际创建工单的系统用户，关联 `tenant_user` |
+| handle_by | bigint | 实际处理工单的系统用户，关联 `tenant_user` |
+| updated_by | bigint | 实际更新工单的系统用户，关联 `tenant_user` |
 | created_at | datetime | 创建时间 |
 | updated_at | datetime | 更新时间 |
 | deleted | tinyint | 软删除 |
@@ -630,6 +734,7 @@ Redis key 设计：
 | uk_workorder_code | enterprise_id,code,deleted | 企业内工单号唯一 |
 | idx_workorder_status | enterprise_id,status,created_at | 工单列表 |
 | idx_workorder_create_merchant | enterprise_id,create_merchant_id,created_at | 下游商户工单 |
+| idx_workorder_source_staff | enterprise_id,source_staff_id,created_at | 商户人员来源工单 |
 | idx_workorder_handle_by | enterprise_id,handle_by,status | 出单员待办 |
 | idx_workorder_owner | enterprise_id,owner_phone,owner_name | 车主查询 |
 
@@ -687,15 +792,19 @@ Redis key 设计：
 | enterprise_id | bigint | 企业 ID |
 | workorder_id | bigint | 工单 ID |
 | required_pay_amount | decimal(12,2) | 应付金额 |
-| pay_name | varchar(100) | 付款人 |
-| pay_id_num | varchar(100) | 付款证件号 |
-| pay_bank | varchar(100) | 付款银行 |
-| pay_bank_card_num | varchar(100) | 付款卡号 |
+| payee_staff_id | bigint | 自动选中的默认收款人，关联 `biz_merchant_staff` |
+| payee_name | varchar(100) | 收款人姓名快照 |
+| payee_phone | varchar(20) | 收款人手机号快照 |
+| payee_id_num | varchar(100) | 收款人证件号快照 |
+| merchant_bank | varchar(100) | 创建方商户开户行快照 |
+| merchant_bank_card_num | varchar(100) | 创建方商户银行卡号快照 |
 | pay_remark | varchar(500) | 支付备注 |
 | pay_failed_remark | varchar(500) | 支付失败原因 |
 | created_at | datetime | 创建时间 |
 | updated_at | datetime | 更新时间 |
 | deleted | tinyint | 软删除 |
+
+创建支付记录时，根据 `biz_workorder.create_merchant_id` 查询创建方商户及其唯一的默认 `PAYEE`：收款人姓名、手机号和证件号取自 `biz_merchant_staff`，开户行和银行卡号取自 `biz_merchant`，然后分别写入支付表快照字段。后续修改商户人员或商户银行卡信息不得覆盖历史工单支付快照；敏感字段应加密保存并按权限脱敏展示。
 
 #### biz_workorder_underwriting 工单核保与出单表
 
@@ -920,8 +1029,8 @@ Redis key 设计：
 ### 6.1 第一阶段：补 SaaS 外壳
 
 1. 新增 `tenant_user`、`platform_user`、`platform_user_role`、`tenant_enterprise`、`tenant_member`、`tenant_invite_code`、`saas_plan`、`saas_wallet`、`saas_recharge_order`、`saas_wallet_transaction`、`saas_order`、`saas_subscription`。
-2. 迁移现有企业客户账号到 `tenant_user`，后台开发者、客服、运营账号单独初始化到 `platform_user`。
-3. 创建一个默认企业，将现有用户挂到 `tenant_member`。
+2. 先按旧角色和业务用途拆分 `insurance.user`：`admin`、`出单员` 等真实登录账号迁移到 `tenant_user`；后台开发者、客服、运营账号单独初始化到 `platform_user`；`联系人`、`店员`、`收款人` 不迁入任何登录用户表，留待第三阶段迁入商户人员表。
+3. 创建一个默认企业，仅将真实登录用户挂到 `tenant_member`。商户人员不进入 `tenant_member`，也不占用套餐成员数。
 4. 现有 `merchant` 暂不拆，只给 `workorder`、`merchant`、`system_file` 等核心表增加 `enterprise_id`。
 5. 登录后 JWT 中增加 `user_id`、当前 `enterprise_id`、`role_code`、权限列表。
 
@@ -931,13 +1040,21 @@ Redis key 设计：
 2. 后端 `@PreAuthorize` 继续使用权限编码，但权限来源从完整角色权限表读取。
 3. 前端菜单从权限表或接口动态生成，避免按角色名称过滤。
 4. 企业拥有者角色变更只允许走转让接口，管理员和出单员由拥有者或管理员变更。
+5. `联系人`、`店员`、`收款人` 不迁入 `auth_role`；删除通过这些名称判断系统权限的逻辑，商户人员职责只查询 `biz_merchant_staff_role.role_code`。
 
 ### 6.3 第三阶段：车险业务拆表
 
-1. 将 `merchant` 拆为 `biz_merchant` 并明确 `merchant_type`。
-2. 将 `workorder` 宽表逐步拆出报价、费用、支付、核保、物流表。
-3. OCR 结果落 `biz_ocr_record`，用量进入 Redis 计数。
-4. 为所有企业业务表增加 `enterprise_id` 复合索引。
+1. 先初始化 `biz_merchant_category`，按“机构→INSURANCE_ORG、车商店铺→DEALER_STORE、汽修厂→AUTO_REPAIR、代理人→AGENT”映射旧 `merchant.type`；空类型和未知类型进入人工核对清单。
+2. 将 `merchant` 迁移为 `biz_merchant`，通过 `category_id` 关联分类，不再保存可自由填写的上下游判断字符串。
+3. 将旧 `user` 中角色为 `联系人`、`店员`、`收款人` 的有效记录迁入 `biz_merchant_staff`，并分别写入 `CONTACT`、`CLERK`、`PAYEE` 角色关系。旧密码、审批状态和登录角色不迁移。
+4. 迁移前按商户检查联系人和默认收款人冲突。真实旧库中已存在同一商户多联系人和多个收款人的情况：联系人必须人工确认唯一有效记录；多个收款人可以保留，但必须人工或按明确业务规则指定唯一默认收款人，禁止按查询顺序自动选择。
+5. 将旧 `merchant.contact/phone` 与联系人角色数据交叉核对；旧 `merchant.bank/bank_card_num` 直接迁入 `biz_merchant.bank/bank_card_num`，不得迁入商户人员表。旧 `user.username` 仅按手机号迁入 `biz_merchant_staff.phone`，证件号必须取 `user.id_num`，不能延续现有代码将 `username` 写入 `pay_id_num` 的错误映射。不一致时输出迁移异常清单，不静默覆盖。
+6. 将 `workorder` 宽表逐步拆出报价、费用、支付、核保、物流表；`created_by/handle_by/updated_by` 只引用真实系统用户，`source_staff_id/payee_staff_id` 引用商户人员。
+7. 创建工单支付数据时分别保存默认收款人的人员信息快照和创建方商户的开户行、银行卡号快照，不让后续人员或商户资料变更影响历史工单。
+8. OCR 结果落 `biz_ocr_record`，用量进入 Redis 计数。
+9. 为所有企业业务表增加 `enterprise_id` 复合索引。
+
+`insurance_saas` 实库已于 2026-07-14 按本节设计完成结构升级，执行脚本为 `other/insurance_saas_merchant_staff_delta.sql`。当前已移除 `biz_merchant.merchant_type/org_type/contact/phone`，保留 `bank/bank_card_num` 作为商户属性，并新增 `biz_merchant_category`、`biz_merchant_staff`、`biz_merchant_staff_role`、工单来源人员字段和拆分后的支付快照字段。后续环境应通过迁移脚本升级，不直接覆盖式重建已有业务表。
 
 ### 6.4 第四阶段：用量归档和后台运营
 
@@ -964,7 +1081,8 @@ SaaS 功能：
 
 | 板块 | 表 |
 | --- | --- |
-| 商户渠道 | biz_merchant, biz_merchant_area |
+| 商户渠道 | biz_merchant_category, biz_merchant, biz_merchant_area |
+| 商户人员 | biz_merchant_staff, biz_merchant_staff_role |
 | 工单 | biz_workorder, biz_workorder_quote, biz_workorder_commission, biz_workorder_payment, biz_workorder_underwriting, biz_workorder_logistics |
 | 车辆证件 | biz_vehicle_license, biz_vehicle_invoice, biz_vehicle_certificate |
 | OCR | biz_ocr_record |

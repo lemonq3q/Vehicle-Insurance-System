@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: InsuranceSystemSaas
+
+server:
+  port: 8081

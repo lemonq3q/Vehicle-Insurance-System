@@ -113,18 +113,12 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination_container">
-        <el-pagination
-          size="small"
-          v-model:current-page="page.pageNum"
-          v-model:page-size="page.pageSize"
-          :page-sizes="[5, 10, 25, 50, 100]"
-          :background="true"
-          layout="total, prev, pager, next, jumper, sizes"
-          :total="page.total"
-          @change="handlePaginationChange"
-        />
-      </div>
+      <AppPagination
+        v-model:page-num="page.pageNum"
+        v-model:page-size="page.pageSize"
+        :total="page.total"
+        @change="handlePaginationChange"
+      />
     </div>
   </div>
 
@@ -134,13 +128,14 @@
 import { reactive, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { selectDownstreamOption } from '@/api/downstream';
-import { selectAllRole } from '@/api/role';
-import { selectUser, getUserExcel, deleteUser,updateUser } from '@/api/user';
+import { getUserExcel } from '@/api/user';
+import { deleteMerchantStaff, selectMerchantStaff, selectMerchantStaffRoles, updateMerchantStaff } from '@/api/merchantStaff';
 import { formatSecondTimestamp } from '@/utils/time';
 import Message from '@/utils/message';
 import { ElMessageBox } from 'element-plus';
 import { isHasPerm } from '@/utils/authenticate';
 import Loading from '@/utils/loading';
+import AppPagination from '@/components/common/AppPagination.vue';
 
 const tableLoading = ref(false);
 
@@ -176,7 +171,7 @@ const handleChangeStatus = async (index, row) => {
       id: row.id,
       status: row.status == 1?0:1
     };
-    await updateUser(updateData).then(res=>{
+    await updateMerchantStaff(updateData).then(res=>{
       res = res.data;
       if (res.code == 200){
         Message.success(`${row.status == 1?'禁用':'启用'}成功`);
@@ -252,7 +247,7 @@ const getMerchantOption = async (blurParam) => {
 const getRoleOption = async () => {
   try{
     roleLoading.value = true;
-    await selectAllRole().then(res=>{
+    await selectMerchantStaffRoles().then(res=>{
       res = res.data;
       if (res.code == 200){
         roleOptions.value = res.data.map(item => {
@@ -261,7 +256,6 @@ const getRoleOption = async () => {
             value: item.id
           }
         });
-        roleOptions.value = roleOptions.value.filter(item => item.label != 'admin' && item.label != '出单员');
       }
     });
   }
@@ -294,7 +288,7 @@ const getData = async () => {
     tableLoading.value = true;
     let params = buildSelectParams();
     console.log(params);
-    await selectUser(params).then(res=>{
+    await selectMerchantStaff(params).then(res=>{
       res = res.data;
       if (res.code == 200){
         buildTableData(res.data.table);
@@ -331,7 +325,7 @@ const handleDelete = (index, row) => {
   .then(async () => {
     try{
       Loading.open();
-      await deleteUser(row.id).then(res => {
+      await deleteMerchantStaff(row.id).then(res => {
         res = res.data;
         if(res.code == 200){
           Message.success("删除成功");

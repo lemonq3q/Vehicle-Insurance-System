@@ -85,18 +85,8 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination_container">
-        <el-pagination
-          size="small"
-          v-model:current-page="page.pageNum"
-          v-model:page-size="page.pageSize"
-          :page-sizes="[5, 10, 25, 50, 100]"
-          :background="true"
-          layout="total, prev, pager, next, jumper, sizes"
-          :total="page.total"
-          @change="handlePaginationChange"
-        />
-      </div>
+      <AppPagination v-model:page-num="page.pageNum" v-model:page-size="page.pageSize"
+        :total="page.total" @change="handlePaginationChange" />
     </div>
   </div>
 </template>
@@ -112,6 +102,7 @@ import { ElMessageBox } from 'element-plus';
 import { useRouter } from 'vue-router';
 import { isHasPerm } from '@/utils/authenticate';
 import Loading from '@/utils/loading';
+import AppPagination from '@/components/common/AppPagination.vue';
 
 const tableLoading = ref(false);
 
