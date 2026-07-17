@@ -9,7 +9,7 @@
       <div class="auth-copy">
         <p>企业门户登录</p>
         <h1>从账号进入你的企业工作台</h1>
-        <span>mock 账号任意输入即可登录，后续可直接替换为真实 `/portal/auth/login` 接口。</span>
+        <span>使用手机号或账号登录，统一管理企业成员、订阅服务与资金记录。</span>
       </div>
 
       <div class="auth-card">
@@ -102,7 +102,7 @@ export default {
       mode: 'login',
       message: '',
       messageType: 'success',
-      loginForm: { username: '13800000001', password: 'mock-password' },
+      loginForm: { username: '', password: '' },
       registerForm: { phone: '', smsCode: '', realName: '', password: '' },
       forgotForm: { phone: '', smsCode: '', password: '' },
       submitting: { login: false, register: false, forgot: false },
@@ -170,7 +170,7 @@ export default {
       if (!this.isPhoneValid(form.phone)) return '请输入正确的 11 位手机号';
       if (!SMS_CODE_PATTERN.test(form.smsCode || '')) return '请输入 6 位短信验证码';
       if (requireName && !form.realName) return '请输入姓名';
-      if (!form.password || form.password.length < 6) return '密码长度不能少于 6 位';
+      if (!form.password || form.password.length < 8) return '密码长度不能少于 8 位';
       return '';
     },
     async submitLogin() {

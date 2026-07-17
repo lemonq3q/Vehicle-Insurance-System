@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseResult handleBusinessException(BusinessException e) {
         log.error("业务异常：code={}, msg={}", e.getCode(), e.getMsg());
-        return new ResponseResult(e.getCode(), e.getMsg());
+        return new ResponseResult(e.getCode(), e.getMsg(), e.getData());
     }
 
     /**

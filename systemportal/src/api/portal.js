@@ -20,7 +20,9 @@ export const createInviteCode = data => post('/portal/enterprise/invite-codes', 
 export const deleteInviteCode = data => del('/portal/enterprise/invite-codes', data);
 export const getMembers = params => get('/portal/enterprise/members', params);
 export const updateMemberRole = data => put('/portal/enterprise/members/role', data);
+export const updateMemberStatus = data => put('/portal/enterprise/members/status', data);
 export const transferOwner = data => post('/portal/enterprise/owner-transfer', data);
+export const getOwnerTransferLogs = params => get('/portal/enterprise/owner-transfer-logs', params);
 export const exitEnterprise = () => post('/portal/enterprise/members/exit', {});
 
 export const getFinanceOverview = () => get('/portal/finance/overview');

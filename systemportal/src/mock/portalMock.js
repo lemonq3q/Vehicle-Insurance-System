@@ -13,6 +13,15 @@ let currentEnterpriseId = 20001;
 const smsCodes = new Map();
 const MOCK_NOW = new Date('2026-07-14T12:00:00');
 
+const filterByTimeRange = (rows, params, field = 'createdAt') => {
+  const start = params.startTime ? new Date(params.startTime.replace(' ', 'T')).getTime() : null;
+  const end = params.endTime ? new Date(params.endTime.replace(' ', 'T')).getTime() : null;
+  return rows.filter(item => {
+    const value = new Date(String(item[field]).replace(' ', 'T')).getTime();
+    return (!start || value >= start) && (!end || value <= end);
+  });
+};
+
 const enterprises = [
   {
     id: 20001,
@@ -72,7 +81,7 @@ let members = [
     realName: '周旋',
     phone: '13800000004',
     roleCode: 'ISSUER',
-    status: 1,
+    status: 0,
     joinedByInviteId: 40002,
     joinedAt: '2026-07-05 17:21:05'
   }
@@ -104,6 +113,31 @@ let inviteCodes = [
     createdAt: '2026-07-03 09:30:00'
   }
 ];
+
+const ownerTransferLogs = [];
+
+function synchronizeMemberSeats(userLimit) {
+  const enterpriseMembers = members.filter(item => item.enterpriseId === currentEnterpriseId);
+  const active = enterpriseMembers.filter(item => item.status === 1);
+  if (active.length > userLimit) {
+    const disablePriority = { ISSUER: 0, ADMIN: 1, OWNER: 2 };
+    active
+      .sort((left, right) => disablePriority[left.roleCode] - disablePriority[right.roleCode] || String(right.joinedAt).localeCompare(String(left.joinedAt)))
+      .slice(0, active.length - userLimit)
+      .forEach(item => {
+        item.status = 0;
+      });
+    return;
+  }
+  const enablePriority = { OWNER: 0, ADMIN: 1, ISSUER: 2 };
+  enterpriseMembers
+    .filter(item => item.status === 0)
+    .sort((left, right) => enablePriority[left.roleCode] - enablePriority[right.roleCode] || String(left.joinedAt).localeCompare(String(right.joinedAt)))
+    .slice(0, userLimit - active.length)
+    .forEach(item => {
+      item.status = 1;
+    });
+}
 
 const plans = [
   {
@@ -235,6 +269,26 @@ let subscriptionOrders = [
     status: 1,
     paidAt: null,
     createdAt: '2026-07-06 10:18:00'
+  },
+  {
+    id: 80003,
+    orderNo: 'SO20260714A2B3C',
+    orderType: 'AUTO_RENEW',
+    enterpriseId: 20001,
+    buyerUserId: 10001,
+    planId: 50002,
+    planName: '专业版',
+    buyUserLimit: 30,
+    buyDurationDays: 365,
+    priceAmount: 2999,
+    payableAmount: 2999,
+    paidAmount: 0,
+    payType: 'BALANCE',
+    autoRenew: true,
+    status: 6,
+    failureReason: '企业余额不足',
+    paidAt: null,
+    createdAt: '2026-07-14 04:00:00'
   }
 ];
 
@@ -297,8 +351,9 @@ const statusNames = {
     1: '待支付',
     2: '已支付',
     3: '已取消',
-    4: '已退款',
-    5: '已关闭'
+      4: '已退款',
+      5: '已关闭',
+      6: '自动续费失败'
   },
   recharge: {
     1: '待支付',
@@ -546,6 +601,9 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     if (params.roleCode) {
       filtered = filtered.filter(item => item.roleCode === params.roleCode);
     }
+    if (params.status !== undefined && params.status !== '') {
+      filtered = filtered.filter(item => item.status === Number(params.status));
+    }
     return ok(paginate(filtered, params));
   }
   if (url === '/portal/enterprise/members/role' && method === 'PUT') {
@@ -553,10 +611,43 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     if (member && member.roleCode !== 'OWNER') member.roleCode = data.roleCode;
     return ok(member, '成员角色已更新');
   }
+  if (url === '/portal/enterprise/members/status' && method === 'PUT') {
+    const member = members.find(item => item.id === Number(data.memberId) && item.enterpriseId === currentEnterpriseId);
+    const targetStatus = Number(data.status);
+    if (!member) return fail('成员不存在', 404);
+    if (member.roleCode === 'OWNER') return fail('企业拥有者不能被停用', 400);
+    if (![0, 1].includes(targetStatus)) return fail('成员状态参数不正确', 400);
+
+    if (targetStatus === 1 && member.status !== 1) {
+      const activeMemberCount = members.filter(item => item.enterpriseId === currentEnterpriseId && item.status === 1).length;
+      const userLimit = Number(subscription?.userLimit || 0);
+      if (userLimit > 0 && activeMemberCount >= userLimit) {
+        return Promise.resolve({
+          code: 409,
+          msg: `当前套餐最多启用 ${userLimit} 名成员，请先升级套餐或停用其他成员`,
+          data: { activeMemberCount, userLimit }
+        });
+      }
+    }
+
+    member.status = targetStatus;
+    return ok(member, targetStatus === 1 ? '成员已启用' : '成员已停用');
+  }
   if (url === '/portal/enterprise/owner-transfer' && method === 'POST') {
     const oldOwner = getCurrentMember();
     const newOwner = members.find(item => item.id === data.toMemberId);
     if (oldOwner && newOwner) {
+      ownerTransferLogs.unshift({
+        id: Date.now(),
+        enterpriseId: currentEnterpriseId,
+        fromUserId: oldOwner.userId,
+        fromUserName: oldOwner.realName,
+        toUserId: newOwner.userId,
+        toUserName: newOwner.realName,
+        status: 1,
+        transferredAt: '2026-07-07 19:00:00',
+        remark: '门户主动转让'
+      });
       oldOwner.roleCode = 'ADMIN';
       newOwner.roleCode = 'OWNER';
       getCurrentEnterprise().ownerUserId = newOwner.userId;
@@ -567,6 +658,9 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       toUserId: newOwner?.userId,
       transferredAt: '2026-07-07 19:00:00'
     }, '企业拥有者已转让');
+  }
+  if (url === '/portal/enterprise/owner-transfer-logs' && method === 'GET') {
+    return ok(paginate(ownerTransferLogs.filter(item => item.enterpriseId === currentEnterpriseId), params));
   }
   if (url === '/portal/enterprise/members/exit' && method === 'POST') {
     currentEnterpriseId = null;
@@ -582,6 +676,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     let filtered = rechargeOrders;
     if (params.rechargeNo) filtered = filtered.filter(item => item.rechargeNo.includes(params.rechargeNo));
     if (params.status) filtered = filtered.filter(item => item.status === Number(params.status));
+    filtered = filterByTimeRange(filtered, params);
     return ok(paginate(filtered, params));
   }
   if (url === '/portal/finance/recharge-orders' && method === 'POST') {
@@ -603,6 +698,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     let filtered = subscriptionOrders;
     if (params.orderNo) filtered = filtered.filter(item => item.orderNo.includes(params.orderNo));
     if (params.orderType) filtered = filtered.filter(item => item.orderType === params.orderType);
+    filtered = filterByTimeRange(filtered, params);
     return ok(paginate(filtered, params));
   }
   if (url === '/portal/finance/subscription-orders/preview' && method === 'POST') {
@@ -695,6 +791,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       lastRenewOrderId: preview.orderType === 'RENEW' ? order.id : subscription?.lastRenewOrderId || null,
       plan
     };
+    synchronizeMemberSeats(plan.userLimit);
     return ok(order, preview.refundAmount > 0 ? '套餐改订成功，差额已退回企业余额' : '订阅订单已支付，套餐已生效');
   }
   if (url === '/portal/finance/subscription/auto-renew' && method === 'PUT') {
@@ -706,6 +803,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     if (params.transactionNo) filtered = filtered.filter(item => item.transactionNo.includes(params.transactionNo));
     if (params.direction) filtered = filtered.filter(item => item.direction === params.direction);
     if (params.transactionType) filtered = filtered.filter(item => item.transactionType === params.transactionType);
+    filtered = filterByTimeRange(filtered, params);
     return ok(paginate(filtered, params));
   }
   if (url === '/portal/user/profile' && method === 'GET') {

@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @AllArgsConstructor
@@ -22,8 +24,11 @@ public class User implements Serializable {
 
     private String username;
 
+    private String phone;
+
     private String email;
 
+    @JsonIgnore
     private String password;
 
     private String realName;
@@ -31,6 +36,14 @@ public class User implements Serializable {
     private String idNum;
 
     private Integer status;
+
+    private Long avatarFileId;
+
+    private LocalDateTime lastLoginTime;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
     @TableField(exist = false)
     private Long merchantId;

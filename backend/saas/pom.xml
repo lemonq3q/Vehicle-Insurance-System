@@ -15,13 +15,23 @@
     <packaging>jar</packaging>
 
     <name>saas</name>
-    <description>Reserved SaaS business application</description>
+    <description>SaaS portal business application</description>
 
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
+            <version>1.1.23</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

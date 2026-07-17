@@ -1,8 +1,8 @@
 package com.example.insurancesystem.filter;
 
 import com.example.insurancesystem.domain.authenticate.LoginUser;
+import com.example.insurancesystem.security.SingleLoginSessionManager;
 import com.example.insurancesystem.utils.JwtUtil;
-import com.example.insurancesystem.utils.RedisCache;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
@@ -18,7 +18,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
@@ -26,7 +25,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     private static final String TOKEN_HEADER = "new-token";
 
     @Autowired
-    private RedisCache redisCache;
+    private SingleLoginSessionManager sessionManager;
 
     @Autowired
     private AuthenticationEntryPoint authenticationEntryPoint;
@@ -34,6 +33,12 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String token = request.getHeader("token");
+        if (token == null) {
+            String authorization = request.getHeader("Authorization");
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                token = authorization.substring(7);
+            }
+        }
         if (token == null) {
             filterChain.doFilter(request, response);
             return;
@@ -55,8 +60,8 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
             return;
         }
 
-        String redisKey = "login:" + userid + ":" + jti;
-        LoginUser loginUser = redisCache.getCacheObject(redisKey);
+        Long userId = Long.valueOf(userid);
+        LoginUser loginUser = sessionManager.get(userId, jti);
         if (loginUser == null) {
             SecurityContextHolder.clearContext();
             authenticationEntryPoint.commence(
@@ -67,7 +72,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
             return;
         }
         // 刷新过期时间
-        redisCache.setCacheObject("login:"+userid+":"+jti, loginUser, 24 , TimeUnit.HOURS);
+        sessionManager.refresh(userId, loginUser);
 
         Date expiration = claims.getExpiration();
         long remainMillis = expiration.getTime() - System.currentTimeMillis();

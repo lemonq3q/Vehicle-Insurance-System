@@ -16,7 +16,8 @@
           <option value="3">已取消</option>
           <option value="4">支付失败</option>
         </select>
-        <button class="layui-btn portal-btn portal-btn-primary" @click="loadData">查询</button>
+        <LayDatePicker v-model="query.dateRange" range placeholder="请选择创建时间范围" />
+        <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
       </div>
       <div class="data-table-wrap">
         <table class="layui-table portal-table">
@@ -44,20 +45,26 @@
           </tbody>
         </table>
       </div>
+      <LayPagination :total="total" :page-num="query.pageNum" :page-size="query.pageSize" @change="changePage" @size-change="changePageSize" />
     </article>
   </section>
 </template>
 
 <script>
 import { getRechargeOrders } from '@/api/portal';
-import { getStatusName } from '@/mock/portalMock';
+import LayDatePicker from '@/components/LayDatePicker.vue';
+import LayPagination from '@/components/LayPagination.vue';
+import { getStatusName } from '@/utils/portalLabels';
+import { defaultMonthRange, rangeParams } from '@/utils/dateRange';
 
 export default {
   name: 'RechargeOrdersPage',
+  components: { LayDatePicker, LayPagination },
   data() {
     return {
-      query: { pageNum: 1, pageSize: 20, rechargeNo: '', status: '' },
-      rows: []
+      query: { pageNum: 1, pageSize: 10, rechargeNo: '', status: '', dateRange: defaultMonthRange() },
+      rows: [],
+      total: 0
     };
   },
   created() {
@@ -69,8 +76,22 @@ export default {
       return { WECHAT: '微信', ALIPAY: '支付宝', BANK: '银行转账' }[channel] || channel;
     },
     async loadData() {
-      const response = await getRechargeOrders(this.query);
+      const response = await getRechargeOrders({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });
       this.rows = response.data.table;
+      this.total = Number(response.data.total || 0);
+    },
+    search() {
+      this.query.pageNum = 1;
+      this.loadData();
+    },
+    changePage(pageNum) {
+      this.query.pageNum = pageNum;
+      this.loadData();
+    },
+    changePageSize(pageSize) {
+      this.query.pageNum = 1;
+      this.query.pageSize = pageSize;
+      this.loadData();
     }
   }
 };

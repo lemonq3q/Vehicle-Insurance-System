@@ -1,6 +1,5 @@
 import axios from 'axios';
 import Storage from '@/utils/storage';
-import mockAxiosAdapter from '@/mock/axiosMockAdapter';
 
 const TOKEN_STORAGE_KEY = 'portalToken';
 const TOKEN_EXPIRE_SECONDS = 60 * 60 * 24;
@@ -16,10 +15,6 @@ const request = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || '',
   timeout: 60000
 });
-
-if (process.env.VUE_APP_USE_MOCK !== 'false') {
-  request.defaults.adapter = mockAxiosAdapter;
-}
 
 let unauthorizedHandler = null;
 

@@ -22,7 +22,8 @@
           <option value="AUTO_RENEW">自动续费</option>
           <option value="CHANGE_PLAN">套餐变更</option>
         </select>
-        <button class="layui-btn portal-btn portal-btn-primary" @click="loadData">查询</button>
+        <LayDatePicker v-model="query.dateRange" range placeholder="请选择交易时间范围" />
+        <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
       </div>
       <div class="data-table-wrap">
         <table class="layui-table portal-table">
@@ -52,19 +53,25 @@
           </tbody>
         </table>
       </div>
+      <LayPagination :total="total" :page-num="query.pageNum" :page-size="query.pageSize" @change="changePage" @size-change="changePageSize" />
     </article>
   </section>
 </template>
 
 <script>
 import { getWalletTransactions } from '@/api/portal';
+import LayDatePicker from '@/components/LayDatePicker.vue';
+import LayPagination from '@/components/LayPagination.vue';
+import { defaultMonthRange, rangeParams } from '@/utils/dateRange';
 
 export default {
   name: 'WalletTransactionsPage',
+  components: { LayDatePicker, LayPagination },
   data() {
     return {
-      query: { pageNum: 1, pageSize: 20, transactionNo: '', direction: '', transactionType: '' },
-      rows: []
+      query: { pageNum: 1, pageSize: 10, transactionNo: '', direction: '', transactionType: '', dateRange: defaultMonthRange() },
+      rows: [],
+      total: 0
     };
   },
   created() {
@@ -83,8 +90,22 @@ export default {
       }[type] || type;
     },
     async loadData() {
-      const response = await getWalletTransactions(this.query);
+      const response = await getWalletTransactions({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });
       this.rows = response.data.table;
+      this.total = Number(response.data.total || 0);
+    },
+    search() {
+      this.query.pageNum = 1;
+      this.loadData();
+    },
+    changePage(pageNum) {
+      this.query.pageNum = pageNum;
+      this.loadData();
+    },
+    changePageSize(pageSize) {
+      this.query.pageNum = 1;
+      this.query.pageSize = pageSize;
+      this.loadData();
     }
   }
 };

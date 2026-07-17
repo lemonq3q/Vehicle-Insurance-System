@@ -5,6 +5,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.sql.SQLException;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 /**
  * 系统编号插入重试工具。仅处理 MySQL 1062 且命中指定编号唯一约束的异常。
@@ -22,9 +23,17 @@ public final class UniqueCodeRetryUtil {
     public static int insertWithGeneratedCode(String constraintName,
                                               Consumer<String> codeSetter,
                                               IntSupplier insertAction) {
+        return insertWithGeneratedCode(
+                constraintName, SystemCommonUtil::buildCode, codeSetter, insertAction);
+    }
+
+    public static int insertWithGeneratedCode(String constraintName,
+                                              Supplier<String> codeGenerator,
+                                              Consumer<String> codeSetter,
+                                              IntSupplier insertAction) {
         DataIntegrityViolationException lastCodeConflict = null;
         for (int retryCount = 0; retryCount <= MAX_RETRY_COUNT; retryCount++) {
-            codeSetter.accept(SystemCommonUtil.buildCode());
+            codeSetter.accept(codeGenerator.get());
             try {
                 return insertAction.getAsInt();
             } catch (DataIntegrityViolationException exception) {

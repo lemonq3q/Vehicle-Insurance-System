@@ -7,7 +7,7 @@
       </div>
     </div>
 
-    <article v-if="canManage" class="portal-card panel">
+    <article v-if="canManage" class="portal-card panel invite-panel">
       <div class="invite-create-area">
         <div class="table-toolbar">
           <h2>邀请码</h2>
@@ -20,7 +20,7 @@
           </div>
           <div class="form-field">
             <label for="expiresAt">过期时间</label>
-            <input id="expiresAt" v-model="inviteForm.expiresAt" class="layui-input" />
+            <LayDatePicker v-model="inviteForm.expiresAt" placeholder="请选择邀请码过期时间" />
           </div>
         </div>
       </div>
@@ -52,10 +52,11 @@
             </tbody>
           </table>
         </div>
+        <LayPagination :total="inviteTotal" :page-num="inviteQuery.pageNum" :page-size="inviteQuery.pageSize" @change="changeInvitePage" @size-change="changeInvitePageSize" />
       </div>
     </article>
 
-    <article class="portal-card panel">
+    <article class="portal-card panel members-panel">
       <div class="table-toolbar">
         <h2>企业成员</h2>
         <div class="filters">
@@ -77,7 +78,9 @@
               <th>账号</th>
               <th>手机号</th>
               <th>角色</th>
+              <th>状态</th>
               <th>加入时间</th>
+              <th>修改角色</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -87,6 +90,7 @@
               <td>{{ item.username }}</td>
               <td>{{ item.phone }}</td>
               <td><span class="portal-tag" :class="{ blue: item.roleCode === 'OWNER', gray: item.roleCode === 'ISSUER' }">{{ roleName(item.roleCode) }}</span></td>
+              <td><span class="portal-tag" :class="{ gray: item.status === 0, warn: item.status === 2 }">{{ memberStatusName(item.status) }}</span></td>
               <td>{{ item.joinedAt }}</td>
               <td>
                 <div class="member-actions">
@@ -94,14 +98,28 @@
                     <option value="ADMIN">管理员</option>
                     <option value="ISSUER">出单员</option>
                   </select>
-                  <button v-if="isOwner && item.roleCode !== 'OWNER'" class="layui-btn layui-btn-xs layui-btn-primary layui-border-blue" @click="openTransferDialog(item)">转让拥有者</button>
-                  <span v-if="!canManage || item.roleCode === 'OWNER'" class="text-muted">不可修改</span>
+                  <span v-else class="text-muted">不可修改</span>
+                </div>
+              </td>
+              <td>
+                <div class="member-actions">
+                  <button
+                    v-if="canManage && item.roleCode !== 'OWNER' && [0, 1].includes(item.status)"
+                    class="layui-btn layui-btn-xs layui-btn-primary"
+                    :class="item.status === 1 ? 'layui-border-red' : 'layui-border-green'"
+                    @click="toggleMemberStatus(item)"
+                  >
+                    {{ item.status === 1 ? '停用' : '启用' }}
+                  </button>
+                  <button v-if="isOwner && item.roleCode !== 'OWNER' && item.status === 1" class="layui-btn layui-btn-xs layui-btn-primary layui-border-blue" @click="openTransferDialog(item)">转让拥有者</button>
+                  <span v-if="!canManage || item.roleCode === 'OWNER'" class="text-muted">不可操作</span>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      <LayPagination :total="memberTotal" :page-num="query.pageNum" :page-size="query.pageSize" @change="changeMemberPage" @size-change="changeMemberPageSize" />
     </article>
 
     <ConfirmDialog
@@ -124,26 +142,33 @@
       @confirm="confirmDeleteInvite"
     />
 
+    <p v-if="memberStatusError" class="message error" role="alert">{{ memberStatusError }}</p>
     <p class="message" aria-live="polite">{{ message }}</p>
   </section>
 </template>
 
 <script>
-import { createInviteCode, deleteInviteCode, getInviteCodes, getMembers, transferOwner, updateMemberRole } from '@/api/portal';
+import { createInviteCode, deleteInviteCode, getInviteCodes, getMembers, transferOwner, updateMemberRole, updateMemberStatus } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
-import { getRoleName } from '@/mock/portalMock';
+import LayDatePicker from '@/components/LayDatePicker.vue';
+import LayPagination from '@/components/LayPagination.vue';
+import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'EnterpriseMembersPage',
-  components: { ConfirmDialog },
+  components: { ConfirmDialog, LayDatePicker, LayPagination },
   data() {
     return {
       members: [],
       invites: [],
-      query: { pageNum: 1, pageSize: 20, keyword: '', roleCode: '' },
-      inviteForm: { maxUseCount: 5, expiresAt: '2026-08-01 23:59:59' },
+      memberTotal: 0,
+      inviteTotal: 0,
+      query: { pageNum: 1, pageSize: 5, keyword: '', roleCode: '' },
+      inviteQuery: { pageNum: 1, pageSize: 5 },
+      inviteForm: { maxUseCount: 5, expiresAt: '2026-08-01' },
       transferDialog: { visible: false, member: null, loading: false },
       deleteInviteDialog: { visible: false, invite: null, loading: false },
+      memberStatusError: '',
       message: ''
     };
   },
@@ -168,17 +193,41 @@ export default {
   },
   methods: {
     roleName: getRoleName,
+    memberStatusName(status) {
+      return { 0: '已停用', 1: '已启用', 2: '待审核', 3: '已退出' }[status] || '未知';
+    },
     async loadMembers() {
       const response = await getMembers(this.query);
       this.members = response.data.table;
+      this.memberTotal = Number(response.data.total || 0);
     },
     async loadInvites() {
-      const response = await getInviteCodes({ pageNum: 1, pageSize: 20 });
+      const response = await getInviteCodes(this.inviteQuery);
       this.invites = response.data.table;
+      this.inviteTotal = Number(response.data.total || 0);
+    },
+    changeMemberPage(pageNum) {
+      this.query.pageNum = pageNum;
+      this.loadMembers();
+    },
+    changeMemberPageSize(pageSize) {
+      this.query.pageNum = 1;
+      this.query.pageSize = pageSize;
+      this.loadMembers();
+    },
+    changeInvitePage(pageNum) {
+      this.inviteQuery.pageNum = pageNum;
+      this.loadInvites();
+    },
+    changeInvitePageSize(pageSize) {
+      this.inviteQuery.pageNum = 1;
+      this.inviteQuery.pageSize = pageSize;
+      this.loadInvites();
     },
     async createInvite() {
       const response = await createInviteCode(this.inviteForm);
       this.message = response.msg;
+      this.inviteQuery.pageNum = 1;
       await this.loadInvites();
     },
     openDeleteInviteDialog(invite) {
@@ -199,6 +248,10 @@ export default {
         const response = await deleteInviteCode({ id: invite.id });
         this.message = response.msg;
         await this.loadInvites();
+        if (!this.invites.length && this.inviteQuery.pageNum > 1) {
+          this.inviteQuery.pageNum -= 1;
+          await this.loadInvites();
+        }
         this.deleteInviteDialog.visible = false;
         this.deleteInviteDialog.invite = null;
       } finally {
@@ -209,6 +262,19 @@ export default {
       const response = await updateMemberRole({ memberId: item.id, roleCode });
       this.message = response.msg;
       await this.loadMembers();
+    },
+    async toggleMemberStatus(item) {
+      this.memberStatusError = '';
+      try {
+        const response = await updateMemberStatus({
+          memberId: item.id,
+          status: item.status === 1 ? 0 : 1
+        });
+        this.message = response.msg;
+        await this.loadMembers();
+      } catch (error) {
+        this.memberStatusError = error.message || '成员状态更新失败';
+      }
     },
     openTransferDialog(item) {
       this.transferDialog.member = item;
@@ -240,6 +306,27 @@ export default {
 </script>
 
 <style scoped>
+section {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  order: 0;
+}
+
+.members-panel {
+  order: 1;
+}
+
+.invite-panel {
+  order: 2;
+}
+
+section > :not(.section-title):not(.members-panel):not(.invite-panel) {
+  order: 3;
+}
+
 .panel {
   padding: 22px;
   margin-bottom: 18px;
@@ -303,9 +390,15 @@ export default {
   border-radius: 4px;
 }
 
+.members-table th:nth-last-child(2),
+.members-table td:nth-last-child(2) {
+  width: 160px;
+  text-align: center;
+}
+
 .members-table th:last-child,
 .members-table td:last-child {
-  width: 260px;
+  width: 220px;
   text-align: center;
 }
 
@@ -328,6 +421,10 @@ export default {
 
 .message {
   color: #166534;
+}
+
+.message.error {
+  color: var(--portal-danger);
 }
 
 @media (max-width: 720px) {

@@ -6,6 +6,7 @@ import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.domain.authenticate.UserDTO;
 import com.example.insurancesystem.service.LoginService;
 import com.example.insurancesystem.service.UserService;
+import com.example.insurancesystem.security.SingleLoginSessionManager;
 import com.example.insurancesystem.utils.EmailUtil;
 import com.example.insurancesystem.utils.JwtUtil;
 import com.example.insurancesystem.utils.RedisCache;
@@ -33,6 +34,9 @@ public class LoginServiceImpl implements LoginService {
     @Autowired
     private RedisCache redisCache;
 
+    @Autowired
+    private SingleLoginSessionManager sessionManager;
+
     @Override
     public ResponseResult login(User user) {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
@@ -46,13 +50,12 @@ public class LoginServiceImpl implements LoginService {
         String jti = JwtUtil.getUUID();
         // jwt有效时间设为一周
         String jwt = JwtUtil.createJWT(userid, JwtUtil.LOGIN_JWT_TTL, jti);
-        loginUser.setSessionId(jti);
         UserDTO userDTO = new UserDTO(loginUser.getUser().getId(), loginUser.getUser().getUsername(), loginUser.getUser().getRealName(), loginUser.getPermissions());
         Map<String, Object> map = new HashMap<>();
         map.put("user", userDTO);
         map.put("token", jwt);
         // 无操作24个小时之后过期
-        redisCache.setCacheObject("login:"+userid+":"+jti, loginUser, 24 ,TimeUnit.HOURS);
+        sessionManager.save(loginUser.getUser().getId(), jti, loginUser);
         ResponseResult result = new ResponseResult(200, "login succeed", map);
         return result;
     }
@@ -63,7 +66,7 @@ public class LoginServiceImpl implements LoginService {
         LoginUser loginUser = (LoginUser) authentication.getPrincipal();
         Long userid = loginUser.getUser().getId();
         String sessionId = loginUser.getSessionId();
-        redisCache.deleteObject("login:" + userid + ":" + sessionId);
+        sessionManager.remove(userid, sessionId);
         return new ResponseResult(200, "logout succeed");
     }
 

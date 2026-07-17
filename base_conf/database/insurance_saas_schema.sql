@@ -30,7 +30,7 @@ FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 CREATE TABLE IF NOT EXISTS `tenant_enterprise` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `name` varchar(150) DEFAULT NULL COMMENT '企业名称',
-  `code` varchar(50) DEFAULT NULL COMMENT '企业编码',
+  `code` varchar(50) NOT NULL COMMENT '企业编码',
   `owner_user_id` bigint DEFAULT NULL COMMENT '当前企业拥有者用户ID',
   `contact_name` varchar(100) DEFAULT NULL COMMENT '联系人',
   `contact_phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS `tenant_enterprise` (
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `updated_by` bigint DEFAULT NULL COMMENT '更新人',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_enterprise_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业租户表';
 
 CREATE TABLE IF NOT EXISTS `tenant_enterprise_archive` LIKE `tenant_enterprise`;
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS `tenant_owner_transfer_log` (
 CREATE TABLE IF NOT EXISTS `tenant_invite_code` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
-  `code` varchar(64) DEFAULT NULL COMMENT '邀请码',
+  `code` varchar(64) NOT NULL COMMENT '邀请码',
   `default_role_code` varchar(32) DEFAULT 'ISSUER' COMMENT '默认角色',
   `max_use_count` int DEFAULT NULL COMMENT '最大使用次数',
   `used_count` int NOT NULL DEFAULT 0 COMMENT '已使用次数',
@@ -101,7 +102,8 @@ CREATE TABLE IF NOT EXISTS `tenant_invite_code` (
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_invite_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业邀请码表';
 
 CREATE TABLE IF NOT EXISTS `tenant_invite_code_archive` LIKE `tenant_invite_code`;
@@ -145,7 +147,7 @@ FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS `saas_order` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `order_no` varchar(64) DEFAULT NULL COMMENT '订单号',
+  `order_no` varchar(64) NOT NULL COMMENT '订单号',
   `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
   `buyer_user_id` bigint DEFAULT NULL COMMENT '购买人',
   `plan_id` bigint DEFAULT NULL COMMENT '套餐ID',
@@ -156,12 +158,14 @@ CREATE TABLE IF NOT EXISTS `saas_order` (
   `paid_amount` decimal(12,2) DEFAULT NULL COMMENT '实付金额',
   `pay_channel` varchar(32) DEFAULT NULL COMMENT '支付渠道',
   `pay_trade_no` varchar(100) DEFAULT NULL COMMENT '第三方交易号',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1待支付 2已支付 3已取消 4已退款 5已关闭',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1待支付 2已支付 3已取消 4已退款 5已关闭 6自动续费失败',
+  `failure_reason` varchar(500) DEFAULT NULL COMMENT '自动续费失败原因',
   `paid_at` datetime DEFAULT NULL COMMENT '支付时间',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saas_order_enterprise_no` (`enterprise_id`, `order_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='SaaS套餐订单表';
 
 CREATE TABLE IF NOT EXISTS `saas_order_archive` LIKE `saas_order`;

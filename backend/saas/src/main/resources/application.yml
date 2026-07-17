@@ -1,6 +1,20 @@
 spring:
   application:
     name: InsuranceSystemSaas
+  datasource:
+    druid:
+      url: ${INSURANCE_DB_URL:jdbc:mysql://localhost:3306/insurance_saas?characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+      username: ${INSURANCE_DB_USERNAME:root}
+      password: ${INSURANCE_DB_PASSWORD:}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: ${INSURANCE_REDIS_HOST:localhost}
+    port: ${INSURANCE_REDIS_PORT:6379}
+    password: ${INSURANCE_REDIS_PASSWORD:}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
 
 server:
   port: 8081

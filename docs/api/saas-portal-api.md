@@ -1,8 +1,8 @@
 # SaaS 门户前端接口文档
 
-本文档描述 `systemportal` 前端当前使用的接口契约。业务接口由 `systemportal/src/api/portal.js` 统一导出，请求通过 `systemportal/src/api/request.js` 中的 Axios 实例管理；mock 模式由 `systemportal/src/mock/axiosMockAdapter.js` 转发至 `systemportal/src/mock/portalMock.js`。后端实现时应保持路径、方法、请求字段、响应字段和统一响应外壳一致。
+本文档描述 `systemportal` 前端当前使用的接口契约。业务接口由 `systemportal/src/api/portal.js` 统一导出，请求通过 `systemportal/src/api/request.js` 中的 Axios 实例管理，并已对接 `backend/saas` 提供的真实接口。
 
-当前前端已经按此文档接入 mock：宣传官网与仪表盘为静态样板；登录注册、企业信息、企业成员、邀请码、订阅服务、充值订单、订阅订单、资金明细、用户中心均通过 mock API 调用。
+宣传官网与仪表盘仍为静态样板；登录注册、企业信息、企业成员、邀请码、订阅服务、充值订单、订阅订单、资金明细、用户中心均调用真实 API。旧 mock 文件仅保留为历史联调样例，不再由请求层加载。
 
 ## 统一约定
 
@@ -27,10 +27,12 @@
 | 配置项 | 当前约定 |
 | --- | --- |
 | API 根地址 | `VUE_APP_API_BASE_URL`，未配置时使用同源地址 |
-| mock 开关 | `VUE_APP_USE_MOCK`，仅显式设置为 `false` 时请求真实后端 |
+| 本地开发代理 | `/portal/**` 默认转发至 `http://127.0.0.1:8081`，可通过 `PORTAL_API_TARGET` 覆盖 |
 | 请求超时 | 60000 ms |
 | 登录态请求头 | `token: <token>`，同时发送 `Authorization: Bearer <token>` |
 | token 刷新响应头 | `new-token` |
+
+登录采用单点会话：同一用户再次登录后，服务端会覆盖原 Redis 会话，之前签发的 token 立即失效。
 | 登录态有效期 | 本地滑动续期 24 小时 |
 
 登录、注册、发送短信验证码、找回密码接口不附加 token。业务响应 `code >= 400` 时 Axios 响应拦截器会转换为 Promise 异常；`code = 401` 或 HTTP 401 时同时清理登录态并返回登录页。
@@ -77,7 +79,7 @@ Body：
 | 字段 | 类型 | 必填 | 说明 | 示例 |
 | --- | --- | --- | --- | --- |
 | username | string | 是 | 登录账号，可为手机号 | 13800000001 |
-| password | string | 是 | 密码 | mock-password |
+| password | string | 是 | 密码，至少 8 位 | Portal@123 |
 
 Response data：
 
@@ -245,11 +247,12 @@ Body：
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | name | string | 是 | 企业名称 |
-| code | string | 否 | 企业编码，不传时后端生成 |
 | contactName | string | 是 | 联系人 |
 | contactPhone | string | 是 | 联系电话 |
 
 Response data：`TenantEnterprise`
+
+企业编码始终由后端的独立编码生成器创建，前端传入的 `code` 字段不会被采用。
 
 ### 3.3 更新当前企业
 
@@ -299,7 +302,7 @@ Query：
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | pageNum | number | 否 | 页码，默认 1 |
-| pageSize | number | 否 | 每页条数，默认 10 |
+| pageSize | number | 否 | 每页条数，默认 5 |
 
 Response data：分页 `TenantInviteCode`
 
@@ -344,6 +347,7 @@ Query：
 | pageSize | number | 否 | 每页条数 |
 | keyword | string | 否 | 姓名、手机号、账号模糊搜索 |
 | roleCode | string | 否 | OWNER、ADMIN、ISSUER |
+| status | number | 否 | 0 停用，1 启用，2 待审核，3 已退出 |
 
 Response data：分页 `TenantMember`
 
@@ -362,7 +366,56 @@ Body：
 
 Response data：`TenantMember`
 
-### 4.6 转让企业拥有者
+### 4.6 修改成员启停状态
+
+`PUT /portal/enterprise/members/status`
+
+作用：启用或停用企业成员。邀请成员不校验套餐人数；只有把成员状态修改为启用时，后端才校验当前套餐可用人数。
+
+权限：OWNER、ADMIN。企业拥有者不能被停用。
+
+Body：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| memberId | number | 是 | 企业成员 ID |
+| status | number | 是 | 0 停用，1 启用 |
+
+Response data：`TenantMember`
+
+人数校验规则：
+
+1. 套餐占用人数只统计当前企业 `tenant_member.status = 1 AND deleted = 0` 的成员。
+2. 停用成员不受套餐人数限制。
+3. 启用成员时由后端在事务中重新统计人数；前端不预判、不缓存剩余席位。
+4. 达到套餐上限时不更新成员状态，返回 `409`。
+
+余额不足示例之外，本接口常见错误如下：
+
+| code | msg | 触发条件 |
+| --- | --- | --- |
+| 400 | 企业拥有者不能被停用 | memberId 指向 OWNER |
+| 400 | 成员状态参数不正确 | status 不是 0 或 1 |
+| 404 | 成员不存在 | 成员不存在或不属于当前企业 |
+| 409 | 当前套餐最多启用 N 名成员，请先升级套餐或停用其他成员 | 启用后会超过套餐人数上限 |
+
+Mock response：
+
+```json
+{
+  "code": 200,
+  "msg": "成员已停用",
+  "data": {
+    "id": 30004,
+    "enterpriseId": 20001,
+    "userId": 10004,
+    "roleCode": "ISSUER",
+    "status": 0
+  }
+}
+```
+
+### 4.7 转让企业拥有者
 
 `POST /portal/enterprise/owner-transfer`
 
@@ -383,7 +436,22 @@ Response data：
 | toUserId | number | 新拥有者用户 ID |
 | transferredAt | string | 转让时间 |
 
-### 4.7 退出企业
+### 4.8 查询企业拥有者转让记录
+
+`GET /portal/enterprise/owner-transfer-logs`
+
+作用：分页查询当前企业历次拥有者转让记录，所有企业成员可查看。
+
+Query：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| pageNum | number | 否 | 页码，默认 1 |
+| pageSize | number | 否 | 每页条数，默认 5，最大 100 |
+
+Response data：分页 `TenantOwnerTransferLog`，包含原拥有者与新拥有者姓名。
+
+### 4.9 退出企业
 
 `POST /portal/enterprise/members/exit`
 
@@ -426,6 +494,8 @@ Body：
 
 Response data：`SaasRechargeOrder`
 
+当前支付网关为 mock 实现：接口创建状态为待支付的充值订单并返回模拟第三方交易号，不会直接增加企业余额。接入真实支付平台后，由支付回调完成订单入账。
+
 ### 5.4 查询充值订单
 
 `GET /portal/finance/recharge-orders`
@@ -437,6 +507,8 @@ Query：
 | pageNum | number | 否 | 页码 |
 | pageSize | number | 否 | 每页条数 |
 | rechargeNo | string | 否 | 充值订单号 |
+| startTime | string | 否 | 创建时间起点，格式 `yyyy-MM-dd HH:mm:ss` |
+| endTime | string | 否 | 创建时间终点，格式 `yyyy-MM-dd HH:mm:ss` |
 | status | number | 否 | 1 待支付，2 已支付，3 已取消，4 支付失败 |
 
 Response data：分页 `SaasRechargeOrder`
@@ -548,7 +620,7 @@ Mock response：
   "msg": "订阅订单已支付，套餐已生效",
   "data": {
     "id": 80003,
-    "orderNo": "SO20260714120000",
+    "orderNo": "SO20260714A2B3C",
     "orderType": "CHANGE_PLAN",
     "planId": 50001,
     "periodCount": 12,
@@ -590,6 +662,8 @@ Query：
 | pageSize | number | 否 | 每页条数 |
 | orderNo | string | 否 | 订阅订单号 |
 | orderType | string | 否 | BUY、RENEW、AUTO_RENEW、CHANGE_PLAN |
+| startTime | string | 否 | 创建时间起点，格式 `yyyy-MM-dd HH:mm:ss` |
+| endTime | string | 否 | 创建时间终点，格式 `yyyy-MM-dd HH:mm:ss` |
 
 Response data：分页 `SaasOrder`
 
@@ -604,6 +678,8 @@ Query：
 | pageNum | number | 否 | 页码 |
 | pageSize | number | 否 | 每页条数 |
 | transactionNo | string | 否 | 流水号 |
+| startTime | string | 否 | 交易时间起点，格式 `yyyy-MM-dd HH:mm:ss` |
+| endTime | string | 否 | 交易时间终点，格式 `yyyy-MM-dd HH:mm:ss` |
 | direction | string | 否 | IN、OUT |
 | transactionType | string | 否 | RECHARGE、BUY_PLAN、RENEW_PLAN、AUTO_RENEW、CHANGE_PLAN、REFUND、ADJUST |
 
@@ -713,6 +789,7 @@ Response data：`TenantUser`
 | oldPlanId | number \| null | 改订前套餐 ID |
 | newPlanId | number \| null | 改订后套餐 ID |
 | autoRenew | boolean | 是否自动续费 |
-| status | number | 1 待支付，2 已支付，3 已取消，4 已退款，5 已关闭 |
+| status | number | 1 待支付，2 已支付，3 已取消，4 已退款，5 已关闭，6 自动续费失败 |
+| failureReason | string | 自动续费失败原因，仅失败订单有值 |
 
 `SaasWallet`、`SaasSubscription` 与 `SaasOrder` 直接对应 `other/saas数据库设计.md` 中的同名表，前端字段采用小驼峰命名，例如 `balance_amount` 对应 `balanceAmount`，`auto_renew_enabled` 对应 `autoRenewEnabled`。

@@ -50,7 +50,7 @@
 </template>
 
 <script>
-import { getRoleName } from '@/mock/portalMock';
+import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'DashboardPage',

@@ -51,7 +51,11 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
-                .antMatchers("/auth/login","/auth/register", "/auth/code", "/auth/forget").permitAll()
+                .antMatchers(
+                        "/auth/login", "/auth/register", "/auth/code", "/auth/forget",
+                        "/portal/auth/login", "/portal/auth/register", "/portal/auth/sms-code",
+                        "/portal/auth/forget-password"
+                ).permitAll()
                 .anyRequest().authenticated();
         // 添加过滤器
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
