@@ -25,9 +25,12 @@ public interface EnterpriseService {
 
   Map<String, Object> updateStatus(Map<String, Object> body);
 
+  boolean removeMember(Map<String, Object> body);
+
   Map<String, Object> transfer(Map<String, Object> body);
 
-  TableData<Map<String, Object>> transferLogs(int pageNum, int pageSize);
+  TableData<Map<String, Object>> memberChangeLogs(
+      int pageNum, int pageSize, String eventType);
 
   boolean exit();
 }

@@ -6,6 +6,8 @@ import com.example.insurancesystem.domain.user.User;
 public interface LoginService {
     ResponseResult login(User user);
 
+    ResponseResult ssoLogin(String code);
+
     ResponseResult logout();
 
     ResponseResult getEmailCode(String email);

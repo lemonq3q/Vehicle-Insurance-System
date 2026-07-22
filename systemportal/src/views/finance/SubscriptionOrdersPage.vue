@@ -8,7 +8,7 @@
     </div>
     <article class="portal-card panel">
       <div class="filters">
-        <input v-model="query.orderNo" class="layui-input" placeholder="订阅订单号" @keyup.enter="loadData" />
+        <input v-model="query.orderNo" class="layui-input" placeholder="订阅订单号" @keyup.enter="search" />
         <select v-model="query.orderType" class="layui-select">
           <option value="">全部类型</option>
           <option value="BUY">购买</option>
@@ -18,6 +18,7 @@
         </select>
         <LayDatePicker v-model="query.dateRange" range placeholder="请选择创建时间范围" />
         <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
+        <button class="layui-btn layui-btn-primary portal-btn" @click="resetQuery">重置</button>
       </div>
       <div class="data-table-wrap">
         <table class="layui-table portal-table">
@@ -100,6 +101,10 @@ export default {
     },
     search() {
       this.query.pageNum = 1;
+      this.loadData();
+    },
+    resetQuery() {
+      this.query = { ...this.query, pageNum: 1, orderNo: '', orderType: '', dateRange: defaultMonthRange() };
       this.loadData();
     },
     changePage(pageNum) {

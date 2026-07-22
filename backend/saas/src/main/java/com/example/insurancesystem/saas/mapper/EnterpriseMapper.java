@@ -20,6 +20,13 @@ public interface EnterpriseMapper {
       @Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
 
   @Select(
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.deleted,m.joined_at,u.username,u.phone,u.real_name "
+          + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 "
+          + "WHERE m.enterprise_id=#{enterpriseId} AND m.user_id=#{userId} LIMIT 1")
+  Map<String, Object> findMemberByUserIncludingDeleted(
+      @Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
+
+  @Select(
       "SELECT e.id,e.name,e.code,e.owner_user_id,e.contact_name,e.contact_phone,e.status,e.source,e.created_at,e.updated_at "
           + "FROM tenant_enterprise e WHERE e.id=#{id} AND e.deleted=0")
   Map<String, Object> findEnterprise(Long id);
@@ -37,8 +44,8 @@ public interface EnterpriseMapper {
   int insertMember(Map<String, Object> member);
 
   @Update(
-      "UPDATE tenant_member SET role_code=#{roleCode},status=1,joined_by_invite_id=#{inviteId},joined_at=NOW(),updated_at=NOW(),updated_by=#{operatorId} "
-          + "WHERE enterprise_id=#{enterpriseId} AND user_id=#{userId} AND deleted=0 AND status=3")
+      "UPDATE tenant_member SET role_code=#{roleCode},status=#{status},joined_by_invite_id=#{inviteId},joined_at=NOW(),updated_at=NOW(),updated_by=#{operatorId},deleted=0 "
+          + "WHERE enterprise_id=#{enterpriseId} AND user_id=#{userId} AND deleted=1")
   int reactivateMember(Map<String, Object> member);
 
   @Insert(
@@ -46,12 +53,20 @@ public interface EnterpriseMapper {
           + "VALUES(#{enterpriseId},0,0,'CNY',1,NOW(),NOW(),#{userId},0)")
   int insertWallet(@Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
 
+  @Insert(
+      "INSERT INTO saas_subscription(enterprise_id,status,user_limit,ocr_quota,request_quota,auto_renew_enabled,created_at,updated_at) "
+          + "VALUES(#{enterpriseId},0,0,0,0,0,NOW(),NOW())")
+  int insertDefaultSubscription(Long enterpriseId);
+
   @Update(
       "UPDATE tenant_enterprise SET name=#{name},contact_name=#{contactName},contact_phone=#{contactPhone},updated_at=NOW(),updated_by=#{userId} WHERE id=#{id} AND deleted=0")
   int updateEnterprise(Map<String, Object> enterprise);
 
   @Select("SELECT * FROM tenant_invite_code WHERE code=#{code} AND deleted=0 LIMIT 1")
   Map<String, Object> findInviteByCode(String code);
+
+  @Select("SELECT * FROM tenant_invite_code WHERE code=#{code} AND deleted=0 LIMIT 1 FOR UPDATE")
+  Map<String, Object> lockInviteByCode(String code);
 
   @Select(
       "<script>SELECT * FROM tenant_invite_code WHERE enterprise_id=#{enterpriseId} AND deleted=0 ORDER BY created_at DESC "
@@ -98,6 +113,10 @@ public interface EnterpriseMapper {
       "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id WHERE m.id=#{id} AND m.enterprise_id=#{enterpriseId} AND m.deleted=0")
   Map<String, Object> findMember(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
 
+  @Select(
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id WHERE m.id=#{id} AND m.enterprise_id=#{enterpriseId} AND m.deleted=0 FOR UPDATE")
+  Map<String, Object> lockMember(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+
   @Update(
       "UPDATE tenant_member SET role_code=#{roleCode},updated_at=NOW(),updated_by=#{userId} WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0")
   int updateMemberRole(Map<String, Object> member);
@@ -106,6 +125,10 @@ public interface EnterpriseMapper {
       "UPDATE tenant_member SET status=#{status},updated_at=NOW(),updated_by=#{userId} WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0")
   int updateMemberStatus(Map<String, Object> member);
 
+  @Update(
+      "UPDATE tenant_member SET status=0,deleted=1,updated_at=NOW(),updated_by=#{userId} WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0")
+  int softDeleteMember(Map<String, Object> member);
+
   @Select(
       "SELECT COUNT(1) FROM tenant_member WHERE enterprise_id=#{enterpriseId} AND status=1 AND deleted=0")
   int countActiveMembers(Long enterpriseId);
@@ -113,8 +136,7 @@ public interface EnterpriseMapper {
   @Select("SELECT id FROM tenant_enterprise WHERE id=#{enterpriseId} AND deleted=0 FOR UPDATE")
   Long lockEnterprise(Long enterpriseId);
 
-  @Select(
-      "SELECT s.user_limit FROM saas_subscription s WHERE s.enterprise_id=#{enterpriseId} AND s.status=1 AND s.end_at&gt;NOW() ORDER BY s.end_at DESC LIMIT 1")
+  @Select("SELECT user_limit FROM saas_subscription WHERE enterprise_id=#{enterpriseId}")
   Integer findCurrentUserLimit(Long enterpriseId);
 
   @Update(
@@ -122,8 +144,12 @@ public interface EnterpriseMapper {
   int updateOwner(Map<String, Object> transfer);
 
   @Insert(
-      "INSERT INTO tenant_owner_transfer_log(enterprise_id,from_user_id,to_user_id,status,transferred_at,created_by,remark) VALUES(#{enterpriseId},#{fromUserId},#{toUserId},1,NOW(),#{fromUserId},'门户主动转让')")
-  int insertTransferLog(Map<String, Object> transfer);
+      "INSERT INTO tenant_member_change_log(enterprise_id,event_type,operator_user_id,target_user_id,operator_name_snapshot,target_name_snapshot,before_role_code,after_role_code,invite_id,occurred_at,remark) "
+          + "VALUES(#{enterpriseId},#{eventType},#{operatorUserId},#{targetUserId},"
+          + "(SELECT real_name FROM tenant_user WHERE id=#{operatorUserId}),"
+          + "(SELECT real_name FROM tenant_user WHERE id=#{targetUserId}),"
+          + "#{beforeRoleCode},#{afterRoleCode},#{inviteId},NOW(),#{remark})")
+  int insertMemberChangeLog(Map<String, Object> change);
 
   @Update(
       "UPDATE tenant_member SET role_code='ADMIN',updated_at=NOW(),updated_by=#{fromUserId} WHERE enterprise_id=#{enterpriseId} AND user_id=#{fromUserId} AND deleted=0")
@@ -134,17 +160,18 @@ public interface EnterpriseMapper {
   int promoteNewOwner(Map<String, Object> transfer);
 
   @Select(
-      "SELECT l.id,l.enterprise_id,l.from_user_id,l.to_user_id,l.status,l.transferred_at,l.remark,"
-          + "from_user.real_name from_user_name,to_user.real_name to_user_name "
-          + "FROM tenant_owner_transfer_log l "
-          + "LEFT JOIN tenant_user from_user ON from_user.id=l.from_user_id "
-          + "LEFT JOIN tenant_user to_user ON to_user.id=l.to_user_id "
-          + "WHERE l.enterprise_id=#{enterpriseId} ORDER BY l.transferred_at DESC,l.id DESC LIMIT #{offset},#{pageSize}")
-  List<Map<String, Object>> findTransferLogs(
+      "<script>SELECT * FROM tenant_member_change_log WHERE enterprise_id=#{enterpriseId} "
+          + "<if test=\"eventType != null and eventType != ''\">AND event_type=#{eventType}</if> "
+          + "ORDER BY occurred_at DESC,id DESC LIMIT #{offset},#{pageSize}</script>")
+  List<Map<String, Object>> findMemberChangeLogs(
       @Param("enterpriseId") Long enterpriseId,
+      @Param("eventType") String eventType,
       @Param("offset") int offset,
       @Param("pageSize") int pageSize);
 
-  @Select("SELECT COUNT(1) FROM tenant_owner_transfer_log WHERE enterprise_id=#{enterpriseId}")
-  long countTransferLogs(Long enterpriseId);
+  @Select(
+      "<script>SELECT COUNT(1) FROM tenant_member_change_log WHERE enterprise_id=#{enterpriseId} "
+          + "<if test=\"eventType != null and eventType != ''\">AND event_type=#{eventType}</if></script>")
+  long countMemberChangeLogs(
+      @Param("enterpriseId") Long enterpriseId, @Param("eventType") String eventType);
 }

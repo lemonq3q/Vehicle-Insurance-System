@@ -12,6 +12,7 @@ import com.example.insurancesystem.domain.workorder.*;
 import com.example.insurancesystem.mapper.*;
 import com.example.insurancesystem.service.InsuranceService;
 import com.example.insurancesystem.service.WorkorderService;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.utils.OSSUtil;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
@@ -169,7 +170,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult insert(WorkorderDTO params) {
         Long nowUserId = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
-        workorder.setEnterpriseId(1L);
+        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         if (workorder.getUpstreamComputeType() == null) workorder.setUpstreamComputeType(0);
         if (workorder.getDownstreamComputeType() == null) workorder.setDownstreamComputeType(0);
         workorder.setCreateBy(nowUserId);
@@ -214,7 +215,7 @@ public class WorkorderServiceImpl implements WorkorderService {
         List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();
         workorderInsuranceList.forEach(item -> {
             item.setWorkorderId(workorder.getId());
-            item.setEnterpriseId(1L);
+            item.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
             item.setUpdateBy(SystemCommonUtil.getNowUserId());
             item.setIsDelete(0);
         });
@@ -223,20 +224,20 @@ public class WorkorderServiceImpl implements WorkorderService {
         if (params.getType() == 0){
             VehicleLicense vehicleLicense = params.getVehicleLicense();
             vehicleLicense.setWorkorderId(workorder.getId());
-            vehicleLicense.setEnterpriseId(1L);
+            vehicleLicense.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
             vehicleLicense.setUpdateBy(SystemCommonUtil.getNowUserId());
             vehicleLicenseMapper.insert(vehicleLicense);
         }
         else {
             VehicleCertificate vehicleCertificate = params.getVehicleCertificate();
             vehicleCertificate.setWorkorderId(workorder.getId());
-            vehicleCertificate.setEnterpriseId(1L);
+            vehicleCertificate.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
             vehicleCertificate.setUpdateBy(SystemCommonUtil.getNowUserId());
             vehicleCertificateMapper.insert(vehicleCertificate);
 
             VehicleInvoice vehicleInvoice = params.getVehicleInvoice();
             vehicleInvoice.setWorkorderId(workorder.getId());
-            vehicleInvoice.setEnterpriseId(1L);
+            vehicleInvoice.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
             vehicleInvoice.setUpdateBy(SystemCommonUtil.getNowUserId());
             vehicleInvoiceMapper.insert(vehicleInvoice);
         }
@@ -245,7 +246,7 @@ public class WorkorderServiceImpl implements WorkorderService {
         if(workorderFileList != null && !workorderFileList.isEmpty()){
             workorderFileList.forEach(item -> {
                 item.setWorkorderId(workorder.getId());
-                item.setEnterpriseId(1L);
+                item.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                 item.setUpdateBy(SystemCommonUtil.getNowUserId());
                 item.setIsDelete(0);
             });
@@ -268,7 +269,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult updateBaseInfo(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
-        workorder.setEnterpriseId(1L);
+        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(updateBy);
         List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();
         workorderInsuranceMapper.batchUpdateByWorkorderId(workorderInsuranceList, workorder.getId(), updateBy);
@@ -343,7 +344,7 @@ public class WorkorderServiceImpl implements WorkorderService {
             }
             else {
                 vehicleLicense.setWorkorderId(workorder.getId());
-                vehicleLicense.setEnterpriseId(1L);
+                vehicleLicense.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                 vehicleLicenseMapper.insert(vehicleLicense);
             }
         }
@@ -369,7 +370,7 @@ public class WorkorderServiceImpl implements WorkorderService {
             }
             else {
                 vehicleInvoice.setWorkorderId(workorder.getId());
-                vehicleInvoice.setEnterpriseId(1L);
+                vehicleInvoice.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                 vehicleInvoiceMapper.insert(vehicleInvoice);
             }
 
@@ -387,7 +388,7 @@ public class WorkorderServiceImpl implements WorkorderService {
             }
             else {
                 vehicleCertificate.setWorkorderId(workorder.getId());
-                vehicleCertificate.setEnterpriseId(1L);
+                vehicleCertificate.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                 vehicleCertificateMapper.insert(vehicleCertificate);
             }
         }
@@ -425,7 +426,7 @@ public class WorkorderServiceImpl implements WorkorderService {
             List<WorkorderFile> workorderFileList = params.getWorkorderFileList();
             workorderFileList.forEach(item -> {
                 item.setWorkorderId(workorder.getId());
-                item.setEnterpriseId(1L);
+                item.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                 item.setUpdateBy(updateBy);
                 item.setIsDelete(0);
             });
@@ -472,7 +473,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult updateQuotation(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
-        workorder.setEnterpriseId(1L);
+        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(updateBy);
         workorder.computeAmount();
         int x = workorderMapper.updateById(workorder);
@@ -485,7 +486,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     @Override
     public ResponseResult updateNoCascade(WorkorderDTO params) {
         Workorder workorder = new Workorder(params);
-        workorder.setEnterpriseId(1L);
+        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(SystemCommonUtil.getNowUserId());
         int x = workorderMapper.updateById(workorder);
         if (workorder.getRemindStatus() != null) {
@@ -502,7 +503,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult acceptInsurance(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
-        workorder.setEnterpriseId(1L);
+        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(updateBy);
         int x = workorderMapper.updateById(workorder);
         savePayment(workorder);
@@ -513,7 +514,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     private void saveAggregate(Workorder workorder) {
-        if (workorder.getEnterpriseId() == null) workorder.setEnterpriseId(1L);
+        if (workorder.getEnterpriseId() == null) {
+            workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
+        }
         saveQuoteAndCommission(workorder);
         savePayment(workorder);
         saveUnderwriting(workorder);
@@ -594,7 +597,7 @@ public class WorkorderServiceImpl implements WorkorderService {
             List<WorkorderFile> workorderFileList = params.getWorkorderFileList();
             workorderFileList.forEach(item -> {
                 item.setWorkorderId(params.getId());
-                item.setEnterpriseId(1L);
+                item.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                 item.setUpdateBy(updateBy);
                 item.setIsDelete(0);
             });

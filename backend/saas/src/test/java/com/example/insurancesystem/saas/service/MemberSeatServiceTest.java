@@ -43,4 +43,16 @@ class MemberSeatServiceTest {
     verify(maintenanceMapper).updateMemberStatuses(List.of(1L, 2L), 1);
     verify(maintenanceMapper, never()).findMembersToDisable(anyLong(), anyInt());
   }
+
+  @Test
+  void disablesAllActiveMembersWhenTheCurrentSubscriptionLimitIsZero() {
+    when(enterpriseMapper.countActiveMembers(20L)).thenReturn(3);
+    when(maintenanceMapper.findMembersToDisable(20L, 3)).thenReturn(List.of(1L, 2L, 3L));
+
+    service.synchronize(20L, 0);
+
+    verify(maintenanceMapper).findMembersToDisable(20L, 3);
+    verify(maintenanceMapper).updateMemberStatuses(List.of(1L, 2L, 3L), 0);
+    verify(maintenanceMapper, never()).findMembersToEnable(anyLong(), anyInt());
+  }
 }

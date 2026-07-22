@@ -1,5 +1,7 @@
 import axios from 'axios';
 import Storage from '@/utils/storage';
+import { notifyError, notifyWarning } from '@/utils/notification';
+import { normalizeDateTimes } from '@/utils/dateTime';
 
 const TOKEN_STORAGE_KEY = 'portalToken';
 const TOKEN_EXPIRE_SECONDS = 60 * 60 * 24;
@@ -12,7 +14,7 @@ const AUTH_WHITE_LIST = [
 ];
 
 const request = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || '',
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://127.0.0.1:8081',
   timeout: 60000
 });
 
@@ -32,8 +34,24 @@ function handleUnauthorized() {
   if (unauthorizedHandler) unauthorizedHandler();
 }
 
+function responseStatus(payload, response) {
+  return Number(payload?.code || response?.status || 0);
+}
+
+function responseMessage(payload, status) {
+  const message = String(payload?.msg || '').trim();
+  if (message) return message;
+  return status >= 500 ? '请求错误' : '请求异常';
+}
+
+function notifyRequestError(status, message) {
+  if (status >= 500) notifyError(message || '请求错误');
+  else if (status >= 400) notifyWarning(message || '请求异常');
+}
+
 function createBusinessError(payload, response) {
-  const error = new Error(payload.msg || '请求失败');
+  const status = responseStatus(payload, response);
+  const error = new Error(responseMessage(payload, status));
   error.code = payload.code;
   error.data = payload.data;
   error.response = response;
@@ -59,24 +77,28 @@ request.interceptors.response.use(response => {
     Storage.set(TOKEN_STORAGE_KEY, refreshedToken, TOKEN_EXPIRE_SECONDS);
   }
 
-  const payload = response.data;
+  const payload = normalizeDateTimes(response.data);
   if (payload && typeof payload === 'object' && 'code' in payload) {
     if (Number(payload.code) === 401) handleUnauthorized();
     if (Number(payload.code) >= 400) {
-      return Promise.reject(createBusinessError(payload, response));
+      const businessError = createBusinessError(payload, response);
+      notifyRequestError(Number(payload.code), businessError.message);
+      return Promise.reject(businessError);
     }
   }
   return payload;
 }, error => {
-  if (Number(error.response?.status) === 401) handleUnauthorized();
+  const payload = error.response?.data;
+  const status = responseStatus(payload, error.response);
+  if (status === 401) handleUnauthorized();
 
-  const responseMessage = error.response?.data?.msg;
-  if (responseMessage) {
-    error.message = responseMessage;
-  } else if (error.code === 'ECONNABORTED') {
-    error.message = '请求超时，请稍后重试';
-  } else if (!error.message) {
-    error.message = '网络请求失败，请稍后重试';
+  if (status >= 400) {
+    error.message = responseMessage(payload, status);
+    error.code = payload?.code || status;
+    notifyRequestError(status, error.message);
+  } else {
+    error.message = '请求错误';
+    notifyError(error.message);
   }
   return Promise.reject(error);
 });

@@ -101,7 +101,7 @@
 | enterprise_id | bigint | 企业 ID |
 | user_id | bigint | 用户 ID |
 | role_code | varchar(32) | OWNER, ADMIN, ISSUER |
-| status | tinyint | 1 正常，0 禁用，2 待审核，3 已退出 |
+| status | tinyint | 1 启用，0 停用，2 待审核；退出或踢出后软删除成员关系 |
 | joined_by_invite_id | bigint | 来源邀请码 |
 | joined_at | datetime | 加入时间 |
 | created_at | datetime | 创建时间 |
@@ -113,7 +113,7 @@
 
 | 名称 | 字段 | 说明 |
 | --- | --- | --- |
-| uk_member_enterprise_user | enterprise_id,user_id,deleted | 同一用户在同一企业只有一个有效成员关系 |
+| uk_member_enterprise_user | enterprise_id,user_id | 同一用户在同一企业只保留一条关系，重新加入时恢复软删除记录 |
 | idx_member_user | user_id,status | 用户进入门户后查询可切换企业 |
 | idx_member_enterprise_role | enterprise_id,role_code,status | 企业成员和角色查询 |
 
@@ -124,17 +124,21 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 1. 以 `tenant_enterprise.owner_user_id` 作为当前拥有者唯一事实来源，`tenant_member.role_code = OWNER` 作为冗余展示字段，由转让事务同步。
 2. 增加生成列 `owner_enterprise_key`，仅当 `role_code='OWNER' AND deleted=0 AND status=1` 时等于 `enterprise_id`，否则为 null，并对该生成列建唯一索引。
 
-#### tenant_owner_transfer_log 企业拥有者转让记录
+#### tenant_member_change_log 企业人员变动记录
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | id | bigint PK | 记录 ID |
 | enterprise_id | bigint | 企业 ID |
-| from_user_id | bigint | 原拥有者 |
-| to_user_id | bigint | 新拥有者 |
-| status | tinyint | 1 成功，2 撤销，3 失败 |
-| transferred_at | datetime | 转让时间 |
-| created_by | bigint | 操作人 |
+| event_type | varchar(32) | JOIN、EXIT、KICK、ROLE_CHANGE、OWNER_TRANSFER |
+| operator_user_id | bigint | 操作人用户 ID，系统操作可为空 |
+| target_user_id | bigint | 目标成员用户 ID |
+| operator_name_snapshot | varchar(100) | 操作人姓名快照 |
+| target_name_snapshot | varchar(100) | 目标成员姓名快照 |
+| before_role_code | varchar(32) | 变更前角色 |
+| after_role_code | varchar(32) | 变更后角色 |
+| invite_id | bigint | 加入企业时使用的邀请码 ID |
+| occurred_at | datetime | 发生时间 |
 | remark | varchar(500) | 备注 |
 
 转让业务必须放在一个事务中：
@@ -143,7 +147,7 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 2. 校验 `to_user_id` 是同企业有效成员。
 3. 更新 `tenant_enterprise.owner_user_id = to_user_id`。
 4. 原 OWNER 成员改为 ADMIN，新成员改为 OWNER。
-5. 写入 `tenant_owner_transfer_log`。
+5. 写入 `tenant_member_change_log`，事件类型为 `OWNER_TRANSFER`。
 
 ### 3.2 邀请码
 
@@ -320,16 +324,18 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 
 #### saas_subscription 企业订阅表
 
-订单支付成功后创建、续期或变更订阅。订阅只保留当前套餐、人数、有效期和自动续费配置；订阅变化历史通过每次创建的 `saas_order` 和 `saas_wallet_transaction` 追溯，不再单独建表记录。
+企业创建时同步创建一条默认未订阅记录，此后订阅、续期、改订和到期只更新该记录。每个企业始终只有一条当前订阅状态；订阅变化历史通过 `saas_order` 和 `saas_wallet_transaction` 追溯。
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | id | bigint PK | 订阅 ID |
-| enterprise_id | bigint | 企业 ID |
-| plan_id | bigint | 当前套餐 |
-| order_id | bigint | 来源订单 |
-| status | tinyint | 1 生效中，2 已过期，3 已暂停，4 已取消 |
-| user_limit | int | 当前人数上限 |
+| enterprise_id | bigint | 企业 ID，非空且唯一 |
+| plan_id | bigint | 当前或最近一次套餐，未订阅时为空 |
+| order_id | bigint | 最近一次生效订单，未订阅时为空 |
+| status | tinyint | 0 未订阅，1 生效中，2 已过期，3 已暂停，4 已取消 |
+| user_limit | int | 当前可启用人数上限，未订阅或到期时为 0 |
+| ocr_quota | int | 当前周期 OCR 额度，未订阅或到期时为 0 |
+| request_quota | int | 当前周期请求额度，未订阅或到期时为 0 |
 | start_at | datetime | 生效时间 |
 | end_at | datetime | 到期时间 |
 | auto_renew_enabled | tinyint | 是否开启自动续费 |
@@ -344,7 +350,7 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 
 | 名称 | 字段 | 说明 |
 | --- | --- | --- |
-| idx_sub_enterprise_status | enterprise_id,status,end_at | 鉴权和到期校验 |
+| uk_saas_subscription_enterprise | enterprise_id | 保证每个企业只有一条当前订阅状态 |
 
 套餐变更计算规则：
 
@@ -354,7 +360,7 @@ MySQL 对软删除和条件唯一不够直接，建议二选一：
 4. 差额 = 新套餐剩余期间价值 - 原套餐剩余价值。
 5. 差额大于 0 时，从企业钱包扣款并写 `CHANGE_PLAN` 出账流水。
 6. 差额小于 0 时，退回企业钱包并写 `CHANGE_PLAN` 入账流水。
-7. 降级后若当前成员数超过新套餐人数上限，则不允许变更，需先减少成员或选择更高套餐。
+7. 降级后若当前启用成员数超过新套餐人数上限，订阅成功后按出单员、管理员、企业拥有者的顺序停用超额成员。
 
 自动续费规则：
 
@@ -1070,7 +1076,7 @@ SaaS 功能：
 | 板块 | 表 |
 | --- | --- |
 | 门户账号 | tenant_user |
-| 企业租户 | tenant_enterprise, tenant_member, tenant_owner_transfer_log |
+| 企业租户 | tenant_enterprise, tenant_member, tenant_member_change_log |
 | 邀请码 | tenant_invite_code |
 | 套餐订单与余额 | saas_plan, saas_wallet, saas_recharge_order, saas_wallet_transaction, saas_order, saas_subscription |
 | 后台平台账号 | platform_user, platform_user_role |

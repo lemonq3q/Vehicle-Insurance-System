@@ -4,6 +4,7 @@ import com.example.insurancesystem.domain.SystemFile;
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.mapper.SystemFileMapper;
 import com.example.insurancesystem.service.FileService;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.utils.OSSUtil;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,7 +80,7 @@ public class FileServiceImpl implements FileService {
     private SystemFile buildSystemFile(String fileName, String objectName) {
         SystemFile systemFile = new SystemFile();
         systemFile.setId(null);
-        systemFile.setEnterpriseId(1L);
+        systemFile.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         systemFile.setFileName(fileName);
         systemFile.setPath(objectName);
         systemFile.setIsLinked(0);

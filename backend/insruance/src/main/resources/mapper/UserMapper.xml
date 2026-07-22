@@ -2,11 +2,25 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.insurancesystem.mapper.UserMapper">
     <select id="selectLoginUser" resultType="com.example.insurancesystem.domain.user.User">
-        SELECT DISTINCT u.id, u.username, u.phone, u.email, u.password, u.real_name, u.id_num,
-               u.status, u.updated_by, u.deleted AS is_delete
+        SELECT u.id, u.username, u.phone, u.email, u.password, u.real_name, u.id_num,
+               u.status, tm.status AS member_status, tm.enterprise_id,
+               u.updated_by, u.deleted AS is_delete
         FROM tenant_user u
-        JOIN tenant_member tm ON tm.user_id = u.id AND tm.deleted = 0 AND tm.status = 1
-        WHERE u.username = #{username} AND u.status = 1 AND u.deleted = 0
+        LEFT JOIN tenant_member tm ON tm.user_id = u.id AND tm.deleted = 0
+        WHERE u.username = #{username} AND u.deleted = 0
+        ORDER BY tm.status DESC, tm.id
+        LIMIT 1
+    </select>
+    <select id="selectSsoUser" resultType="com.example.insurancesystem.domain.user.User">
+        SELECT u.id, u.username, u.phone, u.email, u.password, u.real_name, u.id_num,
+               u.status, tm.status AS member_status, tm.enterprise_id,
+               u.updated_by, u.deleted AS is_delete
+        FROM tenant_user u
+        JOIN tenant_member tm ON tm.user_id = u.id
+            AND tm.enterprise_id = #{enterpriseId} AND tm.deleted = 0
+        JOIN tenant_enterprise te ON te.id = tm.enterprise_id
+            AND te.status = 1 AND te.deleted = 0
+        WHERE u.id = #{userId} AND u.deleted = 0
         LIMIT 1
     </select>
     <sql id="staffColumns">

@@ -11,10 +11,12 @@ const SubscriptionServicePage = () => import('@/views/finance/SubscriptionServic
 const SubscriptionOrderDetailPage = () => import('@/views/finance/SubscriptionOrderDetailPage.vue');
 const RechargePlaceholderPage = () => import('@/views/finance/RechargePlaceholderPage.vue');
 const RechargeOrdersPage = () => import('@/views/finance/RechargeOrdersPage.vue');
+const RechargeOrderDetailPage = () => import('@/views/finance/RechargeOrderDetailPage.vue');
 const SubscriptionOrdersPage = () => import('@/views/finance/SubscriptionOrdersPage.vue');
 const WalletTransactionsPage = () => import('@/views/finance/WalletTransactionsPage.vue');
 const UserCenterPage = () => import('@/views/user/UserCenterPage.vue');
 const HelpCenterPage = () => import('@/views/help/HelpCenterPage.vue');
+const NoEnterprisePage = () => import('@/views/enterprise/NoEnterprisePage.vue');
 
 const routes = [
   {
@@ -35,15 +37,17 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/portal/dashboard' },
-      { path: 'dashboard', name: 'dashboard', component: DashboardPage, meta: { title: '仪表盘' } },
+      { path: 'dashboard', name: 'dashboard', component: DashboardPage, meta: { title: '仪表盘', requiresEnterprise: true } },
       { path: 'enterprise/info', name: 'enterprise-info', component: EnterpriseInfoPage, meta: { title: '企业信息' } },
-      { path: 'enterprise/members', name: 'enterprise-members', component: EnterpriseMembersPage, meta: { title: '企业人员' } },
-      { path: 'finance/subscription', name: 'finance-subscription', component: SubscriptionServicePage, meta: { title: '订阅服务' } },
-      { path: 'finance/subscription/order/:planId', name: 'finance-subscription-order-detail', component: SubscriptionOrderDetailPage, meta: { title: '订阅订单详情' } },
-      { path: 'finance/recharge', name: 'finance-recharge', component: RechargePlaceholderPage, meta: { title: '余额充值' } },
-      { path: 'finance/recharges', name: 'finance-recharges', component: RechargeOrdersPage, meta: { title: '充值订单' } },
-      { path: 'finance/orders', name: 'finance-orders', component: SubscriptionOrdersPage, meta: { title: '订阅订单' } },
-      { path: 'finance/transactions', name: 'finance-transactions', component: WalletTransactionsPage, meta: { title: '资金明细' } },
+      { path: 'enterprise/members', name: 'enterprise-members', component: EnterpriseMembersPage, meta: { title: '企业人员', requiresEnterprise: true } },
+      { path: 'finance/subscription', name: 'finance-subscription', component: SubscriptionServicePage, meta: { title: '订阅服务', requiresEnterprise: true } },
+      { path: 'finance/subscription/order/:planId', name: 'finance-subscription-order-detail', component: SubscriptionOrderDetailPage, meta: { title: '订阅订单详情', requiresEnterprise: true } },
+      { path: 'finance/recharge', name: 'finance-recharge', component: RechargePlaceholderPage, meta: { title: '余额充值', requiresEnterprise: true } },
+      { path: 'finance/recharges', name: 'finance-recharges', component: RechargeOrdersPage, meta: { title: '充值订单', requiresEnterprise: true } },
+      { path: 'finance/recharges/:id', name: 'finance-recharge-detail', component: RechargeOrderDetailPage, meta: { title: '充值订单详情', requiresEnterprise: true } },
+      { path: 'finance/orders', name: 'finance-orders', component: SubscriptionOrdersPage, meta: { title: '订阅订单', requiresEnterprise: true } },
+      { path: 'finance/transactions', name: 'finance-transactions', component: WalletTransactionsPage, meta: { title: '资金明细', requiresEnterprise: true } },
+      { path: 'enterprise-required', name: 'enterprise-required', component: NoEnterprisePage, meta: { title: '尚未加入企业' } },
       { path: 'user/profile', name: 'user-profile', component: UserCenterPage, meta: { title: '用户中心' } },
       { path: 'help', name: 'help', component: HelpCenterPage, meta: { title: '帮助中心' } }
     ]
@@ -66,6 +70,13 @@ router.beforeEach(async (to, from, next) => {
   }
   if (to.meta.guest && store.getters.isLogin) {
     next('/portal/dashboard');
+    return;
+  }
+  if (to.meta.requiresAuth && store.getters.isLogin && !store.state.contextLoaded) {
+    await store.dispatch('loadContext');
+  }
+  if (to.meta.requiresEnterprise && !store.state.currentEnterprise) {
+    next({ name: 'enterprise-required', query: { redirect: to.fullPath } });
     return;
   }
   next();

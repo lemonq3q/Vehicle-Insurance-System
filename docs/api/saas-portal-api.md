@@ -88,7 +88,9 @@ Response data：
 | token | string | 登录 token |
 | user | TenantUser | 当前用户 |
 | enterprises | TenantEnterprise[] | 可进入的企业 |
-| currentEnterpriseId | number | 当前企业 ID |
+| currentEnterpriseId | number \| null | 当前企业 ID |
+| currentEnterprise | TenantEnterprise \| null | 当前企业完整信息 |
+| currentMember | TenantMember \| null | 当前用户在当前企业中的成员关系与角色 |
 
 Mock 示例：
 
@@ -100,10 +102,19 @@ Mock 示例：
     "token": "mock-portal-token",
     "user": { "id": 10001, "username": "linxf", "phone": "13800000001", "realName": "林晓峰" },
     "enterprises": [{ "id": 20001, "name": "杭州小马车险服务有限公司", "code": "ENT-HZ-202607" }],
-    "currentEnterpriseId": 20001
+    "currentEnterpriseId": 20001,
+    "currentEnterprise": { "id": 20001, "name": "杭州小马车险服务有限公司", "code": "ENT-HZ-202607" },
+    "currentMember": { "id": 30001, "enterpriseId": 20001, "roleCode": "OWNER", "status": 1 }
   }
 }
 ```
+
+错误情况：
+
+| code | msg | 触发条件 |
+| --- | --- | --- |
+| 400 | 用户名或密码错误 | 登录账号不存在或密码校验失败 |
+| 403 | 账号未启用 | 用户账号状态为停用 |
 
 ### 1.2 发送短信验证码
 
@@ -234,7 +245,7 @@ Response data：
 | enterprise | TenantEnterprise | 当前企业 |
 | member | TenantMember | 当前成员身份 |
 | wallet | SaasWallet | 企业钱包 |
-| subscription | SaasSubscription | 当前订阅，包含 plan |
+| subscription | SaasSubscription | 企业唯一的当前订阅状态；未订阅时 `status=0`、额度为 0，生效时包含 plan |
 
 ### 3.2 创建企业
 
@@ -317,7 +328,7 @@ Body：
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | maxUseCount | number | 否 | 最大使用次数，null 表示不限 |
-| expiresAt | string | 是 | 过期时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| expiresAt | string | 是 | 过期日期，格式 `yyyy-MM-dd`；服务端按当日 `23:59:59` 保存 |
 
 Response data：`TenantInviteCode`
 
@@ -347,7 +358,7 @@ Query：
 | pageSize | number | 否 | 每页条数 |
 | keyword | string | 否 | 姓名、手机号、账号模糊搜索 |
 | roleCode | string | 否 | OWNER、ADMIN、ISSUER |
-| status | number | 否 | 0 停用，1 启用，2 待审核，3 已退出 |
+| status | number | 否 | 0 停用，1 启用，2 待审核；已退出成员不再出现在成员关系表中 |
 
 Response data：分页 `TenantMember`
 
@@ -397,6 +408,7 @@ Response data：`TenantMember`
 | 400 | 企业拥有者不能被停用 | memberId 指向 OWNER |
 | 400 | 成员状态参数不正确 | status 不是 0 或 1 |
 | 404 | 成员不存在 | 成员不存在或不属于当前企业 |
+| 409 | 企业当前未开通任何套餐，暂时无法启用成员 | 当前订阅人数额度为 0 |
 | 409 | 当前套餐最多启用 N 名成员，请先升级套餐或停用其他成员 | 启用后会超过套餐人数上限 |
 
 Mock response：
@@ -436,11 +448,13 @@ Response data：
 | toUserId | number | 新拥有者用户 ID |
 | transferredAt | string | 转让时间 |
 
-### 4.8 查询企业拥有者转让记录
+转让事务会先锁定企业记录，再锁定目标成员。成员踢出接口使用相同锁顺序，避免目标成员在转让为拥有者的同时被移出企业。
 
-`GET /portal/enterprise/owner-transfer-logs`
+### 4.8 查询企业人员变动记录
 
-作用：分页查询当前企业历次拥有者转让记录，所有企业成员可查看。
+`GET /portal/enterprise/member-change-logs`
+
+作用：分页查询当前企业成员加入、主动退出、踢出、角色修改和拥有者转让记录，所有企业成员可查看。
 
 Query：
 
@@ -448,8 +462,9 @@ Query：
 | --- | --- | --- | --- |
 | pageNum | number | 否 | 页码，默认 1 |
 | pageSize | number | 否 | 每页条数，默认 5，最大 100 |
+| eventType | string | 否 | JOIN、EXIT、KICK、ROLE_CHANGE、OWNER_TRANSFER |
 
-Response data：分页 `TenantOwnerTransferLog`，包含原拥有者与新拥有者姓名。
+Response data：分页 `TenantMemberChangeLog`，包含操作人和目标成员姓名快照、变更前后角色、发生时间及备注。
 
 ### 4.9 退出企业
 
@@ -458,6 +473,24 @@ Response data：分页 `TenantOwnerTransferLog`，包含原拥有者与新拥有
 权限：ADMIN、ISSUER。OWNER 不可退出企业。
 
 Response data：`true`
+
+### 4.10 踢出企业成员
+
+`POST /portal/enterprise/members/remove`
+
+作用：软删除指定成员与企业的绑定关系，使其立即从企业成员列表消失。企业拥有者不能被踢出，操作者不能通过此接口踢出自己。
+
+权限：OWNER、ADMIN。
+
+Body：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| memberId | number | 是 | 需要移出企业的成员 ID |
+
+Response data：`true`
+
+并发规则：踢出、拥有者转让、成员启停、角色修改和主动退出均在事务中依次锁定企业和目标成员。先完成踢出的成员无法再被转让；先完成转让的成员会成为 OWNER，后续踢出、停用或退出请求将被拒绝。退出和踢出都会写入企业人员变动记录。
 
 ## 5. 财务中心
 
@@ -470,7 +503,7 @@ Response data：
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | wallet | SaasWallet | 企业钱包 |
-| subscription | SaasSubscription | 当前订阅，包含 plan |
+| subscription | SaasSubscription | 企业唯一的当前订阅状态；未订阅时 `status=0`、额度为 0，生效时包含 plan |
 | currentMemberCount | number | 当前有效成员数 |
 
 ### 5.2 查询套餐
@@ -495,6 +528,44 @@ Body：
 Response data：`SaasRechargeOrder`
 
 当前支付网关为 mock 实现：接口创建状态为待支付的充值订单并返回模拟第三方交易号，不会直接增加企业余额。接入真实支付平台后，由支付回调完成订单入账。
+
+从套餐订阅页面因余额不足进入充值时，前端会携带 `planId`、`periodCount` 和 `autoRenew` 订阅意图。模拟充值成功后，前端立即调用订阅订单创建接口，由服务端重新计算金额、扣减余额并更新当前套餐；若订阅提交失败，充值订单详情页保留继续完成套餐订阅入口。
+
+### 5.3.1 查询充值订单详情
+
+`GET /portal/finance/recharge-orders/{id}`
+
+权限：OWNER、ADMIN，且订单必须属于当前企业。
+
+Response data：`SaasRechargeOrder`
+
+### 5.3.2 模拟完成充值
+
+`POST /portal/finance/recharge-orders/complete`
+
+作用：测试环境模拟支付成功。在同一事务中锁定充值订单和企业钱包，将待支付订单修改为已支付、增加钱包余额并创建 `RECHARGE` 入账流水。已支付订单重复调用时直接返回原订单，不会重复入账。
+
+权限：OWNER、ADMIN。
+
+Body：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| rechargeOrderId | number | 是 | 待支付充值订单 ID |
+
+Response data：`SaasRechargeOrder`，额外返回 `balanceAmount` 和 `transactionNo`。
+
+### 5.3.3 取消充值订单
+
+`POST /portal/finance/recharge-orders/{id}/cancel`
+
+作用：取消当前企业的待支付充值订单。只有 `status=1` 的订单可以取消；已取消订单重复调用时按成功返回，不重复修改。
+
+权限：OWNER、ADMIN，且订单必须属于当前企业。
+
+Response data：更新为已取消状态的 `SaasRechargeOrder`。
+
+常见错误：订单不存在返回 `404`，订单已支付或处于其他不可取消状态时返回 `409`。
 
 ### 5.4 查询充值订单
 
@@ -589,7 +660,7 @@ Mock response：
 
 `POST /portal/finance/subscription-orders`
 
-作用：服务端重新计算订单金额并校验企业余额；余额充足时在同一事务中创建订单、扣款或退款、写资金流水并更新当前订阅。
+作用：服务端重新计算订单金额并校验企业余额；余额充足时在同一事务中创建历史订单、扣款或退款、写资金流水并更新企业唯一的当前订阅状态。
 
 权限：OWNER、ADMIN。
 
@@ -640,7 +711,7 @@ Mock response：
 
 `PUT /portal/finance/subscription/auto-renew`
 
-权限：OWNER、ADMIN。ISSUER 调用时返回 `403`。
+权限：OWNER、ADMIN。ISSUER 调用时返回 `403`；只有 `status=1` 的生效订阅可修改自动续费。
 
 Body：
 
@@ -746,7 +817,7 @@ Response data：`TenantUser`
 | realName | string | 成员姓名 |
 | phone | string | 手机号 |
 | roleCode | string | OWNER、ADMIN、ISSUER |
-| status | number | 1 正常，0 禁用，2 待审核，3 已退出 |
+| status | number | 1 启用，0 停用，2 待审核；退出后成员关系被软删除 |
 | joinedByInviteId | number | 来源邀请码 |
 | joinedAt | string | 加入时间 |
 
@@ -764,6 +835,24 @@ Response data：`TenantUser`
 | price | number | 售价 |
 | originalPrice | number | 原价 |
 | status | number | 1 上架，0 下架 |
+
+### SaasSubscription
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | number | 当前订阅状态 ID，每个企业固定一条 |
+| enterpriseId | number | 企业 ID，数据库唯一 |
+| planId | number \| null | 当前或最近一次套餐 ID |
+| orderId | number \| null | 最近一次生效订单 ID |
+| status | number | 0 未订阅，1 生效中，2 已过期，3 已暂停，4 已取消 |
+| userLimit | number | 当前可启用成员上限，未订阅或到期时为 0 |
+| ocrQuota | number | 当前周期 OCR 额度 |
+| requestQuota | number | 当前周期请求额度 |
+| startAt | string \| null | 当前订阅生效时间 |
+| endAt | string \| null | 当前订阅到期时间 |
+| autoRenewEnabled | boolean | 是否开启自动续费，仅生效订阅可修改 |
+| nextRenewAt | string \| null | 下次自动续费时间 |
+| plan | SaasPlan \| null | 套餐详情，未订阅时为空 |
 
 ### SaasOrder
 

@@ -54,7 +54,8 @@ public class SecurityConfig {
                 .antMatchers(
                         "/auth/login", "/auth/register", "/auth/code", "/auth/forget",
                         "/portal/auth/login", "/portal/auth/register", "/portal/auth/sms-code",
-                        "/portal/auth/forget-password"
+                        "/portal/auth/forget-password", "/internal/sso/exchange",
+                        "/auth/sso/exchange"
                 ).permitAll()
                 .anyRequest().authenticated();
         // 添加过滤器

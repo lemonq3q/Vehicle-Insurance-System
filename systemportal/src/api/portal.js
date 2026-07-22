@@ -10,6 +10,7 @@ export const sendSmsCode = data => post('/portal/auth/sms-code', data);
 export const register = data => post('/portal/auth/register', data);
 export const forgetPassword = data => post('/portal/auth/forget-password', data);
 export const getAccountContext = () => get('/portal/account/context');
+export const createInsuranceAuthorization = () => post('/portal/sso/authorize', {});
 
 export const getEnterpriseCurrent = () => get('/portal/enterprise/current');
 export const createEnterprise = data => post('/portal/enterprise', data);
@@ -21,13 +22,17 @@ export const deleteInviteCode = data => del('/portal/enterprise/invite-codes', d
 export const getMembers = params => get('/portal/enterprise/members', params);
 export const updateMemberRole = data => put('/portal/enterprise/members/role', data);
 export const updateMemberStatus = data => put('/portal/enterprise/members/status', data);
+export const removeEnterpriseMember = data => post('/portal/enterprise/members/remove', data);
 export const transferOwner = data => post('/portal/enterprise/owner-transfer', data);
-export const getOwnerTransferLogs = params => get('/portal/enterprise/owner-transfer-logs', params);
+export const getMemberChangeLogs = params => get('/portal/enterprise/member-change-logs', params);
 export const exitEnterprise = () => post('/portal/enterprise/members/exit', {});
 
 export const getFinanceOverview = () => get('/portal/finance/overview');
 export const getPlans = () => get('/portal/finance/plans');
 export const createRechargeOrder = data => post('/portal/finance/recharge-orders', data);
+export const getRechargeOrder = id => get(`/portal/finance/recharge-orders/${id}`);
+export const completeRechargeOrder = data => post('/portal/finance/recharge-orders/complete', data);
+export const cancelRechargeOrder = id => post(`/portal/finance/recharge-orders/${id}/cancel`, {});
 export const getRechargeOrders = params => get('/portal/finance/recharge-orders', params);
 export const getSubscriptionOrderPreview = data => post('/portal/finance/subscription-orders/preview', data);
 export const createSubscriptionOrder = data => post('/portal/finance/subscription-orders', data);

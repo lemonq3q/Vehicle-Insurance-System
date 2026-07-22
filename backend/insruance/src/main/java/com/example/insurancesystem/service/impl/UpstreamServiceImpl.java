@@ -8,6 +8,7 @@ import com.example.insurancesystem.domain.merchant.*;
 import com.example.insurancesystem.mapper.MerchantAreaMapper;
 import com.example.insurancesystem.mapper.MerchantMapper;
 import com.example.insurancesystem.service.UpstreamService;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.github.pagehelper.PageHelper;
@@ -132,7 +133,7 @@ public class UpstreamServiceImpl implements UpstreamService {
         Long userId = SystemCommonUtil.getNowUserId();
 
         Merchant upstream = new Merchant(params);
-        upstream.setEnterpriseId(1L);
+        upstream.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         upstream.setCategoryId(upstreamMapper.selectCategoryIdByCode(MerchantCategoryCode.INSURANCE_ORG));
         upstream.setUpdateBy(userId);
         int x = UniqueCodeRetryUtil.insertWithGeneratedCode(
@@ -146,7 +147,7 @@ public class UpstreamServiceImpl implements UpstreamService {
                         MerchantArea upstreamArea = new MerchantArea();
                         upstreamArea.setAreaCode(area);
                         upstreamArea.setMerchantId(upstream.getId());
-                        upstreamArea.setEnterpriseId(1L);
+                        upstreamArea.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                         upstreamArea.setUpdateBy(SystemCommonUtil.getNowUserId());
                         upstreamArea.setIsDelete(0);
                         return upstreamArea;
@@ -181,7 +182,7 @@ public class UpstreamServiceImpl implements UpstreamService {
                         MerchantArea upstreamArea = new MerchantArea();
                         upstreamArea.setAreaCode(area);
                         upstreamArea.setMerchantId(upstream.getId());
-                        upstreamArea.setEnterpriseId(1L);
+                        upstreamArea.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                         upstreamArea.setUpdateBy(SystemCommonUtil.getNowUserId());
                         upstreamArea.setIsDelete(0);
                         return upstreamArea;

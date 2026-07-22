@@ -11,6 +11,12 @@ public interface FinanceService {
 
   Map<String, Object> createRecharge(Map<String, Object> body);
 
+  Map<String, Object> rechargeDetail(Long id);
+
+  Map<String, Object> completeRecharge(Map<String, Object> body);
+
+  Map<String, Object> cancelRecharge(Long id);
+
   TableData<Map<String, Object>> recharges(
       int pageNum,
       int pageSize,

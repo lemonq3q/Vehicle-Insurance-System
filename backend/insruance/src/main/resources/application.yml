@@ -20,3 +20,17 @@ mybatis-plus:
 server:
   port: 8080
 
+security:
+  session:
+    # 车险会话在 Redis 中的完整 Key 格式：insurance:login:{userId}
+    key-prefix: ${INSURANCE_LOGIN_KEY_PREFIX:insurance:login:}
+
+insurance:
+  tenant-isolation:
+    enabled: true
+  sso:
+    # 车险后端使用的 SaaS 后端内部授权码兑换地址。
+    saas-exchange-url: ${SAAS_SSO_EXCHANGE_URL:http://localhost:8081/internal/sso/exchange}
+    # 必须与 SaaS 服务器的 INSURANCE_SSO_CLIENT_SECRET 一致。
+    client-secret: ${INSURANCE_SSO_CLIENT_SECRET:change-me-in-production}
+

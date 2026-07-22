@@ -12,14 +12,17 @@ public class SaasMaintenanceScheduler {
 
   private final MaintenanceManager maintenanceManager;
   private final SubscriptionMaintenanceCoordinator subscriptions;
+  private final InviteCleanupService inviteCleanupService;
   private final SaasDataArchiveService archiveService;
 
   public SaasMaintenanceScheduler(
       MaintenanceManager maintenanceManager,
       SubscriptionMaintenanceCoordinator subscriptions,
+      InviteCleanupService inviteCleanupService,
       SaasDataArchiveService archiveService) {
     this.maintenanceManager = maintenanceManager;
     this.subscriptions = subscriptions;
+    this.inviteCleanupService = inviteCleanupService;
     this.archiveService = archiveService;
   }
 
@@ -30,8 +33,12 @@ public class SaasMaintenanceScheduler {
       maintenanceManager.startMaintenance();
       maintenanceManager.waitForAllRequestsComplete();
       subscriptions.processExpiredSubscriptions();
+      int deletedInvites = inviteCleanupService.cleanup();
       int archived = archiveService.archiveDeletedData();
-      log.info("SaaS daily maintenance completed, archived rows: {}", archived);
+      log.info(
+          "SaaS daily maintenance completed, deleted invites: {}, archived rows: {}",
+          deletedInvites,
+          archived);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       log.error("SaaS daily maintenance interrupted", exception);

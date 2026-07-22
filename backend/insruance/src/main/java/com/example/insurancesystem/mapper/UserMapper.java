@@ -5,6 +5,7 @@ import com.example.insurancesystem.domain.user.MerchantUserDTO;
 import com.example.insurancesystem.domain.user.MerchantUserSearchDTO;
 import com.example.insurancesystem.domain.user.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -12,6 +13,8 @@ import java.util.List;
 @Mapper
 public interface UserMapper extends BatchBaseMapper<User> {
     User selectLoginUser(String username);
+
+    User selectSsoUser(@Param("userId") Long userId, @Param("enterpriseId") Long enterpriseId);
 
     List<MerchantUserDTO> selectByMerchantUserSearchDTO(MerchantUserSearchDTO merchantUserSearchDTO);
 

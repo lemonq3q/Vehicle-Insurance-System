@@ -8,7 +8,7 @@
     </div>
     <article class="portal-card panel">
       <div class="filters">
-        <input v-model="query.rechargeNo" class="layui-input" placeholder="充值订单号" @keyup.enter="loadData" />
+        <input v-model="query.rechargeNo" class="layui-input" placeholder="充值订单号" @keyup.enter="search" />
         <select v-model="query.status" class="layui-select">
           <option value="">全部状态</option>
           <option value="1">待支付</option>
@@ -18,6 +18,7 @@
         </select>
         <LayDatePicker v-model="query.dateRange" range placeholder="请选择创建时间范围" />
         <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
+        <button class="layui-btn layui-btn-primary portal-btn" @click="resetQuery">重置</button>
       </div>
       <div class="data-table-wrap">
         <table class="layui-table portal-table">
@@ -30,6 +31,7 @@
               <th>状态</th>
               <th>支付时间</th>
               <th>创建时间</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -41,6 +43,11 @@
               <td><span class="portal-tag" :class="{ warn: item.status === 1 }">{{ statusName('recharge', item.status) }}</span></td>
               <td>{{ item.paidAt || '-' }}</td>
               <td>{{ item.createdAt }}</td>
+              <td>
+                <router-link class="layui-btn layui-btn-xs layui-btn-primary layui-border-green" :to="{ name: 'finance-recharge-detail', params: { id: item.id } }">
+                  {{ item.status === 1 ? '继续支付' : '查看详情' }}
+                </router-link>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -82,6 +89,10 @@ export default {
     },
     search() {
       this.query.pageNum = 1;
+      this.loadData();
+    },
+    resetQuery() {
+      this.query = { ...this.query, pageNum: 1, rechargeNo: '', status: '', dateRange: defaultMonthRange() };
       this.loadData();
     },
     changePage(pageNum) {

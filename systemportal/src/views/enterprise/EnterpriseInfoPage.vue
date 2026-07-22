@@ -55,9 +55,9 @@
         <ul class="summary-list">
           <li><span>企业状态</span><strong>正常</strong></li>
           <li><span>我的角色</span><strong>{{ roleName(activeRoleCode) }}</strong></li>
-          <li><span>加入时间</span><strong>{{ member.joinedAt }}</strong></li>
-          <li><span>当前余额</span><strong>¥{{ wallet.balanceAmount }}</strong></li>
-          <li><span>订阅套餐</span><strong>{{ subscription.plan.name }}</strong></li>
+          <li><span>加入时间</span><strong>{{ member?.joinedAt || '-' }}</strong></li>
+          <li><span>当前余额</span><strong>¥{{ money(wallet?.balanceAmount) }}</strong></li>
+          <li><span>订阅套餐</span><strong>{{ subscriptionName }}</strong></li>
         </ul>
         <button v-if="canExitEnterprise" class="layui-btn layui-btn-primary layui-border-red portal-btn exit-enterprise-button" type="button" @click="openExitDialog">
           <i class="layui-icon layui-icon-logout"></i>
@@ -65,38 +65,7 @@
         </button>
       </aside>
 
-      <article class="portal-card panel transfer-history-panel">
-        <div class="panel-title-row">
-          <h2>企业拥有者转让记录</h2>
-          <span class="history-caption">共 {{ transferTotal }} 条</span>
-        </div>
-        <div class="data-table-wrap">
-          <table class="layui-table portal-table">
-            <thead>
-              <tr>
-                <th>原拥有者</th>
-                <th>新拥有者</th>
-                <th>转让时间</th>
-                <th>状态</th>
-                <th>备注</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in transferLogs" :key="item.id">
-                <td>{{ item.fromUserName || '-' }}</td>
-                <td>{{ item.toUserName || '-' }}</td>
-                <td>{{ item.transferredAt || '-' }}</td>
-                <td><span class="portal-tag" :class="{ gray: item.status !== 1 }">{{ transferStatusName(item.status) }}</span></td>
-                <td>{{ item.remark || '-' }}</td>
-              </tr>
-              <tr v-if="!transferLogs.length">
-                <td colspan="5" class="empty-cell">暂无转让记录</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <LayPagination :total="transferTotal" :page-num="transferQuery.pageNum" :page-size="transferQuery.pageSize" @change="changeTransferPage" @size-change="changeTransferPageSize" />
-      </article>
+      <InviteManagementPanel v-if="canManageInvites" />
     </div>
 
     <div v-else class="onboarding-grid">
@@ -141,19 +110,18 @@
       @confirm="confirmExitEnterprise"
     />
 
-    <p class="message" aria-live="polite">{{ message }}</p>
   </section>
 </template>
 
 <script>
-import { createEnterprise, exitEnterprise, getEnterpriseCurrent, getOwnerTransferLogs, joinEnterpriseByInvite, updateEnterprise } from '@/api/portal';
+import { createEnterprise, exitEnterprise, getEnterpriseCurrent, joinEnterpriseByInvite, updateEnterprise } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
-import LayPagination from '@/components/LayPagination.vue';
+import InviteManagementPanel from '@/components/InviteManagementPanel.vue';
 import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'EnterpriseInfoPage',
-  components: { ConfirmDialog, LayPagination },
+  components: { ConfirmDialog, InviteManagementPanel },
   data() {
     return {
       enterprise: null,
@@ -164,16 +132,11 @@ export default {
       isEditingEnterprise: false,
       exitDialog: { visible: false, loading: false },
       createForm: { name: '', contactName: '', contactPhone: '' },
-      inviteForm: { code: '' },
-      transferLogs: [],
-      transferTotal: 0,
-      transferQuery: { pageNum: 1, pageSize: 5 },
-      message: ''
+      inviteForm: { code: '' }
     };
   },
   async created() {
     await this.loadData();
-    if (this.enterprise) await this.loadTransferLogs();
   },
   computed: {
     activeRoleCode() {
@@ -184,6 +147,13 @@ export default {
     },
     canExitEnterprise() {
       return ['ADMIN', 'ISSUER'].includes(this.activeRoleCode);
+    },
+    canManageInvites() {
+      return this.$store.getters.canManageEnterprise;
+    },
+    subscriptionName() {
+      if (Number(this.subscription?.status) !== 1) return '暂未订阅';
+      return this.subscription?.plan?.name || '套餐信息缺失';
     }
   },
   watch: {
@@ -193,32 +163,21 @@ export default {
   },
   methods: {
     roleName: getRoleName,
-    transferStatusName(status) {
-      return { 1: '成功', 2: '已撤销', 3: '失败' }[status] || '未知';
+    money(value) {
+      return Number(value || 0).toFixed(2);
     },
     async loadData() {
       const response = await getEnterpriseCurrent();
-      Object.assign(this, response.data);
+      const data = response.data || {};
+      this.enterprise = data.enterprise || null;
+      this.member = data.member || null;
+      this.wallet = data.wallet || { balanceAmount: 0, currency: 'CNY' };
+      this.subscription = data.subscription || { status: 0, userLimit: 0, plan: {} };
       this.form = this.enterprise ? { ...this.enterprise } : {};
-    },
-    async loadTransferLogs() {
-      const response = await getOwnerTransferLogs(this.transferQuery);
-      this.transferLogs = response.data.table;
-      this.transferTotal = Number(response.data.total || 0);
-    },
-    changeTransferPage(pageNum) {
-      this.transferQuery.pageNum = pageNum;
-      this.loadTransferLogs();
-    },
-    changeTransferPageSize(pageSize) {
-      this.transferQuery.pageNum = 1;
-      this.transferQuery.pageSize = pageSize;
-      this.loadTransferLogs();
     },
     beginEnterpriseEdit() {
       if (!this.canEditEnterprise) return;
       this.form = { ...this.enterprise };
-      this.message = '';
       this.isEditingEnterprise = true;
     },
     cancelEnterpriseEdit() {
@@ -235,7 +194,6 @@ export default {
       this.enterprise = response.data;
       this.form = { ...response.data };
       this.isEditingEnterprise = false;
-      this.message = response.msg;
       await this.$store.dispatch('loadContext');
     },
     openExitDialog() {
@@ -249,8 +207,7 @@ export default {
       if (!this.canExitEnterprise) return;
       this.exitDialog.loading = true;
       try {
-        const response = await exitEnterprise();
-        this.message = response.msg;
+        await exitEnterprise();
         this.exitDialog.visible = false;
         await this.$store.dispatch('loadContext');
         await this.loadData();
@@ -259,14 +216,12 @@ export default {
       }
     },
     async createNewEnterprise() {
-      const response = await createEnterprise(this.createForm);
-      this.message = response.msg;
+      await createEnterprise(this.createForm);
       await this.$store.dispatch('loadContext');
       await this.loadData();
     },
     async joinByInvite() {
-      const response = await joinEnterpriseByInvite(this.inviteForm);
-      this.message = response.msg;
+      await joinEnterpriseByInvite(this.inviteForm);
       await this.$store.dispatch('loadContext');
       await this.loadData();
     }
@@ -284,15 +239,6 @@ export default {
 
 .panel {
   padding: 22px;
-}
-
-.transfer-history-panel {
-  grid-column: 1 / -1;
-}
-
-.history-caption {
-  color: var(--portal-muted);
-  font-size: 13px;
 }
 
 .empty-cell {
@@ -388,11 +334,6 @@ export default {
 
 .join-enterprise-button {
   margin-top: 16px;
-}
-
-.message {
-  min-height: 24px;
-  color: #166534;
 }
 
 @media (max-width: 960px) {

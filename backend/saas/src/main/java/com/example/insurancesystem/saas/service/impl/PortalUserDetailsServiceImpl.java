@@ -19,8 +19,8 @@ public class PortalUserDetailsServiceImpl implements UserDetailsService {
 
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     User user = userMapper.findForLogin(username);
-    if (user == null || user.getStatus() == null || user.getStatus() != 1) {
-      throw new UsernameNotFoundException("账号不存在或已停用");
+    if (user == null) {
+      throw new UsernameNotFoundException("账号不存在");
     }
     return new LoginUser(user, Collections.singletonList("portal:access"));
   }

@@ -13,6 +13,7 @@ import com.example.insurancesystem.domain.user.MerchantUserSearchDTO;
 import com.example.insurancesystem.mapper.MerchantStaffMapper;
 import com.example.insurancesystem.mapper.MerchantStaffRoleMapper;
 import com.example.insurancesystem.service.MerchantStaffService;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import com.github.pagehelper.PageHelper;
 import org.springframework.stereotype.Service;
@@ -22,8 +23,6 @@ import java.util.List;
 
 @Service
 public class MerchantStaffServiceImpl implements MerchantStaffService {
-    private static final Long LEGACY_ENTERPRISE_ID = 1L;
-
     private final MerchantStaffMapper staffMapper;
     private final MerchantStaffRoleMapper roleMapper;
 
@@ -144,7 +143,7 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
     private MerchantStaff toEntity(MerchantUserDTO params) {
         MerchantStaff staff = new MerchantStaff();
         staff.setId(params.getId());
-        staff.setEnterpriseId(LEGACY_ENTERPRISE_ID);
+        staff.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         staff.setMerchantId(params.getMerchantId());
         staff.setName(params.getName());
         staff.setPhone(params.getUsername());
@@ -168,7 +167,7 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
 
     private MerchantStaffRole newRole(MerchantStaff staff, String roleCode) {
         MerchantStaffRole role = new MerchantStaffRole();
-        role.setEnterpriseId(LEGACY_ENTERPRISE_ID);
+        role.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         role.setMerchantId(staff.getMerchantId());
         role.setStaffId(staff.getId());
         role.setRoleCode(roleCode);

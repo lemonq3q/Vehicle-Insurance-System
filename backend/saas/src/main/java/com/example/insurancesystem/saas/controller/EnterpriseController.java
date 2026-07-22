@@ -73,16 +73,22 @@ public class EnterpriseController {
         200, ((Number) member.get("status")).intValue() == 1 ? "成员已启用" : "成员已停用", member);
   }
 
+  @PostMapping("/members/remove")
+  public ResponseResult<?> removeMember(@RequestBody Map<String, Object> body) {
+    return new ResponseResult<>(200, "成员已移出企业", service.removeMember(body));
+  }
+
   @PostMapping("/owner-transfer")
   public ResponseResult<?> transfer(@RequestBody Map<String, Object> body) {
     return new ResponseResult<>(200, "企业拥有者已转让", service.transfer(body));
   }
 
-  @GetMapping("/owner-transfer-logs")
-  public ResponseResult<?> transferLogs(
+  @GetMapping("/member-change-logs")
+  public ResponseResult<?> memberChangeLogs(
       @RequestParam(defaultValue = "1") int pageNum,
-      @RequestParam(defaultValue = "5") int pageSize) {
-    return ok(service.transferLogs(pageNum, pageSize));
+      @RequestParam(defaultValue = "5") int pageSize,
+      @RequestParam(required = false) String eventType) {
+    return ok(service.memberChangeLogs(pageNum, pageSize, eventType));
   }
 
   @PostMapping("/members/exit")

@@ -374,9 +374,6 @@ const getCode = async () => {
         Message.success('验证码发送成功');
         flag = false;
       }
-      else{
-        Message.warning(res.msg);
-      }
     });
   }
   finally{
@@ -429,9 +426,6 @@ const handleForgetPassword = (formEl) => {
             forgetForm.password = '';
             forgetForm.confirmPassword = '';
           }
-          else{
-            Message.warning(res.msg);
-          }
         });
       } finally {
         Loading.close();
@@ -456,12 +450,6 @@ const handleLogin = (formEl) => {
             store.commit('login/setUser', res.data.user);
             router.push('/home');
           }
-          else if (res.code ==503){
-            Message.warning("系统维护中，请稍后再试！");
-          }
-          else{
-            Message.warning("账号或密码错误！");
-          }
         })
       }
       finally{
@@ -484,12 +472,6 @@ const handleRegister = async (formEl) => {
           res = res.data;
           if (res.code == 200){
             Message.success(res.msg);
-          }
-          else if (res.code ==503){
-            Message.warning("系统维护中，请稍后再试！");
-          }
-          else{
-            Message.warning(res.msg);
           }
         })
       }

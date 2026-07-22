@@ -31,6 +31,7 @@ export default {
 .help-card {
   max-width: 720px;
   padding: 48px;
+  margin: 20px auto 0;
   text-align: center;
 }
 

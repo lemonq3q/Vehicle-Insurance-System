@@ -55,17 +55,18 @@ FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS `tenant_member` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
-  `user_id` bigint DEFAULT NULL COMMENT '用户ID',
+  `enterprise_id` bigint NOT NULL COMMENT '企业ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
   `role_code` varchar(32) DEFAULT NULL COMMENT 'OWNER ADMIN ISSUER',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1正常 0禁用 2待审核 3已退出',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '0停用 1启用 2待审核',
   `joined_by_invite_id` bigint DEFAULT NULL COMMENT '来源邀请码',
   `joined_at` datetime DEFAULT NULL COMMENT '加入时间',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `updated_by` bigint DEFAULT NULL COMMENT '更新人',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_member_enterprise_user` (`enterprise_id`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业成员表';
 
 CREATE TABLE IF NOT EXISTS `tenant_member_archive` LIKE `tenant_member`;
@@ -77,17 +78,23 @@ DROP TRIGGER IF EXISTS `trg_tenant_member_bu`;
 CREATE TRIGGER `trg_tenant_member_bu` BEFORE UPDATE ON `tenant_member`
 FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 
-CREATE TABLE IF NOT EXISTS `tenant_owner_transfer_log` (
+CREATE TABLE IF NOT EXISTS `tenant_member_change_log` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
-  `from_user_id` bigint DEFAULT NULL COMMENT '原拥有者',
-  `to_user_id` bigint DEFAULT NULL COMMENT '新拥有者',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1成功 2撤销 3失败',
-  `transferred_at` datetime DEFAULT NULL COMMENT '转让时间',
-  `created_by` bigint DEFAULT NULL COMMENT '操作人',
+  `enterprise_id` bigint NOT NULL COMMENT '企业ID',
+  `event_type` varchar(32) NOT NULL COMMENT 'JOIN EXIT KICK ROLE_CHANGE OWNER_TRANSFER',
+  `operator_user_id` bigint DEFAULT NULL COMMENT '操作人',
+  `target_user_id` bigint NOT NULL COMMENT '目标成员',
+  `operator_name_snapshot` varchar(100) DEFAULT NULL COMMENT '操作人姓名快照',
+  `target_name_snapshot` varchar(100) DEFAULT NULL COMMENT '目标成员姓名快照',
+  `before_role_code` varchar(32) DEFAULT NULL COMMENT '变更前角色',
+  `after_role_code` varchar(32) DEFAULT NULL COMMENT '变更后角色',
+  `invite_id` bigint DEFAULT NULL COMMENT '来源邀请码',
+  `occurred_at` datetime NOT NULL COMMENT '发生时间',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业拥有者转让记录';
+  PRIMARY KEY (`id`),
+  KEY `idx_member_change_enterprise_time` (`enterprise_id`,`occurred_at`),
+  KEY `idx_member_change_enterprise_type` (`enterprise_id`,`event_type`,`occurred_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业人员变动记录';
 
 CREATE TABLE IF NOT EXISTS `tenant_invite_code` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -179,18 +186,24 @@ FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS `saas_subscription` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
+  `enterprise_id` bigint NOT NULL COMMENT '企业ID',
   `plan_id` bigint DEFAULT NULL COMMENT '当前套餐',
   `order_id` bigint DEFAULT NULL COMMENT '来源订单',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1生效中 2已过期 3已暂停 4已取消',
-  `user_limit` int DEFAULT NULL COMMENT '当前人数上限',
-  `ocr_quota` int DEFAULT NULL COMMENT '当前周期OCR额度',
-  `request_quota` int DEFAULT NULL COMMENT '当前周期请求额度',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0未订阅 1生效中 2已过期 3已暂停 4已取消',
+  `user_limit` int NOT NULL DEFAULT 0 COMMENT '当前可启用成员上限',
+  `ocr_quota` int NOT NULL DEFAULT 0 COMMENT '当前周期OCR额度',
+  `request_quota` int NOT NULL DEFAULT 0 COMMENT '当前周期请求额度',
   `start_at` datetime DEFAULT NULL COMMENT '生效时间',
   `end_at` datetime DEFAULT NULL COMMENT '到期时间',
+  `auto_renew_enabled` tinyint NOT NULL DEFAULT 0 COMMENT '是否开启自动续费',
+  `auto_renew_plan_id` bigint DEFAULT NULL COMMENT '自动续费用套餐',
+  `next_renew_at` datetime DEFAULT NULL COMMENT '下次自动续费时间',
+  `last_renew_order_id` bigint DEFAULT NULL COMMENT '最近一次续费订单',
+  `cancel_auto_renew_at` datetime DEFAULT NULL COMMENT '取消自动续费时间',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saas_subscription_enterprise` (`enterprise_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业订阅表';
 
 DROP TRIGGER IF EXISTS `trg_saas_subscription_bi`;

@@ -33,8 +33,9 @@ public class PortalContextService {
     Map<String, Object> member = currentMember();
     String role = String.valueOf(member.get("roleCode"));
     if (Arrays.stream(roles).noneMatch(role::equals)) throw new BusinessException(403, "无操作权限");
-    if (((Number) member.get("status")).intValue() != 1)
-      throw new BusinessException(403, "当前企业成员未启用");
+    int memberStatus = ((Number) member.get("status")).intValue();
+    if (memberStatus != 0 && memberStatus != 1)
+      throw new BusinessException(403, "当前企业成员状态不可用");
     return member;
   }
 }

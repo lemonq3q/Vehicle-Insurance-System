@@ -13,6 +13,7 @@ import com.example.insurancesystem.mapper.MerchantMapper;
 import com.example.insurancesystem.mapper.UserMapper;
 import com.example.insurancesystem.mapper.UserRoleMapper;
 import com.example.insurancesystem.service.DownstreamService;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.service.MerchantStaffService;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
@@ -90,7 +91,7 @@ public class DownstreamServiceImp implements DownstreamService {
         Long userId = SystemCommonUtil.getNowUserId();
 
         Merchant downstream = new Merchant(params);
-        downstream.setEnterpriseId(1L);
+        downstream.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         downstream.setCategoryId(resolveCategoryId(params.getType()));
         downstream.setUpdateBy(userId);
         int x = UniqueCodeRetryUtil.insertWithGeneratedCode(
@@ -104,7 +105,7 @@ public class DownstreamServiceImp implements DownstreamService {
                         MerchantArea downstreamArea = new MerchantArea();
                         downstreamArea.setAreaCode(area);
                         downstreamArea.setMerchantId(downstream.getId());
-                        downstreamArea.setEnterpriseId(1L);
+                        downstreamArea.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                         downstreamArea.setUpdateBy(SystemCommonUtil.getNowUserId());
                         downstreamArea.setIsDelete(0);
                         return downstreamArea;
@@ -148,7 +149,7 @@ public class DownstreamServiceImp implements DownstreamService {
                         MerchantArea areas = new MerchantArea();
                         areas.setAreaCode(area);
                         areas.setMerchantId(downstream.getId());
-                        areas.setEnterpriseId(1L);
+                        areas.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
                         areas.setUpdateBy(SystemCommonUtil.getNowUserId());
                         areas.setIsDelete(0);
                         return areas;

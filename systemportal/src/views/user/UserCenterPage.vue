@@ -60,7 +60,6 @@
       </div>
     </article>
 
-    <p class="message" aria-live="polite">{{ message }}</p>
   </section>
 </template>
 
@@ -73,8 +72,7 @@ export default {
     return {
       profile: {},
       form: {},
-      isEditing: false,
-      message: ''
+      isEditing: false
     };
   },
   computed: {
@@ -96,7 +94,6 @@ export default {
   methods: {
     beginEdit() {
       this.form = { ...this.profile };
-      this.message = '';
       this.isEditing = true;
     },
     cancelEdit() {
@@ -108,7 +105,6 @@ export default {
       this.profile = response.data;
       this.form = { ...response.data };
       this.isEditing = false;
-      this.message = response.msg;
       await this.$store.dispatch('loadContext');
     }
   }
@@ -217,10 +213,6 @@ export default {
 .profile-form {
   align-content: start;
   padding-top: 20px;
-}
-
-.message {
-  color: #166534;
 }
 
 @media (max-width: 880px) {

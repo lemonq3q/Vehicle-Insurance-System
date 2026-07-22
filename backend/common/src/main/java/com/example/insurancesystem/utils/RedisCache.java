@@ -37,6 +37,23 @@ public class RedisCache {
         return operation.get(key);
     }
 
+    /**
+     * Claims a short-lived value once. The claim marker prevents concurrent exchange requests
+     * from consuming the same authorization code, even when the application has multiple nodes.
+     */
+    public <T> T getAndDeleteOnce(final String key, final long claimTimeout, final TimeUnit unit) {
+        Boolean claimed = redisTemplate.opsForValue()
+                .setIfAbsent(key + ":claimed", "1", claimTimeout, unit);
+        if (!Boolean.TRUE.equals(claimed)) {
+            return null;
+        }
+        T value = getCacheObject(key);
+        if (value != null) {
+            deleteObject(key);
+        }
+        return value;
+    }
+
     public boolean deleteObject(final String key){
         return redisTemplate.delete(key);
     }

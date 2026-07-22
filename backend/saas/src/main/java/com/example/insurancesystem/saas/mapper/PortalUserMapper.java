@@ -21,11 +21,11 @@ public interface PortalUserMapper {
   @Select("SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND phone=#{phone}")
   int countByPhone(String phone);
 
-  @Select("SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND phone=#{phone} AND id&lt;&gt;#{id}")
+  @Select("SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND phone=#{phone} AND id<>#{id}")
   int countPhoneExcept(@Param("phone") String phone, @Param("id") Long id);
 
   @Select(
-      "SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND username=#{username} AND id&lt;&gt;#{id}")
+      "SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND username=#{username} AND id<>#{id}")
   int countUsernameExcept(@Param("username") String username, @Param("id") Long id);
 
   @Insert(

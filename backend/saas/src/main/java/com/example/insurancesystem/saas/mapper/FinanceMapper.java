@@ -19,15 +19,35 @@ public interface FinanceMapper {
   @Select("SELECT * FROM saas_plan WHERE status=1 AND deleted=0 ORDER BY sort_no,id")
   List<Map<String, Object>> findPlans();
 
-  @Select(
-      "SELECT * FROM saas_subscription WHERE enterprise_id=#{enterpriseId} AND status=1 AND end_at&gt;NOW() ORDER BY end_at DESC LIMIT 1")
+  @Select("SELECT * FROM saas_subscription WHERE enterprise_id=#{enterpriseId} LIMIT 1")
   Map<String, Object> findSubscription(Long enterpriseId);
+
+  @Select("SELECT * FROM saas_subscription WHERE enterprise_id=#{enterpriseId} FOR UPDATE")
+  Map<String, Object> lockSubscription(Long enterpriseId);
 
   @Insert(
       "INSERT INTO saas_recharge_order(recharge_no,enterprise_id,user_id,amount,pay_channel,pay_trade_no,status,created_at,updated_at,deleted) "
           + "VALUES(#{rechargeNo},#{enterpriseId},#{userId},#{amount},#{payChannel},#{payTradeNo},1,NOW(),NOW(),0)")
   @Options(useGeneratedKeys = true, keyProperty = "id")
   int insertRecharge(Map<String, Object> order);
+
+  @Select(
+      "SELECT * FROM saas_recharge_order WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0")
+  Map<String, Object> findRechargeOrder(
+      @Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+
+  @Select(
+      "SELECT * FROM saas_recharge_order WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0 FOR UPDATE")
+  Map<String, Object> lockRechargeOrder(
+      @Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+
+  @Update(
+      "UPDATE saas_recharge_order SET status=2,paid_at=NOW(),updated_at=NOW() WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND status=1 AND deleted=0")
+  int completeRechargeOrder(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+
+  @Update(
+      "UPDATE saas_recharge_order SET status=3,updated_at=NOW() WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND status=1 AND deleted=0")
+  int cancelRechargeOrder(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
 
   @Select(
       "<script>SELECT * FROM saas_recharge_order WHERE enterprise_id=#{enterpriseId} AND deleted=0 "
@@ -57,8 +77,8 @@ public interface FinanceMapper {
   int insertAutoRenewFailureOrder(Map<String, Object> order);
 
   @Insert(
-      "INSERT INTO saas_wallet_transaction(enterprise_id,wallet_id,user_id,transaction_no,direction,transaction_type,amount,balance_before,balance_after,related_order_id,related_subscription_id,remark,created_at) "
-          + "VALUES(#{enterpriseId},#{walletId},#{userId},#{transactionNo},#{direction},#{transactionType},#{amount},#{balanceBefore},#{balanceAfter},#{orderId},#{subscriptionId},#{remark},NOW())")
+      "INSERT INTO saas_wallet_transaction(enterprise_id,wallet_id,user_id,transaction_no,direction,transaction_type,amount,balance_before,balance_after,related_order_id,related_recharge_order_id,related_subscription_id,remark,created_at) "
+          + "VALUES(#{enterpriseId},#{walletId},#{userId},#{transactionNo},#{direction},#{transactionType},#{amount},#{balanceBefore},#{balanceAfter},#{orderId},#{rechargeOrderId},#{subscriptionId},#{remark},NOW())")
   @Options(useGeneratedKeys = true, keyProperty = "id")
   int insertTransaction(Map<String, Object> transaction);
 
@@ -66,14 +86,8 @@ public interface FinanceMapper {
   int bindOrderTransaction(
       @Param("orderId") Long orderId, @Param("transactionId") Long transactionId);
 
-  @Insert(
-      "INSERT INTO saas_subscription(enterprise_id,plan_id,order_id,status,user_limit,start_at,end_at,auto_renew_enabled,auto_renew_plan_id,next_renew_at,last_renew_order_id,created_at,updated_at) "
-          + "VALUES(#{enterpriseId},#{planId},#{orderId},1,#{userLimit},#{startAt},#{endAt},#{autoRenew},#{planId},#{nextRenewAt},#{orderId},NOW(),NOW())")
-  @Options(useGeneratedKeys = true, keyProperty = "id")
-  int insertSubscription(Map<String, Object> subscription);
-
   @Update(
-      "UPDATE saas_subscription SET plan_id=#{planId},order_id=#{orderId},status=1,user_limit=#{userLimit},start_at=#{startAt},end_at=#{endAt},auto_renew_enabled=#{autoRenew},auto_renew_plan_id=#{planId},next_renew_at=#{nextRenewAt},last_renew_order_id=#{orderId},updated_at=NOW() WHERE id=#{id}")
+      "UPDATE saas_subscription SET plan_id=#{planId},order_id=#{orderId},status=1,user_limit=#{userLimit},ocr_quota=#{ocrQuota},request_quota=#{requestQuota},start_at=#{startAt},end_at=#{endAt},auto_renew_enabled=#{autoRenew},auto_renew_plan_id=CASE WHEN #{autoRenew}=1 THEN #{planId} ELSE NULL END,next_renew_at=#{nextRenewAt},last_renew_order_id=#{orderId},cancel_auto_renew_at=CASE WHEN #{autoRenew}=0 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE enterprise_id=#{enterpriseId}")
   int updateSubscription(Map<String, Object> subscription);
 
   @Update(

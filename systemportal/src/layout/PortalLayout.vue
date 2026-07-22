@@ -26,6 +26,15 @@
       </div>
       <div class="header-actions">
         <button
+          class="layui-btn portal-btn portal-btn-primary enter-system-button"
+          type="button"
+          :disabled="enteringSystem || !$store.state.currentMember"
+          @click="enterInsuranceSystem"
+        >
+          <i class="layui-icon layui-icon-release"></i>
+          <span>{{ enteringSystem ? '正在进入...' : '进入车险系统' }}</span>
+        </button>
+        <button
           class="layui-btn layui-btn-primary layui-border-green portal-btn test-role-button"
           type="button"
           :disabled="!$store.state.currentMember"
@@ -58,6 +67,7 @@
 
 <script>
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { createInsuranceAuthorization } from '@/api/portal';
 
 export default {
   name: 'PortalLayout',
@@ -65,6 +75,7 @@ export default {
   data() {
     return {
       logoutDialogVisible: false,
+      enteringSystem: false,
       menus: [
         {
           title: '工作台',
@@ -113,9 +124,22 @@ export default {
     }
   },
   async created() {
-    await this.$store.dispatch('loadContext');
+    if (!this.$store.state.contextLoaded) {
+      await this.$store.dispatch('loadContext');
+    }
   },
   methods: {
+    async enterInsuranceSystem() {
+      if (this.enteringSystem) return;
+      this.enteringSystem = true;
+      try {
+        const response = await createInsuranceAuthorization();
+        window.location.assign(response.data.redirectUrl);
+      } catch {
+        this.enteringSystem = false;
+        // Request errors are displayed by the Axios interceptor.
+      }
+    },
     toggleSidebar() {
       this.$store.commit('setSidebarCollapsed', !this.collapsed);
     },
@@ -252,6 +276,16 @@ export default {
   min-width: 112px;
 }
 
+.enter-system-button i {
+  margin-right: 5px;
+}
+
+.enter-system-button span {
+  display: inline;
+  color: inherit;
+  font-size: inherit;
+}
+
 .test-role-button i {
   margin-right: 5px;
 }
@@ -328,6 +362,19 @@ export default {
 
   .test-role-button span {
     display: none;
+  }
+
+  .enter-system-button span {
+    display: none;
+  }
+
+  .enter-system-button {
+    width: 42px;
+    padding: 0;
+  }
+
+  .enter-system-button i {
+    margin: 0;
   }
 }
 </style>

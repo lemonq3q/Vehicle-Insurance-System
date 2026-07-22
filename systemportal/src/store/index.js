@@ -10,6 +10,7 @@ const store = createStore({
       enterprises: [],
       currentEnterprise: null,
       currentMember: null,
+      contextLoaded: false,
       testRoleCode: '',
       sidebarCollapsed: false
     };
@@ -41,6 +42,7 @@ const store = createStore({
       state.enterprises = context.enterprises || [];
       state.currentEnterprise = context.currentEnterprise;
       state.currentMember = context.currentMember;
+      state.contextLoaded = true;
       if (!context.currentMember) state.testRoleCode = '';
       Storage.set('portalUser', context.user);
     },
@@ -56,16 +58,22 @@ const store = createStore({
       state.enterprises = [];
       state.currentEnterprise = null;
       state.currentMember = null;
+      state.contextLoaded = false;
       state.testRoleCode = '';
       Storage.remove('portalToken');
       Storage.remove('portalUser');
     }
   },
   actions: {
-    async login({ commit }, payload) {
+    async login({ commit, dispatch }, payload) {
       const response = await login(payload);
       commit('setToken', response.data.token);
-      commit('setContext', response.data);
+      if (Object.prototype.hasOwnProperty.call(response.data, 'currentEnterprise')
+        && Object.prototype.hasOwnProperty.call(response.data, 'currentMember')) {
+        commit('setContext', response.data);
+      } else {
+        await dispatch('loadContext');
+      }
       return response;
     },
     async loadContext({ commit }) {

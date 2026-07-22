@@ -61,7 +61,6 @@
           <input v-model="form.autoRenew" type="checkbox" :disabled="!canManageFinance" />
         </label>
 
-        <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
       </article>
 
       <aside class="portal-card amount-panel">
@@ -93,6 +92,7 @@
 
 <script>
 import { createSubscriptionOrder, getFinanceOverview, getPlans, getSubscriptionOrderPreview } from '@/api/portal';
+import { notifyWarning } from '@/utils/notification';
 
 export default {
   name: 'SubscriptionOrderDetailPage',
@@ -103,8 +103,7 @@ export default {
       plan: null,
       overview: { wallet: {}, subscription: {} },
       preview: null,
-      form: { periodCount: 1, autoRenew: false },
-      errorMessage: ''
+      form: { periodCount: 1, autoRenew: false }
     };
   },
   computed: {
@@ -140,7 +139,7 @@ export default {
         if (!this.plan) return;
 
         this.form.autoRenew = this.$route.query.autoRenew === undefined
-          ? Boolean(this.overview.subscription?.autoRenewEnabled)
+          ? Number(this.overview.subscription?.status) === 1 && Boolean(this.overview.subscription?.autoRenewEnabled)
           : this.$route.query.autoRenew === 'true';
         this.form.periodCount = Math.max(1, Number(this.$route.query.periodCount || 1));
         await this.loadPreview(true);
@@ -183,10 +182,9 @@ export default {
     },
     async submitOrder() {
       if (!this.canManageFinance) return;
-      this.errorMessage = '';
       await this.normalizePeriod();
       if (!this.preview.eligible) {
-        this.errorMessage = this.preview.validationMessage;
+        notifyWarning(this.preview.validationMessage || '请求异常');
         return;
       }
       if (this.isBalanceInsufficient) {
@@ -210,7 +208,7 @@ export default {
           this.goToRecharge();
           return;
         }
-        this.errorMessage = error.message || '订单提交失败，请稍后重试';
+        // Request errors are displayed by the Axios interceptor.
       } finally {
         this.submitting = false;
       }
@@ -361,7 +359,6 @@ export default {
   height: 20px;
 }
 
-.form-error,
 .balance-warning {
   padding: 10px 12px;
   border-radius: 6px;

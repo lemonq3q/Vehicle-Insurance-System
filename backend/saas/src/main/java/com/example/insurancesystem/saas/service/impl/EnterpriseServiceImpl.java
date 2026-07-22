@@ -10,6 +10,7 @@ import com.example.insurancesystem.saas.support.PortalContextService;
 import com.example.insurancesystem.saas.support.PortalMaps;
 import com.example.insurancesystem.saas.support.SaasCodeConstraints;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -47,7 +48,7 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     Long enterpriseId = ((Number) member.get("enterpriseId")).longValue();
     Map<String, Object> subscription =
         PortalMaps.camel(financeMapper.findSubscription(enterpriseId));
-    if (subscription != null)
+    if (subscription != null && subscription.get("planId") != null)
       subscription.put(
           "plan",
           PortalMaps.camel(
@@ -55,7 +56,7 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("enterprise", PortalMaps.camel(mapper.findEnterprise(enterpriseId)));
     data.put("member", member);
-    data.put("wallet", PortalMaps.camel(financeMapper.findWallet(enterpriseId)));
+    data.put("wallet", walletView(enterpriseId));
     data.put("subscription", subscription);
     return data;
   }
@@ -79,9 +80,12 @@ public class EnterpriseServiceImpl implements EnterpriseService {
         () -> mapper.insertEnterprise(enterprise));
     Long enterpriseId = ((Number) enterprise.get("id")).longValue();
     Map<String, Object> member =
-        member(enterpriseId, context.userId(), "OWNER", 1, null, context.userId());
+        member(enterpriseId, context.userId(), "OWNER", 0, null, context.userId());
     mapper.insertMember(member);
     mapper.insertWallet(enterpriseId, context.userId());
+    mapper.insertDefaultSubscription(enterpriseId);
+    insertMemberChange(
+        enterpriseId, "JOIN", context.userId(), context.userId(), null, "OWNER", null, "创建企业并加入");
     return PortalMaps.camel(mapper.findEnterprise(enterpriseId));
   }
 
@@ -111,20 +115,44 @@ public class EnterpriseServiceImpl implements EnterpriseService {
         || (max != null && used.intValue() >= max.intValue()))
       throw new BusinessException(400, "邀请码已失效");
     Long enterpriseId = ((Number) invite.get("enterpriseId")).longValue();
-    Map<String, Object> existing = mapper.findMemberByUser(enterpriseId, context.userId());
-    if (existing != null && PortalMaps.intValue(existing, "status", "status") != 3)
+    mapper.lockEnterprise(enterpriseId);
+    invite = PortalMaps.camel(mapper.lockInviteByCode(code));
+    if (invite == null) throw new BusinessException(404, "邀请码不存在");
+    status = ((Number) invite.get("status")).intValue();
+    expires = (LocalDateTime) invite.get("expiresAt");
+    max = (Number) invite.get("maxUseCount");
+    used = (Number) invite.get("usedCount");
+    if (status != 1
+        || (expires != null && expires.isBefore(LocalDateTime.now()))
+        || (max != null && used.intValue() >= max.intValue()))
+      throw new BusinessException(400, "邀请码已失效");
+    Map<String, Object> existing =
+        PortalMaps.camel(mapper.findMemberByUserIncludingDeleted(enterpriseId, context.userId()));
+    if (existing != null && PortalMaps.intValue(existing, "deleted", "deleted") == 0)
       throw new BusinessException(400, "已经是该企业成员");
+    Integer configuredLimit = mapper.findCurrentUserLimit(enterpriseId);
+    int userLimit = configuredLimit == null ? 0 : Math.max(0, configuredLimit);
+    int memberStatus = mapper.countActiveMembers(enterpriseId) < userLimit ? 1 : 0;
     Map<String, Object> member =
         member(
             enterpriseId,
             context.userId(),
             "ISSUER",
-            1,
+            memberStatus,
             ((Number) invite.get("id")).longValue(),
             context.userId());
     if (mapper.reactivateMember(member) == 0) mapper.insertMember(member);
     if (mapper.consumeInvite(((Number) invite.get("id")).longValue()) == 0)
       throw new BusinessException(400, "邀请码已失效");
+    insertMemberChange(
+        enterpriseId,
+        "JOIN",
+        context.userId(),
+        context.userId(),
+        null,
+        "ISSUER",
+        ((Number) invite.get("id")).longValue(),
+        "通过邀请码加入企业");
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("enterpriseId", enterpriseId);
     result.put("roleCode", "ISSUER");
@@ -189,21 +217,34 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     return new TableData<>(mapper.countMembers(query), PortalMaps.camel(mapper.findMembers(query)));
   }
 
+  @Transactional
   public Map<String, Object> updateRole(Map<String, Object> body) {
     context.requireRoles("OWNER", "ADMIN");
     Long enterpriseId = context.enterpriseId();
     Long id = number(body, "memberId");
     String role = required(body, "roleCode");
     if (!Set.of("ADMIN", "ISSUER").contains(role)) throw new BusinessException(400, "成员角色参数不正确");
-    Map<String, Object> target = PortalMaps.camel(mapper.findMember(id, enterpriseId));
+    mapper.lockEnterprise(enterpriseId);
+    Map<String, Object> target = PortalMaps.camel(mapper.lockMember(id, enterpriseId));
     if (target == null) throw new BusinessException(404, "成员不存在");
     if ("OWNER".equals(target.get("roleCode"))) throw new BusinessException(400, "企业拥有者角色不能修改");
+    String oldRole = String.valueOf(target.get("roleCode"));
+    if (oldRole.equals(role)) return target;
     Map<String, Object> update = new LinkedHashMap<>();
     update.put("id", id);
     update.put("enterpriseId", enterpriseId);
     update.put("roleCode", role);
     update.put("userId", context.userId());
     mapper.updateMemberRole(update);
+    insertMemberChange(
+        enterpriseId,
+        "ROLE_CHANGE",
+        context.userId(),
+        ((Number) target.get("userId")).longValue(),
+        oldRole,
+        role,
+        null,
+        "修改企业成员角色");
     return PortalMaps.camel(mapper.findMember(id, enterpriseId));
   }
 
@@ -214,15 +255,18 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     Long id = number(body, "memberId");
     int status = ((Number) body.getOrDefault("status", -1)).intValue();
     if (status != 0 && status != 1) throw new BusinessException(400, "成员状态参数不正确");
-    Map<String, Object> target = PortalMaps.camel(mapper.findMember(id, enterpriseId));
+    mapper.lockEnterprise(enterpriseId);
+    Map<String, Object> target = PortalMaps.camel(mapper.lockMember(id, enterpriseId));
     if (target == null) throw new BusinessException(404, "成员不存在");
     if ("OWNER".equals(target.get("roleCode")) && status == 0)
       throw new BusinessException(400, "企业拥有者不能被停用");
     if (status == 1 && ((Number) target.get("status")).intValue() != 1) {
-      mapper.lockEnterprise(enterpriseId);
-      Integer userLimit = mapper.findCurrentUserLimit(enterpriseId);
+      Integer configuredLimit = mapper.findCurrentUserLimit(enterpriseId);
+      int userLimit = configuredLimit == null ? 0 : Math.max(0, configuredLimit);
       int count = mapper.countActiveMembers(enterpriseId);
-      if (userLimit != null && count >= userLimit)
+      if (userLimit == 0)
+        throw new BusinessException(409, "企业当前未开通任何套餐，暂时无法启用成员");
+      if (count >= userLimit)
         throw new BusinessException(409, "当前套餐最多启用 " + userLimit + " 名成员，请先升级套餐或停用其他成员");
     }
     Map<String, Object> update = new LinkedHashMap<>();
@@ -235,11 +279,43 @@ public class EnterpriseServiceImpl implements EnterpriseService {
   }
 
   @Transactional
+  public boolean removeMember(Map<String, Object> body) {
+    context.requireRoles("OWNER", "ADMIN");
+    Long enterpriseId = context.enterpriseId();
+    Long memberId = number(body, "memberId");
+    mapper.lockEnterprise(enterpriseId);
+    Map<String, Object> target = PortalMaps.camel(mapper.lockMember(memberId, enterpriseId));
+    if (target == null) throw new BusinessException(404, "企业成员不存在");
+    if ("OWNER".equals(target.get("roleCode")))
+      throw new BusinessException(400, "企业拥有者不能被移出企业");
+    if (context.userId().equals(((Number) target.get("userId")).longValue()))
+      throw new BusinessException(400, "不能将自己踢出企业，请使用退出企业功能");
+
+    Map<String, Object> update = new LinkedHashMap<>();
+    update.put("id", memberId);
+    update.put("enterpriseId", enterpriseId);
+    update.put("userId", context.userId());
+    if (mapper.softDeleteMember(update) == 0)
+      throw new BusinessException(409, "成员状态已发生变化，请刷新后重试");
+    insertMemberChange(
+        enterpriseId,
+        "KICK",
+        context.userId(),
+        ((Number) target.get("userId")).longValue(),
+        String.valueOf(target.get("roleCode")),
+        null,
+        null,
+        "移出企业成员");
+    return true;
+  }
+
+  @Transactional
   public Map<String, Object> transfer(Map<String, Object> body) {
     Map<String, Object> owner = context.requireRoles("OWNER");
     Long enterpriseId = ((Number) owner.get("enterpriseId")).longValue();
     Long targetId = number(body, "toMemberId");
-    Map<String, Object> target = PortalMaps.camel(mapper.findMember(targetId, enterpriseId));
+    mapper.lockEnterprise(enterpriseId);
+    Map<String, Object> target = PortalMaps.camel(mapper.lockMember(targetId, enterpriseId));
     if (target == null || ((Number) target.get("status")).intValue() != 1)
       throw new BusinessException(400, "只能转让给同企业的启用成员");
     Long from = context.userId(), to = ((Number) target.get("userId")).longValue();
@@ -252,32 +328,78 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     if (mapper.updateOwner(transfer) == 0) throw new BusinessException(409, "企业拥有者已发生变化，请刷新后重试");
     mapper.demoteOldOwner(transfer);
     mapper.promoteNewOwner(transfer);
-    mapper.insertTransferLog(transfer);
+    insertMemberChange(
+        enterpriseId,
+        "OWNER_TRANSFER",
+        from,
+        to,
+        String.valueOf(target.get("roleCode")),
+        "OWNER",
+        null,
+        "门户主动转让企业拥有者");
     transfer.put("transferredAt", LocalDateTime.now());
     return transfer;
   }
 
-  public TableData<Map<String, Object>> transferLogs(int pageNum, int pageSize) {
+  public TableData<Map<String, Object>> memberChangeLogs(
+      int pageNum, int pageSize, String eventType) {
     Long enterpriseId = context.enterpriseId();
     pageNum = positive(pageNum, 1);
     pageSize = limit(pageSize);
     return new TableData<>(
-        mapper.countTransferLogs(enterpriseId),
+        mapper.countMemberChangeLogs(enterpriseId, eventType),
         PortalMaps.camel(
-            mapper.findTransferLogs(enterpriseId, (pageNum - 1) * pageSize, pageSize)));
+            mapper.findMemberChangeLogs(
+                enterpriseId, eventType, (pageNum - 1) * pageSize, pageSize)));
   }
 
   @Transactional
   public boolean exit() {
     Map<String, Object> member = context.currentMember();
-    if ("OWNER".equals(member.get("roleCode"))) throw new BusinessException(400, "企业拥有者不可退出企业");
+    Long enterpriseId = ((Number) member.get("enterpriseId")).longValue();
+    Long memberId = ((Number) member.get("id")).longValue();
+    mapper.lockEnterprise(enterpriseId);
+    member = PortalMaps.camel(mapper.lockMember(memberId, enterpriseId));
+    if (member == null) throw new BusinessException(404, "企业成员不存在");
+    if ("OWNER".equals(member.get("roleCode")))
+      throw new BusinessException(400, "企业拥有者不可退出企业");
     Map<String, Object> update = new LinkedHashMap<>();
-    update.put("id", member.get("id"));
-    update.put("enterpriseId", member.get("enterpriseId"));
-    update.put("status", 3);
+    update.put("id", memberId);
+    update.put("enterpriseId", enterpriseId);
     update.put("userId", context.userId());
-    mapper.updateMemberStatus(update);
+    if (mapper.softDeleteMember(update) == 0)
+      throw new BusinessException(409, "成员关系已发生变化，请刷新后重试");
+    insertMemberChange(
+        enterpriseId,
+        "EXIT",
+        context.userId(),
+        context.userId(),
+        String.valueOf(member.get("roleCode")),
+        null,
+        null,
+        "成员主动退出企业");
     return true;
+  }
+
+  private void insertMemberChange(
+      Long enterpriseId,
+      String eventType,
+      Long operatorUserId,
+      Long targetUserId,
+      String beforeRoleCode,
+      String afterRoleCode,
+      Long inviteId,
+      String remark) {
+    Map<String, Object> change = new LinkedHashMap<>();
+    change.put("enterpriseId", enterpriseId);
+    change.put("eventType", eventType);
+    change.put("operatorUserId", operatorUserId);
+    change.put("targetUserId", targetUserId);
+    change.put("beforeRoleCode", beforeRoleCode);
+    change.put("afterRoleCode", afterRoleCode);
+    change.put("inviteId", inviteId);
+    change.put("remark", remark);
+    mapper.insertMemberChangeLog(change);
   }
 
   private Map<String, Object> member(
@@ -290,6 +412,16 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     m.put("inviteId", inviteId);
     m.put("operatorId", operator);
     return m;
+  }
+
+  private Map<String, Object> walletView(Long enterpriseId) {
+    Map<String, Object> wallet = PortalMaps.camel(financeMapper.findWallet(enterpriseId));
+    if (wallet != null) return wallet;
+
+    Map<String, Object> emptyWallet = new LinkedHashMap<>();
+    emptyWallet.put("balanceAmount", BigDecimal.ZERO.setScale(2));
+    emptyWallet.put("currency", "CNY");
+    return emptyWallet;
   }
 
   private String required(Map<String, Object> b, String k) {

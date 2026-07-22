@@ -43,10 +43,6 @@ public class SubscriptionMaintenanceProcessor {
     if (!isDue(subscription)) return "SKIPPED";
 
     Long enterpriseId = number(subscription.get("enterpriseId"));
-    if (maintenanceMapper.countOtherActiveSubscriptions(enterpriseId, subscriptionId) > 0) {
-      maintenanceMapper.expireSubscription(subscriptionId);
-      return "SUPERSEDED";
-    }
     if (!enabled(subscription.get("autoRenewEnabled"))) {
       expire(subscriptionId, enterpriseId);
       return "EXPIRED";
@@ -115,6 +111,8 @@ public class SubscriptionMaintenanceProcessor {
     update.put("planId", planId);
     update.put("orderId", order.get("id"));
     update.put("userLimit", userLimit);
+    update.put("ocrQuota", intValue(plan.get("ocrQuota")));
+    update.put("requestQuota", intValue(plan.get("requestQuota")));
     update.put("startAt", subscription.get("startAt"));
     update.put("endAt", newEnd);
     update.put("autoRenew", 1);
@@ -149,10 +147,6 @@ public class SubscriptionMaintenanceProcessor {
         PortalMaps.camel(maintenanceMapper.lockSubscription(subscriptionId));
     if (!isDue(subscription)) return;
     Long enterpriseId = number(subscription.get("enterpriseId"));
-    if (maintenanceMapper.countOtherActiveSubscriptions(enterpriseId, subscriptionId) > 0) {
-      maintenanceMapper.expireSubscription(subscriptionId);
-      return;
-    }
     Long planId =
         subscription.get("autoRenewPlanId") == null
             ? number(subscription.get("planId"))
@@ -206,6 +200,10 @@ public class SubscriptionMaintenanceProcessor {
 
   private boolean enabled(Object value) {
     return value != null && ((Number) value).intValue() == 1;
+  }
+
+  private int intValue(Object value) {
+    return value == null ? 0 : ((Number) value).intValue();
   }
 
   private Long number(Object value) {

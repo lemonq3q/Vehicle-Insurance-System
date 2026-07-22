@@ -3,14 +3,14 @@ spring:
     name: InsuranceSystemSaas
   datasource:
     druid:
-      url: ${INSURANCE_DB_URL:jdbc:mysql://localhost:3306/insurance_saas?characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
-      username: ${INSURANCE_DB_USERNAME:root}
-      password: ${INSURANCE_DB_PASSWORD:}
+      url: jdbc:mysql://localhost:3306/insurance_saas?characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      username: root
+      password: 20040619Lmy
       driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
-    host: ${INSURANCE_REDIS_HOST:localhost}
-    port: ${INSURANCE_REDIS_PORT:6379}
-    password: ${INSURANCE_REDIS_PASSWORD:}
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
 
 mybatis-plus:
   configuration:
@@ -18,3 +18,16 @@ mybatis-plus:
 
 server:
   port: 8081
+
+security:
+  session:
+    # SaaS 会话在 Redis 中的完整 Key 格式：portal:login:{userId}
+    key-prefix: ${PORTAL_LOGIN_KEY_PREFIX:portal:login:}
+
+portal:
+  sso:
+    # 可修改为车险前端的正式域名，不要带末尾斜杠。
+    insurance-frontend-url: ${INSURANCE_FRONTEND_URL:http://localhost:8888}
+    # 两台服务器上配置相同的高强度密钥，生产环境必须修改。
+    insurance-client-secret: ${INSURANCE_SSO_CLIENT_SECRET:change-me-in-production}
+    code-ttl-seconds: ${INSURANCE_SSO_CODE_TTL_SECONDS:60}

@@ -3,71 +3,23 @@
     <div class="section-title">
       <div>
         <h1>企业人员</h1>
-        <p>所有成员可查看人员列表，企业拥有者和管理员可维护邀请码与成员角色。</p>
+        <p>查看当前企业成员并追踪人员加入、退出和角色变化。</p>
       </div>
     </div>
-
-    <article v-if="canManage" class="portal-card panel invite-panel">
-      <div class="invite-create-area">
-        <div class="table-toolbar">
-          <h2>邀请码</h2>
-          <button class="layui-btn portal-btn portal-btn-primary" @click="createInvite">创建邀请码</button>
-        </div>
-        <div class="invite-form">
-          <div class="form-field">
-            <label for="maxUseCount">邀请人数</label>
-            <input id="maxUseCount" v-model.number="inviteForm.maxUseCount" class="layui-input" type="number" min="1" />
-          </div>
-          <div class="form-field">
-            <label for="expiresAt">过期时间</label>
-            <LayDatePicker v-model="inviteForm.expiresAt" placeholder="请选择邀请码过期时间" />
-          </div>
-        </div>
-      </div>
-      <div class="invite-list-area">
-        <h3>已创建的邀请码</h3>
-        <div class="data-table-wrap">
-          <table class="layui-table portal-table">
-            <thead>
-              <tr>
-                <th>邀请码</th>
-                <th>默认角色</th>
-                <th>使用次数</th>
-                <th>过期时间</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in invites" :key="item.id">
-                <td>{{ item.code }}</td>
-                <td>{{ roleName(item.defaultRoleCode) }}</td>
-                <td>{{ item.usedCount }} / {{ item.maxUseCount || '不限' }}</td>
-                <td>{{ item.expiresAt }}</td>
-                <td><span class="portal-tag">可用</span></td>
-                <td>
-                  <button class="layui-btn layui-btn-xs layui-btn-primary layui-border-red" @click="openDeleteInviteDialog(item)">删除</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <LayPagination :total="inviteTotal" :page-num="inviteQuery.pageNum" :page-size="inviteQuery.pageSize" @change="changeInvitePage" @size-change="changeInvitePageSize" />
-      </div>
-    </article>
 
     <article class="portal-card panel members-panel">
       <div class="table-toolbar">
         <h2>企业成员</h2>
         <div class="filters">
-          <input v-model="query.keyword" class="layui-input" placeholder="姓名、手机号或账号" @keyup.enter="loadMembers" />
-          <select v-model="query.roleCode" class="layui-select" @change="loadMembers">
+          <input v-model="query.keyword" class="layui-input" placeholder="姓名、手机号或账号" @keyup.enter="searchMembers" />
+          <select v-model="query.roleCode" class="layui-select">
             <option value="">全部角色</option>
             <option value="OWNER">企业拥有者</option>
             <option value="ADMIN">管理员</option>
             <option value="ISSUER">出单员</option>
           </select>
-          <button class="layui-btn portal-btn portal-btn-primary" @click="loadMembers">查询</button>
+          <button class="layui-btn portal-btn portal-btn-primary" @click="searchMembers">查询</button>
+          <button class="layui-btn layui-btn-primary portal-btn" @click="resetMemberQuery">重置</button>
         </div>
       </div>
       <div class="data-table-wrap">
@@ -106,12 +58,13 @@
                   <button
                     v-if="canManage && item.roleCode !== 'OWNER' && [0, 1].includes(item.status)"
                     class="layui-btn layui-btn-xs layui-btn-primary"
-                    :class="item.status === 1 ? 'layui-border-red' : 'layui-border-green'"
+                    :class="item.status === 1 ? 'member-disable-button' : 'layui-border-green'"
                     @click="toggleMemberStatus(item)"
                   >
                     {{ item.status === 1 ? '停用' : '启用' }}
                   </button>
                   <button v-if="isOwner && item.roleCode !== 'OWNER' && item.status === 1" class="layui-btn layui-btn-xs layui-btn-primary layui-border-blue" @click="openTransferDialog(item)">转让拥有者</button>
+                  <button v-if="canRemoveMember(item)" class="layui-btn layui-btn-xs layui-btn-primary layui-border-red" @click="openRemoveDialog(item)">踢出</button>
                   <span v-if="!canManage || item.roleCode === 'OWNER'" class="text-muted">不可操作</span>
                 </div>
               </td>
@@ -120,6 +73,41 @@
         </table>
       </div>
       <LayPagination :total="memberTotal" :page-num="query.pageNum" :page-size="query.pageSize" @change="changeMemberPage" @size-change="changeMemberPageSize" />
+    </article>
+
+    <article class="portal-card panel change-log-panel">
+      <div class="table-toolbar">
+        <h2>企业人员变动记录</h2>
+        <div class="filters">
+          <select v-model="changeQuery.eventType" class="layui-select">
+            <option value="">全部类型</option>
+            <option value="JOIN">加入企业</option>
+            <option value="EXIT">主动退出</option>
+            <option value="KICK">踢出企业</option>
+            <option value="ROLE_CHANGE">角色修改</option>
+            <option value="OWNER_TRANSFER">拥有者转让</option>
+          </select>
+          <button class="layui-btn portal-btn portal-btn-primary" @click="searchChanges">查询</button>
+          <button class="layui-btn layui-btn-primary portal-btn" @click="resetChangeQuery">重置</button>
+        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="layui-table portal-table">
+          <thead><tr><th>变动类型</th><th>操作人</th><th>相关成员</th><th>角色变化</th><th>发生时间</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr v-for="item in changeLogs" :key="item.id">
+              <td><span class="portal-tag" :class="changeTagClass(item.eventType)">{{ eventName(item.eventType) }}</span></td>
+              <td>{{ item.operatorNameSnapshot || '系统' }}</td>
+              <td>{{ item.targetNameSnapshot || '-' }}</td>
+              <td>{{ roleChangeText(item) }}</td>
+              <td>{{ item.occurredAt || '-' }}</td>
+              <td>{{ item.remark || '-' }}</td>
+            </tr>
+            <tr v-if="!changeLogs.length"><td colspan="6" class="empty-cell">暂无人员变动记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <LayPagination :total="changeTotal" :page-num="changeQuery.pageNum" :page-size="changeQuery.pageSize" @change="changeLogPage" @size-change="changeLogPageSize" />
     </article>
 
     <ConfirmDialog
@@ -133,43 +121,37 @@
     />
 
     <ConfirmDialog
-      :visible="deleteInviteDialog.visible"
-      title="删除邀请码"
-      :message="deleteInviteDialogMessage"
-      confirm-text="确认删除"
-      :loading="deleteInviteDialog.loading"
-      @cancel="closeDeleteInviteDialog"
-      @confirm="confirmDeleteInvite"
+      :visible="removeDialog.visible"
+      title="移出企业成员"
+      :message="removeDialogMessage"
+      confirm-text="确认踢出"
+      :loading="removeDialog.loading"
+      @cancel="closeRemoveDialog"
+      @confirm="confirmRemoveMember"
     />
 
-    <p v-if="memberStatusError" class="message error" role="alert">{{ memberStatusError }}</p>
-    <p class="message" aria-live="polite">{{ message }}</p>
   </section>
 </template>
 
 <script>
-import { createInviteCode, deleteInviteCode, getInviteCodes, getMembers, transferOwner, updateMemberRole, updateMemberStatus } from '@/api/portal';
+import { getMemberChangeLogs, getMembers, removeEnterpriseMember, transferOwner, updateMemberRole, updateMemberStatus } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
-import LayDatePicker from '@/components/LayDatePicker.vue';
 import LayPagination from '@/components/LayPagination.vue';
 import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'EnterpriseMembersPage',
-  components: { ConfirmDialog, LayDatePicker, LayPagination },
+  components: { ConfirmDialog, LayPagination },
   data() {
     return {
       members: [],
-      invites: [],
+      changeLogs: [],
       memberTotal: 0,
-      inviteTotal: 0,
+      changeTotal: 0,
       query: { pageNum: 1, pageSize: 5, keyword: '', roleCode: '' },
-      inviteQuery: { pageNum: 1, pageSize: 5 },
-      inviteForm: { maxUseCount: 5, expiresAt: '2026-08-01' },
+      changeQuery: { pageNum: 1, pageSize: 5, eventType: '' },
       transferDialog: { visible: false, member: null, loading: false },
-      deleteInviteDialog: { visible: false, invite: null, loading: false },
-      memberStatusError: '',
-      message: ''
+      removeDialog: { visible: false, member: null, loading: false }
     };
   },
   computed: {
@@ -183,28 +165,58 @@ export default {
       const memberName = this.transferDialog.member?.realName || '';
       return `确定将企业拥有者转让给“${memberName}”吗？转让后你的角色将变更为管理员，请谨慎操作。`;
     },
-    deleteInviteDialogMessage() {
-      const inviteCode = this.deleteInviteDialog.invite?.code || '';
-      return `确定删除邀请码“${inviteCode}”吗？删除后尚未使用该邀请码的用户将无法加入企业。`;
+    removeDialogMessage() {
+      const memberName = this.removeDialog.member?.realName || '';
+      return `确定将“${memberName}”踢出当前企业吗？该成员将立即失去企业数据访问权限，重新加入时需要新的邀请码。`;
     }
   },
   async created() {
-    await Promise.all([this.loadMembers(), this.loadInvites()]);
+    await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
   },
   methods: {
     roleName: getRoleName,
     memberStatusName(status) {
-      return { 0: '已停用', 1: '已启用', 2: '待审核', 3: '已退出' }[status] || '未知';
+      return { 0: '已停用', 1: '已启用', 2: '待审核' }[status] || '未知';
+    },
+    eventName(eventType) {
+      return {
+        JOIN: '加入企业',
+        EXIT: '主动退出',
+        KICK: '踢出企业',
+        ROLE_CHANGE: '角色修改',
+        OWNER_TRANSFER: '拥有者转让'
+      }[eventType] || eventType || '未知';
+    },
+    changeTagClass(eventType) {
+      return {
+        EXIT: 'gray',
+        KICK: 'warn',
+        OWNER_TRANSFER: 'blue'
+      }[eventType] || '';
+    },
+    roleChangeText(item) {
+      if (!item.beforeRoleCode && !item.afterRoleCode) return '-';
+      const beforeRole = item.beforeRoleCode ? this.roleName(item.beforeRoleCode) : '-';
+      const afterRole = item.afterRoleCode ? this.roleName(item.afterRoleCode) : '-';
+      return `${beforeRole} -> ${afterRole}`;
     },
     async loadMembers() {
       const response = await getMembers(this.query);
       this.members = response.data.table;
       this.memberTotal = Number(response.data.total || 0);
     },
-    async loadInvites() {
-      const response = await getInviteCodes(this.inviteQuery);
-      this.invites = response.data.table;
-      this.inviteTotal = Number(response.data.total || 0);
+    async loadChangeLogs() {
+      const response = await getMemberChangeLogs(this.changeQuery);
+      this.changeLogs = response.data.table;
+      this.changeTotal = Number(response.data.total || 0);
+    },
+    searchMembers() {
+      this.query.pageNum = 1;
+      this.loadMembers();
+    },
+    resetMemberQuery() {
+      this.query = { ...this.query, pageNum: 1, keyword: '', roleCode: '' };
+      this.loadMembers();
     },
     changeMemberPage(pageNum) {
       this.query.pageNum = pageNum;
@@ -215,65 +227,67 @@ export default {
       this.query.pageSize = pageSize;
       this.loadMembers();
     },
-    changeInvitePage(pageNum) {
-      this.inviteQuery.pageNum = pageNum;
-      this.loadInvites();
+    searchChanges() {
+      this.changeQuery.pageNum = 1;
+      this.loadChangeLogs();
     },
-    changeInvitePageSize(pageSize) {
-      this.inviteQuery.pageNum = 1;
-      this.inviteQuery.pageSize = pageSize;
-      this.loadInvites();
+    resetChangeQuery() {
+      this.changeQuery = { ...this.changeQuery, pageNum: 1, eventType: '' };
+      this.loadChangeLogs();
     },
-    async createInvite() {
-      const response = await createInviteCode(this.inviteForm);
-      this.message = response.msg;
-      this.inviteQuery.pageNum = 1;
-      await this.loadInvites();
+    changeLogPage(pageNum) {
+      this.changeQuery.pageNum = pageNum;
+      this.loadChangeLogs();
     },
-    openDeleteInviteDialog(invite) {
-      this.deleteInviteDialog.invite = invite;
-      this.deleteInviteDialog.visible = true;
-    },
-    closeDeleteInviteDialog() {
-      if (this.deleteInviteDialog.loading) return;
-      this.deleteInviteDialog.visible = false;
-      this.deleteInviteDialog.invite = null;
-    },
-    async confirmDeleteInvite() {
-      const invite = this.deleteInviteDialog.invite;
-      if (!invite) return;
-
-      this.deleteInviteDialog.loading = true;
-      try {
-        const response = await deleteInviteCode({ id: invite.id });
-        this.message = response.msg;
-        await this.loadInvites();
-        if (!this.invites.length && this.inviteQuery.pageNum > 1) {
-          this.inviteQuery.pageNum -= 1;
-          await this.loadInvites();
-        }
-        this.deleteInviteDialog.visible = false;
-        this.deleteInviteDialog.invite = null;
-      } finally {
-        this.deleteInviteDialog.loading = false;
-      }
+    changeLogPageSize(pageSize) {
+      this.changeQuery.pageNum = 1;
+      this.changeQuery.pageSize = pageSize;
+      this.loadChangeLogs();
     },
     async changeRole(item, roleCode) {
-      const response = await updateMemberRole({ memberId: item.id, roleCode });
-      this.message = response.msg;
-      await this.loadMembers();
+      await updateMemberRole({ memberId: item.id, roleCode });
+      await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
     },
     async toggleMemberStatus(item) {
-      this.memberStatusError = '';
       try {
-        const response = await updateMemberStatus({
+        await updateMemberStatus({
           memberId: item.id,
           status: item.status === 1 ? 0 : 1
         });
-        this.message = response.msg;
         await this.loadMembers();
-      } catch (error) {
-        this.memberStatusError = error.message || '成员状态更新失败';
+      } catch {
+        // Request errors are displayed by the Axios interceptor.
+      }
+    },
+    canRemoveMember(item) {
+      return this.canManage
+        && item.roleCode !== 'OWNER'
+        && Number(item.userId) !== Number(this.$store.state.user?.id);
+    },
+    openRemoveDialog(item) {
+      this.removeDialog.member = item;
+      this.removeDialog.visible = true;
+    },
+    closeRemoveDialog() {
+      if (this.removeDialog.loading) return;
+      this.removeDialog.visible = false;
+      this.removeDialog.member = null;
+    },
+    async confirmRemoveMember() {
+      const member = this.removeDialog.member;
+      if (!member) return;
+      this.removeDialog.loading = true;
+      try {
+        await removeEnterpriseMember({ memberId: member.id });
+        this.removeDialog.visible = false;
+        this.removeDialog.member = null;
+        await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
+        if (!this.members.length && this.query.pageNum > 1) {
+          this.query.pageNum -= 1;
+          await this.loadMembers();
+        }
+      } finally {
+        this.removeDialog.loading = false;
       }
     },
     openTransferDialog(item) {
@@ -291,10 +305,9 @@ export default {
 
       this.transferDialog.loading = true;
       try {
-        const response = await transferOwner({ toMemberId: member.id });
-        this.message = response.msg;
+        await transferOwner({ toMemberId: member.id });
         await this.$store.dispatch('loadContext');
-        await this.loadMembers();
+        await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
         this.transferDialog.visible = false;
         this.transferDialog.member = null;
       } finally {
@@ -319,11 +332,11 @@ section {
   order: 1;
 }
 
-.invite-panel {
+.change-log-panel {
   order: 2;
 }
 
-section > :not(.section-title):not(.members-panel):not(.invite-panel) {
+section > :not(.section-title):not(.members-panel):not(.change-log-panel) {
   order: 3;
 }
 
@@ -343,33 +356,6 @@ section > :not(.section-title):not(.members-panel):not(.invite-panel) {
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-}
-
-.invite-create-area {
-  padding-bottom: 22px;
-}
-
-.invite-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.invite-action-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
-.invite-list-area {
-  padding-top: 20px;
-  border-top: 1px solid var(--portal-border);
-}
-
-.invite-list-area h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 700;
 }
 
 .filters {
@@ -415,24 +401,31 @@ section > :not(.section-title):not(.members-panel):not(.invite-panel) {
   white-space: nowrap;
 }
 
+.member-actions .member-disable-button {
+  border-color: #d9a008;
+  color: #9a6700;
+  background: #fffbea;
+}
+
+.member-actions .member-disable-button:hover {
+  border-color: #b77900;
+  color: #7a4e00;
+  background: #fff4c2;
+}
+
 .text-muted {
   color: var(--portal-muted);
 }
 
-.message {
-  color: #166534;
-}
-
-.message.error {
-  color: var(--portal-danger);
+.empty-cell {
+  padding: 28px 16px !important;
+  color: var(--portal-muted);
+  text-align: center !important;
 }
 
 @media (max-width: 720px) {
-  .invite-form {
-    grid-template-columns: 1fr;
-  }
-
-  .invite-action-row .portal-btn {
+  .filters .layui-input,
+  .filters .layui-select {
     width: 100%;
   }
 }

@@ -114,7 +114,21 @@ let inviteCodes = [
   }
 ];
 
-const ownerTransferLogs = [];
+const memberChangeLogs = [
+  {
+    id: 1,
+    enterpriseId: 20001,
+    eventType: 'JOIN',
+    operatorUserId: 10002,
+    targetUserId: 10002,
+    operatorNameSnapshot: '陈雨',
+    targetNameSnapshot: '陈雨',
+    beforeRoleCode: null,
+    afterRoleCode: 'ISSUER',
+    occurredAt: '2026-07-02 14:06:12',
+    remark: '通过邀请码加入企业'
+  }
+];
 
 function synchronizeMemberSeats(userLimit) {
   const enterpriseMembers = members.filter(item => item.enterpriseId === currentEnterpriseId);
@@ -529,6 +543,12 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   if (url === '/portal/account/context') {
     return ok(context());
   }
+  if (url === '/portal/sso/authorize' && method === 'POST') {
+    return ok({
+      redirectUrl: `${process.env.VUE_APP_INSURANCE_FRONTEND_URL || 'http://localhost:8888'}/sso/callback?code=mock-insurance-sso-code`,
+      expiresIn: 60
+    }, '授权成功');
+  }
   if (url === '/portal/enterprise/current') {
     return ok({
       enterprise: getCurrentEnterprise(),
@@ -549,7 +569,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     };
     enterprises.push(enterprise);
     currentEnterpriseId = enterprise.id;
-    members.push({
+    const ownerMember = {
       id: 30999,
       enterpriseId: enterprise.id,
       userId: currentUser.id,
@@ -560,6 +580,20 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       status: 1,
       joinedByInviteId: null,
       joinedAt: '2026-07-07 19:00:00'
+    };
+    members.push(ownerMember);
+    memberChangeLogs.unshift({
+      id: Date.now(),
+      enterpriseId: enterprise.id,
+      eventType: 'JOIN',
+      operatorUserId: currentUser.id,
+      targetUserId: currentUser.id,
+      operatorNameSnapshot: currentUser.realName,
+      targetNameSnapshot: currentUser.realName,
+      beforeRoleCode: null,
+      afterRoleCode: 'OWNER',
+      occurredAt: ownerMember.joinedAt,
+      remark: '创建企业并加入'
     });
     return ok(enterprise, '企业创建成功');
   }
@@ -569,6 +603,37 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     return ok(enterprise, '企业信息已更新');
   }
   if (url === '/portal/enterprise/join-by-invite' && method === 'POST') {
+    const invite = inviteCodes.find(item => item.code === data.code && item.status === 1);
+    if (!invite) return fail('邀请码不存在或已失效', 404);
+    currentEnterpriseId = invite.enterpriseId;
+    const member = {
+      id: Date.now(),
+      enterpriseId: invite.enterpriseId,
+      userId: currentUser.id,
+      username: currentUser.username,
+      realName: currentUser.realName,
+      phone: currentUser.phone,
+      roleCode: 'ISSUER',
+      status: 0,
+      joinedByInviteId: invite.id,
+      joinedAt: formatDateTime(MOCK_NOW)
+    };
+    members = members.filter(item => !(item.enterpriseId === invite.enterpriseId && item.userId === currentUser.id));
+    members.push(member);
+    invite.usedCount += 1;
+    memberChangeLogs.unshift({
+      id: Date.now(),
+      enterpriseId: invite.enterpriseId,
+      eventType: 'JOIN',
+      operatorUserId: currentUser.id,
+      targetUserId: currentUser.id,
+      operatorNameSnapshot: currentUser.realName,
+      targetNameSnapshot: currentUser.realName,
+      beforeRoleCode: null,
+      afterRoleCode: 'ISSUER',
+      occurredAt: member.joinedAt,
+      remark: '通过邀请码加入企业'
+    });
     return ok({ enterpriseId: currentEnterpriseId, roleCode: 'ISSUER' }, '已加入企业');
   }
   if (url === '/portal/enterprise/invite-codes' && method === 'GET') {
@@ -608,7 +673,22 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   }
   if (url === '/portal/enterprise/members/role' && method === 'PUT') {
     const member = members.find(item => item.id === data.memberId);
-    if (member && member.roleCode !== 'OWNER') member.roleCode = data.roleCode;
+    if (member && member.roleCode !== 'OWNER' && member.roleCode !== data.roleCode) {
+      memberChangeLogs.unshift({
+        id: Date.now(),
+        enterpriseId: currentEnterpriseId,
+        eventType: 'ROLE_CHANGE',
+        operatorUserId: currentUser.id,
+        targetUserId: member.userId,
+        operatorNameSnapshot: currentUser.realName,
+        targetNameSnapshot: member.realName,
+        beforeRoleCode: member.roleCode,
+        afterRoleCode: data.roleCode,
+        occurredAt: formatDateTime(MOCK_NOW),
+        remark: '修改企业成员角色'
+      });
+      member.roleCode = data.roleCode;
+    }
     return ok(member, '成员角色已更新');
   }
   if (url === '/portal/enterprise/members/status' && method === 'PUT') {
@@ -621,6 +701,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     if (targetStatus === 1 && member.status !== 1) {
       const activeMemberCount = members.filter(item => item.enterpriseId === currentEnterpriseId && item.status === 1).length;
       const userLimit = Number(subscription?.userLimit || 0);
+      if (userLimit === 0) return fail('企业当前未开通任何套餐，暂时无法启用成员', 409);
       if (userLimit > 0 && activeMemberCount >= userLimit) {
         return Promise.resolve({
           code: 409,
@@ -637,16 +718,18 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     const oldOwner = getCurrentMember();
     const newOwner = members.find(item => item.id === data.toMemberId);
     if (oldOwner && newOwner) {
-      ownerTransferLogs.unshift({
+      memberChangeLogs.unshift({
         id: Date.now(),
         enterpriseId: currentEnterpriseId,
-        fromUserId: oldOwner.userId,
-        fromUserName: oldOwner.realName,
-        toUserId: newOwner.userId,
-        toUserName: newOwner.realName,
-        status: 1,
-        transferredAt: '2026-07-07 19:00:00',
-        remark: '门户主动转让'
+        eventType: 'OWNER_TRANSFER',
+        operatorUserId: oldOwner.userId,
+        targetUserId: newOwner.userId,
+        operatorNameSnapshot: oldOwner.realName,
+        targetNameSnapshot: newOwner.realName,
+        beforeRoleCode: newOwner.roleCode,
+        afterRoleCode: 'OWNER',
+        occurredAt: '2026-07-07 19:00:00',
+        remark: '门户主动转让企业拥有者'
       });
       oldOwner.roleCode = 'ADMIN';
       newOwner.roleCode = 'OWNER';
@@ -659,10 +742,50 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       transferredAt: '2026-07-07 19:00:00'
     }, '企业拥有者已转让');
   }
-  if (url === '/portal/enterprise/owner-transfer-logs' && method === 'GET') {
-    return ok(paginate(ownerTransferLogs.filter(item => item.enterpriseId === currentEnterpriseId), params));
+  if (url === '/portal/enterprise/members/remove' && method === 'POST') {
+    const member = members.find(item => item.id === Number(data.memberId) && item.enterpriseId === currentEnterpriseId);
+    if (!member) return fail('企业成员不存在', 404);
+    if (member.roleCode === 'OWNER') return fail('企业拥有者不能被移出企业', 400);
+    if (member.userId === currentUser.id) return fail('不能将自己踢出企业，请使用退出企业功能', 400);
+    memberChangeLogs.unshift({
+      id: Date.now(),
+      enterpriseId: currentEnterpriseId,
+      eventType: 'KICK',
+      operatorUserId: currentUser.id,
+      targetUserId: member.userId,
+      operatorNameSnapshot: currentUser.realName,
+      targetNameSnapshot: member.realName,
+      beforeRoleCode: member.roleCode,
+      afterRoleCode: null,
+      occurredAt: formatDateTime(MOCK_NOW),
+      remark: '移出企业成员'
+    });
+    members = members.filter(item => item.id !== member.id);
+    return ok(true, '成员已移出企业');
+  }
+  if (url === '/portal/enterprise/member-change-logs' && method === 'GET') {
+    let filtered = memberChangeLogs.filter(item => item.enterpriseId === currentEnterpriseId);
+    if (params.eventType) filtered = filtered.filter(item => item.eventType === params.eventType);
+    return ok(paginate(filtered, params));
   }
   if (url === '/portal/enterprise/members/exit' && method === 'POST') {
+    const member = getCurrentMember();
+    if (member) {
+      memberChangeLogs.unshift({
+        id: Date.now(),
+        enterpriseId: currentEnterpriseId,
+        eventType: 'EXIT',
+        operatorUserId: currentUser.id,
+        targetUserId: currentUser.id,
+        operatorNameSnapshot: currentUser.realName,
+        targetNameSnapshot: currentUser.realName,
+        beforeRoleCode: member.roleCode,
+        afterRoleCode: null,
+        occurredAt: formatDateTime(MOCK_NOW),
+        remark: '成员主动退出企业'
+      });
+      members = members.filter(item => item.id !== member.id);
+    }
     currentEnterpriseId = null;
     return ok(true, '已退出企业');
   }
@@ -693,6 +816,45 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     };
     rechargeOrders.unshift(order);
     return ok(order, '充值订单已创建');
+  }
+  if (/^\/portal\/finance\/recharge-orders\/\d+$/.test(url) && method === 'GET') {
+    const order = rechargeOrders.find(item => item.id === Number(url.split('/').pop()));
+    return order ? ok(order) : fail('充值订单不存在', 404);
+  }
+  if (url === '/portal/finance/recharge-orders/complete' && method === 'POST') {
+    const order = rechargeOrders.find(item => item.id === Number(data.rechargeOrderId));
+    if (!order) return fail('充值订单不存在', 404);
+    if (order.status !== 2) {
+      const balanceBefore = Number(wallet.balanceAmount || 0);
+      wallet.balanceAmount = roundMoney(balanceBefore + Number(order.amount || 0));
+      order.status = 2;
+      order.paidAt = formatDateTime(MOCK_NOW);
+      transactions.unshift({
+        id: Date.now(),
+        enterpriseId: currentEnterpriseId,
+        walletId: wallet.id,
+        userId: currentUser.id,
+        transactionNo: createOrderNo('TX'),
+        direction: 'IN',
+        transactionType: 'RECHARGE',
+        amount: Number(order.amount || 0),
+        balanceBefore,
+        balanceAfter: wallet.balanceAmount,
+        relatedRechargeOrderId: order.id,
+        remark: `余额充值 ${order.rechargeNo}`,
+        createdAt: formatDateTime(MOCK_NOW)
+      });
+    }
+    return ok({ ...order, balanceAmount: wallet.balanceAmount }, '模拟支付成功，余额已到账');
+  }
+  if (/^\/portal\/finance\/recharge-orders\/\d+\/cancel$/.test(url) && method === 'POST') {
+    const orderId = Number(url.split('/').slice(-2)[0]);
+    const order = rechargeOrders.find(item => item.id === orderId);
+    if (!order) return fail('充值订单不存在', 404);
+    if (order.status === 3) return ok(order, '充值订单已取消');
+    if (order.status !== 1) return fail('只有待支付订单可以取消', 409);
+    order.status = 3;
+    return ok(order, '充值订单已取消');
   }
   if (url === '/portal/finance/subscription-orders' && method === 'GET') {
     let filtered = subscriptionOrders;

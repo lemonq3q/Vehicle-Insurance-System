@@ -8,7 +8,7 @@
     </div>
     <article class="portal-card panel">
       <div class="filters">
-        <input v-model="query.transactionNo" class="layui-input" placeholder="流水号" @keyup.enter="loadData" />
+        <input v-model="query.transactionNo" class="layui-input" placeholder="流水号" @keyup.enter="search" />
         <select v-model="query.direction" class="layui-select">
           <option value="">全部方向</option>
           <option value="IN">入账</option>
@@ -24,6 +24,7 @@
         </select>
         <LayDatePicker v-model="query.dateRange" range placeholder="请选择交易时间范围" />
         <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
+        <button class="layui-btn layui-btn-primary portal-btn" @click="resetQuery">重置</button>
       </div>
       <div class="data-table-wrap">
         <table class="layui-table portal-table">
@@ -96,6 +97,10 @@ export default {
     },
     search() {
       this.query.pageNum = 1;
+      this.loadData();
+    },
+    resetQuery() {
+      this.query = { ...this.query, pageNum: 1, transactionNo: '', direction: '', transactionType: '', dateRange: defaultMonthRange() };
       this.loadData();
     },
     changePage(pageNum) {

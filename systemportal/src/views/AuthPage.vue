@@ -26,7 +26,7 @@
           </div>
           <div class="form-field">
             <label for="loginPassword">密码</label>
-            <input id="loginPassword" v-model="loginForm.password" class="layui-input" type="password" autocomplete="current-password" />
+            <PasswordField id="loginPassword" v-model="loginForm.password" autocomplete="current-password" />
           </div>
           <button class="layui-btn portal-btn portal-btn-primary auth-submit" :disabled="submitting.login">
             {{ submitting.login ? '登录中...' : '登录门户' }}
@@ -42,7 +42,7 @@
             <label for="regCode">短信验证码</label>
             <div class="verification-row">
               <input id="regCode" v-model.trim="registerForm.smsCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-              <button type="button" class="code-button" :disabled="isSmsDisabled('register', registerForm.phone)" @click="sendCode('REGISTER', registerForm.phone, 'register')">
+              <button type="button" class="code-button" :disabled="isSmsDisabled('register')" @click="sendCode('REGISTER', registerForm.phone, 'register')">
                 {{ codeButtonText('register') }}
               </button>
             </div>
@@ -53,7 +53,7 @@
           </div>
           <div class="form-field">
             <label for="regPassword">密码</label>
-            <input id="regPassword" v-model="registerForm.password" class="layui-input" type="password" autocomplete="new-password" />
+            <PasswordField id="regPassword" v-model="registerForm.password" autocomplete="new-password" />
           </div>
           <button class="layui-btn portal-btn portal-btn-primary auth-submit" :disabled="submitting.register">
             {{ submitting.register ? '注册中...' : '创建账号' }}
@@ -69,21 +69,20 @@
             <label for="forgotCode">短信验证码</label>
             <div class="verification-row">
               <input id="forgotCode" v-model.trim="forgotForm.smsCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-              <button type="button" class="code-button" :disabled="isSmsDisabled('forgot', forgotForm.phone)" @click="sendCode('RESET_PASSWORD', forgotForm.phone, 'forgot')">
+              <button type="button" class="code-button" :disabled="isSmsDisabled('forgot')" @click="sendCode('RESET_PASSWORD', forgotForm.phone, 'forgot')">
                 {{ codeButtonText('forgot') }}
               </button>
             </div>
           </div>
           <div class="form-field">
             <label for="forgotPassword">新密码</label>
-            <input id="forgotPassword" v-model="forgotForm.password" class="layui-input" type="password" autocomplete="new-password" />
+            <PasswordField id="forgotPassword" v-model="forgotForm.password" autocomplete="new-password" />
           </div>
           <button class="layui-btn portal-btn portal-btn-primary auth-submit" :disabled="submitting.forgot">
             {{ submitting.forgot ? '重置中...' : '重置密码' }}
           </button>
         </form>
 
-        <p class="auth-message" :class="messageType" aria-live="polite">{{ message }}</p>
       </div>
     </section>
   </main>
@@ -91,17 +90,18 @@
 
 <script>
 import { forgetPassword, register, sendSmsCode } from '@/api/portal';
+import { notifySuccess, notifyWarning } from '@/utils/notification';
+import PasswordField from '@/components/PasswordField.vue';
 
 const PHONE_PATTERN = /^1[3-9]\d{9}$/;
 const SMS_CODE_PATTERN = /^\d{6}$/;
 
 export default {
   name: 'AuthPage',
+  components: { PasswordField },
   data() {
     return {
       mode: 'login',
-      message: '',
-      messageType: 'success',
       loginForm: { username: '', password: '' },
       registerForm: { phone: '', smsCode: '', realName: '', password: '' },
       forgotForm: { phone: '', smsCode: '', password: '' },
@@ -118,18 +118,13 @@ export default {
   methods: {
     switchMode(mode) {
       this.mode = mode;
-      this.message = '';
-    },
-    setMessage(message, type = 'success') {
-      this.message = message;
-      this.messageType = type;
     },
     isPhoneValid(phone) {
       return PHONE_PATTERN.test(phone || '');
     },
-    isSmsDisabled(key, phone) {
+    isSmsDisabled(key) {
       const state = this.smsState[key];
-      return !this.isPhoneValid(phone) || state.sending || state.seconds > 0;
+      return state.sending || state.seconds > 0;
     },
     codeButtonText(key) {
       const state = this.smsState[key];
@@ -150,37 +145,53 @@ export default {
       }, 1000);
     },
     async sendCode(scene, phone, key) {
+      if (!phone) {
+        notifyWarning('请输入手机号');
+        return;
+      }
       if (!this.isPhoneValid(phone)) {
-        this.setMessage('请输入正确的 11 位手机号', 'error');
+        notifyWarning('请输入正确的 11 位手机号');
         return;
       }
       const state = this.smsState[key];
       state.sending = true;
       try {
         const response = await sendSmsCode({ phone, scene });
-        this.setMessage(response.msg);
+        notifySuccess(response.msg || '验证码已发送');
         this.startCountdown(key, response.data.retryAfterSeconds);
-      } catch (error) {
-        this.setMessage(error.message, 'error');
+      } catch {
+        // Request errors are displayed by the Axios interceptor.
       } finally {
         state.sending = false;
       }
     },
     validateSmsForm(form, requireName = false) {
+      if (!form.phone) return '请输入手机号';
       if (!this.isPhoneValid(form.phone)) return '请输入正确的 11 位手机号';
+      if (!form.smsCode) return '请输入短信验证码';
       if (!SMS_CODE_PATTERN.test(form.smsCode || '')) return '请输入 6 位短信验证码';
       if (requireName && !form.realName) return '请输入姓名';
-      if (!form.password || form.password.length < 8) return '密码长度不能少于 8 位';
+      if (!form.password) return requireName ? '请输入密码' : '请输入新密码';
+      if (form.password.length < 8) return '密码长度不能少于 8 位';
+      return '';
+    },
+    validateLoginForm() {
+      if (!String(this.loginForm.username || '').trim()) return '请输入登录账号';
+      if (!this.loginForm.password) return '请输入密码';
       return '';
     },
     async submitLogin() {
+      const validationMessage = this.validateLoginForm();
+      if (validationMessage) {
+        notifyWarning(validationMessage);
+        return;
+      }
       this.submitting.login = true;
       try {
-        const response = await this.$store.dispatch('login', this.loginForm);
-        this.setMessage(response.msg);
+        await this.$store.dispatch('login', this.loginForm);
         this.$router.push('/portal/dashboard');
-      } catch (error) {
-        this.setMessage(error.message, 'error');
+      } catch {
+        // Request errors are displayed by the Axios interceptor.
       } finally {
         this.submitting.login = false;
       }
@@ -188,17 +199,17 @@ export default {
     async submitRegister() {
       const validationMessage = this.validateSmsForm(this.registerForm, true);
       if (validationMessage) {
-        this.setMessage(validationMessage, 'error');
+        notifyWarning(validationMessage);
         return;
       }
       this.submitting.register = true;
       try {
         const response = await register(this.registerForm);
-        this.setMessage(response.msg);
+        notifySuccess(response.msg || '注册成功');
         this.mode = 'login';
         this.loginForm.username = this.registerForm.phone;
-      } catch (error) {
-        this.setMessage(error.message, 'error');
+      } catch {
+        // Request errors are displayed by the Axios interceptor.
       } finally {
         this.submitting.register = false;
       }
@@ -206,17 +217,17 @@ export default {
     async submitForgot() {
       const validationMessage = this.validateSmsForm(this.forgotForm);
       if (validationMessage) {
-        this.setMessage(validationMessage, 'error');
+        notifyWarning(validationMessage);
         return;
       }
       this.submitting.forgot = true;
       try {
         const response = await forgetPassword(this.forgotForm);
-        this.setMessage(response.msg);
+        notifySuccess(response.msg || '密码已重置');
         this.mode = 'login';
         this.loginForm.username = this.forgotForm.phone;
-      } catch (error) {
-        this.setMessage(error.message, 'error');
+      } catch {
+        // Request errors are displayed by the Axios interceptor.
       } finally {
         this.submitting.forgot = false;
       }
@@ -342,17 +353,6 @@ export default {
 .auth-submit {
   width: 100%;
   margin-top: 6px;
-}
-
-.auth-message {
-  min-height: 24px;
-  margin: 14px 0 0;
-  color: #166534;
-  text-align: center;
-}
-
-.auth-message.error {
-  color: var(--portal-danger);
 }
 
 @media (max-width: 420px) {

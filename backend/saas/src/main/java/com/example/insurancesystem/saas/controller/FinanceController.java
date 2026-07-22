@@ -29,6 +29,21 @@ public class FinanceController {
     return new ResponseResult<>(200, "充值订单已创建", service.createRecharge(body));
   }
 
+  @GetMapping("/recharge-orders/{id}")
+  public ResponseResult<?> rechargeDetail(@PathVariable Long id) {
+    return ok(service.rechargeDetail(id));
+  }
+
+  @PostMapping("/recharge-orders/complete")
+  public ResponseResult<?> completeRecharge(@RequestBody Map<String, Object> body) {
+    return new ResponseResult<>(200, "模拟支付成功，余额已到账", service.completeRecharge(body));
+  }
+
+  @PostMapping("/recharge-orders/{id}/cancel")
+  public ResponseResult<?> cancelRecharge(@PathVariable Long id) {
+    return new ResponseResult<>(200, "充值订单已取消", service.cancelRecharge(id));
+  }
+
   @GetMapping("/recharge-orders")
   public ResponseResult<?> recharges(
       @RequestParam(defaultValue = "1") int pageNum,

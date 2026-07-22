@@ -10,6 +10,10 @@ public class ResponseResult<T> {
 
     private T data;
 
+    /** Required by Jackson when a service response is consumed through RestTemplate. */
+    public ResponseResult() {
+    }
+
     public ResponseResult(Integer code, String msg){
         this.code = code;
         this.msg = msg;
@@ -28,6 +32,10 @@ public class ResponseResult<T> {
 
     public Integer getCode(){
         return code;
+    }
+
+    public void setCode(Integer code) {
+        this.code = code;
     }
 
     public String getMsg(){

@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 const HomePage = () => import('@/page/HomePage.vue');
 const LoginPage = () => import('@/page/LoginPage.vue');
+const SsoCallbackPage = () => import('@/page/SsoCallbackPage.vue');
 const AcceptWorkOrder = () => import('@/components/AcceptWorkOrder.vue');
 const AllWorkOrder = () => import('@/components/AllWorkOrder.vue');
 const DetailWorkorder = () => import('@/components/DetailWorkorder.vue');
@@ -32,6 +33,14 @@ const routes = [
     meta: {
       requiresAuth: false
     },
+  },
+  {
+    path: '/sso/callback',
+    component: SsoCallbackPage,
+    meta: {
+      requiresAuth: false,
+      ssoCallback: true
+    }
   },
   {
     path: '/home',
@@ -128,7 +137,9 @@ router.beforeEach((to, from, next) => {
     }
   }
   else{
-    if (to.path === '/login' && isLogin) {
+    if (to.meta.ssoCallback) {
+      next();
+    } else if (to.path === '/login' && isLogin) {
       next('/home');
     } else {
       next();

@@ -24,3 +24,7 @@ export function getSmsCode(email){
   let url = `${rootUrl}/code?email=${email}`;
   return axios.get(url);
 }
+
+export function exchangeSsoCode(code) {
+  return axios.post(`${rootUrl}/sso/exchange`, { code });
+}

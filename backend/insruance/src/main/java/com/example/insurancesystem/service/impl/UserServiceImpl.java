@@ -14,6 +14,7 @@ import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.domain.user.TenantMember;
 import com.example.insurancesystem.mapper.RoleMapper;
 import com.example.insurancesystem.mapper.UserMapper;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.mapper.UserRoleMapper;
 import com.example.insurancesystem.mapper.TenantMemberMapper;
 import com.example.insurancesystem.service.MerchantStaffService;
@@ -330,7 +331,7 @@ public class UserServiceImpl implements UserService {
 
     private void insertMember(Long userId, String roleCode, int status) {
         TenantMember member = new TenantMember();
-        member.setEnterpriseId(1L);
+        member.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         member.setUserId(userId);
         member.setRoleCode(roleCode);
         member.setStatus(status);

@@ -6,12 +6,18 @@ import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.domain.authenticate.UserDTO;
 import com.example.insurancesystem.service.LoginService;
 import com.example.insurancesystem.service.UserService;
+import com.example.insurancesystem.integration.SaasSsoClient;
+import com.example.insurancesystem.mapper.MenuMapper;
+import com.example.insurancesystem.mapper.UserMapper;
 import com.example.insurancesystem.security.SingleLoginSessionManager;
+import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.utils.EmailUtil;
 import com.example.insurancesystem.utils.JwtUtil;
 import com.example.insurancesystem.utils.RedisCache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -37,14 +43,57 @@ public class LoginServiceImpl implements LoginService {
     @Autowired
     private SingleLoginSessionManager sessionManager;
 
+    @Autowired
+    private SaasSsoClient saasSsoClient;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private MenuMapper menuMapper;
+
     @Override
     public ResponseResult login(User user) {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
-        Authentication authenticate = authenticationManager.authenticate(authenticationToken);
+        Authentication authenticate;
+        try {
+            authenticate = authenticationManager.authenticate(authenticationToken);
+        } catch (DisabledException exception) {
+            throw new BusinessException(403, "账号未启用");
+        } catch (BadCredentialsException exception) {
+            throw new BusinessException(400, "用户名或密码错误");
+        }
         if(authenticate == null) {
             throw new RuntimeException("Authentication failed");
         }
         LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
+        if (loginUser.getEnterpriseId() == null) {
+            throw new BusinessException(403, "尚未加入企业，请先前往 SaaS 门户创建或加入企业");
+        }
+        return createSession(loginUser);
+    }
+
+    @Override
+    public ResponseResult ssoLogin(String code) {
+        if (code == null || code.isBlank()) {
+            throw new BusinessException(400, "授权码不能为空");
+        }
+        Map<String, Object> identity = saasSsoClient.exchange(code);
+        Long userId = number(identity.get("userId"), "用户标识");
+        Long enterpriseId = number(identity.get("enterpriseId"), "企业标识");
+        User ssoUser = userMapper.selectSsoUser(userId, enterpriseId);
+        if (ssoUser == null) {
+            throw new BusinessException(403, "用户不属于当前企业或企业不可用");
+        }
+        LoginUser loginUser = new LoginUser(
+                ssoUser, menuMapper.selectPermsByUserId(userId, enterpriseId));
+        if (!loginUser.isEnabled()) {
+            throw new BusinessException(403, "账号或企业成员未启用");
+        }
+        return createSession(loginUser);
+    }
+
+    private ResponseResult createSession(LoginUser loginUser) {
         String userid = loginUser.getUser().getId().toString();
         // 用jti来作为会话级标识
         String jti = JwtUtil.getUUID();
@@ -58,6 +107,15 @@ public class LoginServiceImpl implements LoginService {
         sessionManager.save(loginUser.getUser().getId(), jti, loginUser);
         ResponseResult result = new ResponseResult(200, "login succeed", map);
         return result;
+    }
+
+    private Long number(Object value, String label) {
+        if (value instanceof Number) return ((Number) value).longValue();
+        try {
+            return Long.valueOf(String.valueOf(value));
+        } catch (Exception exception) {
+            throw new BusinessException(502, "SaaS 认证结果缺少" + label);
+        }
     }
 
     @Override

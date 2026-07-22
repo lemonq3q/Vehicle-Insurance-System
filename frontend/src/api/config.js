@@ -10,7 +10,8 @@ const notInterceptUrls = [
   '/auth/login',
   '/auth/register',
   '/auth/code',
-  '/auth/forget'
+  '/auth/forget',
+  '/auth/sso/exchange'
 ];
 
 axios.defaults.baseURL = 'http://localhost:8080';
@@ -42,11 +43,6 @@ axios.interceptors.request.use(function (config) {
 });
 
 axios.interceptors.response.use(function (response) {
-  const isIgnoreUrl = notInterceptUrls.some(item => response.config.url.includes(item));
-  if (isIgnoreUrl) {
-    return response;
-  }
-
   const refreshedToken = response.headers[REFRESHED_TOKEN_HEADER];
   if (refreshedToken) {
     Storage.set('token', refreshedToken, 60 * 60 * 24);
@@ -79,7 +75,14 @@ axios.interceptors.response.use(function (response) {
   if (isExcelRequest) {
     Message.error("Excel下载异常");
   } else {
-    Message.error("请求出错！");
+    const status = Number(error.response?.status || 0);
+    const message = error.response?.data?.msg
+      || (status >= 500 ? "请求错误" : "请求异常");
+    if (status >= 500 || status === 0) {
+      Message.error(message);
+    } else {
+      Message.warning(message);
+    }
   }
   return Promise.reject(error);
 });

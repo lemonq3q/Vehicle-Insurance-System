@@ -26,11 +26,14 @@ public class LoginUser implements UserDetails {
 
     private String sessionId;
 
+    private Long enterpriseId;
+
     @JsonIgnore
     private List<GrantedAuthority> authorities;
 
     public LoginUser(User user, List<String> permissions) {
         this.user = user;
+        this.enterpriseId = user.getEnterpriseId();
         this.permissions = Objects.requireNonNullElseGet(permissions, ArrayList::new);
     }
 
@@ -72,6 +75,9 @@ public class LoginUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        boolean accountEnabled = Integer.valueOf(1).equals(user.getStatus());
+        boolean memberEnabled = user.getEnterpriseId() == null
+                || Integer.valueOf(1).equals(user.getMemberStatus());
+        return accountEnabled && memberEnabled;
     }
 }

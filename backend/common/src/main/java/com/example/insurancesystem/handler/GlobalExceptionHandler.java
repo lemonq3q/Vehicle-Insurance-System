@@ -3,6 +3,7 @@ package com.example.insurancesystem.handler;
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -17,6 +18,12 @@ public class GlobalExceptionHandler {
     public ResponseResult handleBusinessException(BusinessException e) {
         log.error("业务异常：code={}, msg={}", e.getCode(), e.getMsg());
         return new ResponseResult(e.getCode(), e.getMsg(), e.getData());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseResult handleAccessDeniedException(AccessDeniedException e) {
+        log.warn("访问被拒绝：{}", e.getMessage());
+        return new ResponseResult(403, "不允许访问");
     }
 
     /**

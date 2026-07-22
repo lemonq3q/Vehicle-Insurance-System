@@ -3,6 +3,7 @@ package com.example.insurancesystem.saas.service.impl;
 import com.example.insurancesystem.domain.authenticate.LoginUser;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.saas.integration.sms.SmsVerificationService;
+import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
 import com.example.insurancesystem.saas.mapper.PortalUserMapper;
 import com.example.insurancesystem.saas.service.PortalAuthService;
 import com.example.insurancesystem.saas.support.PortalMaps;
@@ -13,6 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +27,7 @@ public class PortalAuthServiceImpl implements PortalAuthService {
   private final AuthenticationManager authenticationManager;
   private final SingleLoginSessionManager sessionManager;
   private final PortalUserMapper userMapper;
+  private final EnterpriseMapper enterpriseMapper;
   private final PasswordEncoder passwordEncoder;
   private final SmsVerificationService smsService;
 
@@ -31,11 +35,13 @@ public class PortalAuthServiceImpl implements PortalAuthService {
       AuthenticationManager authenticationManager,
       SingleLoginSessionManager sessionManager,
       PortalUserMapper userMapper,
+      EnterpriseMapper enterpriseMapper,
       PasswordEncoder passwordEncoder,
       SmsVerificationService smsService) {
     this.authenticationManager = authenticationManager;
     this.sessionManager = sessionManager;
     this.userMapper = userMapper;
+    this.enterpriseMapper = enterpriseMapper;
     this.passwordEncoder = passwordEncoder;
     this.smsService = smsService;
   }
@@ -43,9 +49,16 @@ public class PortalAuthServiceImpl implements PortalAuthService {
   public Map<String, Object> login(Map<String, Object> body) {
     String username = text(body, "username");
     String password = text(body, "password");
-    Authentication authentication =
-        authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(username, password));
+    Authentication authentication;
+    try {
+      authentication =
+          authenticationManager.authenticate(
+              new UsernamePasswordAuthenticationToken(username, password));
+    } catch (DisabledException exception) {
+      throw new BusinessException(403, "账号未启用");
+    } catch (BadCredentialsException exception) {
+      throw new BusinessException(400, "用户名或密码错误");
+    }
     LoginUser loginUser = (LoginUser) authentication.getPrincipal();
     Long userId = loginUser.getUser().getId();
     String sessionId = JwtUtil.getUUID();
@@ -53,11 +66,20 @@ public class PortalAuthServiceImpl implements PortalAuthService {
     sessionManager.save(userId, sessionId, loginUser);
     userMapper.updateLastLogin(userId, LocalDateTime.now());
     List<Map<String, Object>> enterprises = PortalMaps.camel(userMapper.findEnterprises(userId));
+    Map<String, Object> currentMember = PortalMaps.camel(enterpriseMapper.findCurrentMember(userId));
+    Long currentEnterpriseId =
+        currentMember == null ? null : ((Number) currentMember.get("enterpriseId")).longValue();
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("token", token);
     result.put("user", PortalMaps.camel(userMapper.findProfile(userId)));
     result.put("enterprises", enterprises);
-    result.put("currentEnterpriseId", enterprises.isEmpty() ? null : enterprises.get(0).get("id"));
+    result.put("currentEnterpriseId", currentEnterpriseId);
+    result.put(
+        "currentEnterprise",
+        currentEnterpriseId == null
+            ? null
+            : PortalMaps.camel(enterpriseMapper.findEnterprise(currentEnterpriseId)));
+    result.put("currentMember", currentMember);
     return result;
   }
 

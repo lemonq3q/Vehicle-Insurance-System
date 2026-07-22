@@ -48,7 +48,7 @@ public class FinanceServiceImpl implements FinanceService {
   public Map<String, Object> overview() {
     Long enterpriseId = context.enterpriseId();
     Map<String, Object> data = new LinkedHashMap<>();
-    data.put("wallet", PortalMaps.camel(mapper.findWallet(enterpriseId)));
+    data.put("wallet", walletView(enterpriseId));
     data.put("subscription", subscriptionView(enterpriseId));
     data.put("currentMemberCount", enterprises.countActiveMembers(enterpriseId));
     return data;
@@ -58,9 +58,11 @@ public class FinanceServiceImpl implements FinanceService {
     return PortalMaps.camel(mapper.findPlans());
   }
 
+  @Transactional
   public Map<String, Object> createRecharge(Map<String, Object> body) {
     Long enterpriseId =
         ((Number) context.requireRoles("OWNER", "ADMIN").get("enterpriseId")).longValue();
+    ensureWallet(enterpriseId);
     BigDecimal amount = decimal(body, "amount");
     if (amount.signum() <= 0) throw new BusinessException(400, "充值金额必须大于 0");
     String channel = required(body, "payChannel").toUpperCase();
@@ -84,6 +86,79 @@ public class FinanceServiceImpl implements FinanceService {
     return PortalMaps.camel(order);
   }
 
+  public Map<String, Object> rechargeDetail(Long id) {
+    context.requireRoles("OWNER", "ADMIN");
+    Map<String, Object> order = PortalMaps.camel(mapper.findRechargeOrder(id, context.enterpriseId()));
+    if (order == null) throw new BusinessException(404, "充值订单不存在");
+    return order;
+  }
+
+  @Transactional
+  public Map<String, Object> completeRecharge(Map<String, Object> body) {
+    context.requireRoles("OWNER", "ADMIN");
+    Long enterpriseId = context.enterpriseId();
+    Long orderId = number(body, "rechargeOrderId");
+    Map<String, Object> order = PortalMaps.camel(mapper.lockRechargeOrder(orderId, enterpriseId));
+    if (order == null) throw new BusinessException(404, "充值订单不存在");
+
+    int status = ((Number) order.get("status")).intValue();
+    if (status == 2) return order;
+    if (status != 1) throw new BusinessException(409, "当前充值订单状态不可支付");
+
+    Map<String, Object> wallet = ensureWallet(enterpriseId);
+    BigDecimal amount = money(order.get("amount"));
+    BigDecimal balanceBefore = money(wallet.get("balanceAmount"));
+    BigDecimal balanceAfter = balanceBefore.add(amount).setScale(2, RoundingMode.HALF_UP);
+
+    Map<String, Object> walletUpdate = new LinkedHashMap<>();
+    walletUpdate.put("walletId", wallet.get("id"));
+    walletUpdate.put("balanceBefore", balanceBefore);
+    walletUpdate.put("balanceAfter", balanceAfter);
+    walletUpdate.put("userId", context.userId());
+    if (mapper.updateWallet(walletUpdate) == 0)
+      throw new BusinessException(409, "企业余额已变化，请重试");
+    if (mapper.completeRechargeOrder(orderId, enterpriseId) == 0)
+      throw new BusinessException(409, "充值订单状态已变化，请刷新后重试");
+
+    Map<String, Object> transaction = new LinkedHashMap<>();
+    transaction.put("enterpriseId", enterpriseId);
+    transaction.put("walletId", wallet.get("id"));
+    transaction.put("userId", context.userId());
+    transaction.put("direction", "IN");
+    transaction.put("transactionType", "RECHARGE");
+    transaction.put("amount", amount);
+    transaction.put("balanceBefore", balanceBefore);
+    transaction.put("balanceAfter", balanceAfter);
+    transaction.put("rechargeOrderId", orderId);
+    transaction.put("remark", "余额充值 " + order.get("rechargeNo"));
+    UniqueCodeRetryUtil.insertWithGeneratedCode(
+        SaasCodeConstraints.WALLET_TRANSACTION_NO,
+        codes::transactionNo,
+        transactionNo -> transaction.put("transactionNo", transactionNo),
+        () -> mapper.insertTransaction(transaction));
+
+    order.put("status", 2);
+    order.put("paidAt", LocalDateTime.now());
+    order.put("balanceAmount", balanceAfter);
+    order.put("transactionNo", transaction.get("transactionNo"));
+    return order;
+  }
+
+  @Transactional
+  public Map<String, Object> cancelRecharge(Long id) {
+    context.requireRoles("OWNER", "ADMIN");
+    Long enterpriseId = context.enterpriseId();
+    Map<String, Object> order = PortalMaps.camel(mapper.lockRechargeOrder(id, enterpriseId));
+    if (order == null) throw new BusinessException(404, "充值订单不存在");
+    int status = ((Number) order.get("status")).intValue();
+    if (status == 3) return order;
+    if (status != 1) throw new BusinessException(409, "只有待支付订单可以取消");
+    if (mapper.cancelRechargeOrder(id, enterpriseId) == 0)
+      throw new BusinessException(409, "充值订单状态已变化，请刷新后重试");
+    order.put("status", 3);
+    return order;
+  }
+
   public TableData<Map<String, Object>> recharges(
       int pageNum,
       int pageSize,
@@ -102,7 +177,7 @@ public class FinanceServiceImpl implements FinanceService {
   public Map<String, Object> preview(Map<String, Object> body) {
     context.requireRoles("OWNER", "ADMIN");
     return calculate(
-        context.enterpriseId(), number(body, "planId"), integer(body, "periodCount"), false);
+        context.enterpriseId(), number(body, "planId"), integer(body, "periodCount"), null);
   }
 
   @Transactional
@@ -112,9 +187,11 @@ public class FinanceServiceImpl implements FinanceService {
     Long planId = number(body, "planId");
     int periods = integer(body, "periodCount");
     boolean autoRenew = Boolean.parseBoolean(String.valueOf(body.getOrDefault("autoRenew", false)));
+    Map<String, Object> currentState = PortalMaps.camel(mapper.lockSubscription(enterpriseId));
+    if (currentState == null) throw new BusinessException(500, "企业订阅状态不存在");
     Map<String, Object> wallet = PortalMaps.camel(mapper.lockWallet(enterpriseId));
     if (wallet == null) throw new BusinessException(404, "企业钱包不存在");
-    Map<String, Object> preview = calculate(enterpriseId, planId, periods, true);
+    Map<String, Object> preview = calculate(enterpriseId, planId, periods, currentState);
     if (!(Boolean) preview.get("eligible")) {
       String message = String.valueOf(preview.get("validationMessage"));
       int code = message.contains("周期") ? 422 : 422;
@@ -132,7 +209,7 @@ public class FinanceServiceImpl implements FinanceService {
     update.put("userId", context.userId());
     if (mapper.updateWallet(update) == 0) throw new BusinessException(409, "企业余额已变化，请重试");
     Map<String, Object> plan = (Map<String, Object>) preview.get("plan"),
-        currentSub = PortalMaps.camel(mapper.findSubscription(enterpriseId));
+        activeSubscription = activeSubscription(currentState);
     Map<String, Object> order = new LinkedHashMap<>();
     order.putAll(preview);
     order.put("enterpriseId", enterpriseId);
@@ -140,8 +217,8 @@ public class FinanceServiceImpl implements FinanceService {
     order.put("planId", planId);
     order.put("userLimit", plan.get("userLimit"));
     order.put("durationDays", ((Number) plan.get("durationDays")).intValue() * periods);
-    order.put("subscriptionId", currentSub == null ? null : currentSub.get("id"));
-    order.put("oldPlanId", currentSub == null ? null : currentSub.get("planId"));
+    order.put("subscriptionId", currentState.get("id"));
+    order.put("oldPlanId", activeSubscription == null ? null : activeSubscription.get("planId"));
     order.put("autoRenew", autoRenew ? 1 : 0);
     order.put("planSnapshotJson", json(plan));
     UniqueCodeRetryUtil.insertWithGeneratedCode(
@@ -150,26 +227,24 @@ public class FinanceServiceImpl implements FinanceService {
         orderNo -> order.put("orderNo", orderNo),
         () -> mapper.insertOrder(order));
     Map<String, Object> subscription = new LinkedHashMap<>();
-    if (currentSub != null) subscription.put("id", currentSub.get("id"));
     subscription.put("enterpriseId", enterpriseId);
     subscription.put("planId", planId);
     subscription.put("orderId", order.get("id"));
     subscription.put("userLimit", plan.get("userLimit"));
+    subscription.put("ocrQuota", intValue(plan.get("ocrQuota")));
+    subscription.put("requestQuota", intValue(plan.get("requestQuota")));
     subscription.put(
         "startAt",
-        currentSub != null && "RENEW".equals(preview.get("orderType"))
-            ? currentSub.get("startAt")
+        activeSubscription != null && "RENEW".equals(preview.get("orderType"))
+            ? activeSubscription.get("startAt")
             : preview.get("startAt"));
     subscription.put("endAt", preview.get("endAt"));
     subscription.put("autoRenew", autoRenew ? 1 : 0);
     subscription.put("nextRenewAt", autoRenew ? preview.get("endAt") : null);
-    if (currentSub == null) mapper.insertSubscription(subscription);
-    else mapper.updateSubscription(subscription);
+    if (mapper.updateSubscription(subscription) == 0)
+      throw new BusinessException(409, "企业订阅状态已变化，请重试");
     seats.synchronize(enterpriseId, ((Number) plan.get("userLimit")).intValue());
-    Long subscriptionId =
-        currentSub == null
-            ? ((Number) subscription.get("id")).longValue()
-            : ((Number) currentSub.get("id")).longValue();
+    Long subscriptionId = ((Number) currentState.get("id")).longValue();
     BigDecimal change = refund.signum() > 0 ? refund : payable;
     Map<String, Object> tx = new LinkedHashMap<>();
     tx.put("enterpriseId", enterpriseId);
@@ -200,7 +275,8 @@ public class FinanceServiceImpl implements FinanceService {
     context.requireRoles("OWNER", "ADMIN");
     Map<String, Object> subscription =
         PortalMaps.camel(mapper.findSubscription(context.enterpriseId()));
-    if (subscription == null) throw new BusinessException(404, "当前订阅不存在");
+    if (activeSubscription(subscription) == null)
+      throw new BusinessException(400, "当前没有生效中的订阅");
     boolean enabled = Boolean.parseBoolean(String.valueOf(body.get("autoRenewEnabled")));
     mapper.updateAutoRenew(((Number) subscription.get("id")).longValue(), enabled ? 1 : 0);
     return subscriptionView(context.enterpriseId());
@@ -242,11 +318,15 @@ public class FinanceServiceImpl implements FinanceService {
   }
 
   private Map<String, Object> calculate(
-      Long enterpriseId, Long planId, int periods, boolean submitting) {
+      Long enterpriseId, Long planId, int periods, Map<String, Object> lockedState) {
     if (periods < 1) throw new BusinessException(400, "订阅周期必须为正整数");
     Map<String, Object> plan = PortalMaps.camel(mapper.findPlan(planId));
     if (plan == null) throw new BusinessException(404, "套餐不存在");
-    Map<String, Object> sub = PortalMaps.camel(mapper.findSubscription(enterpriseId)),
+    Map<String, Object> state =
+            lockedState == null
+                ? PortalMaps.camel(mapper.findSubscription(enterpriseId))
+                : lockedState,
+        sub = activeSubscription(state),
         currentPlan =
             sub == null
                 ? null
@@ -291,11 +371,8 @@ public class FinanceServiceImpl implements FinanceService {
     BigDecimal balance = wallet == null ? BigDecimal.ZERO : money(wallet.get("balanceAmount"));
     int members = enterprises.countActiveMembers(enterpriseId),
         limit = ((Number) plan.get("userLimit")).intValue();
-    boolean eligible = periods >= minimum && members <= limit;
-    String message =
-        periods < minimum
-            ? "改订周期不能少于 " + minimum + " 个周期"
-            : members > limit ? "当前企业有 " + members + " 名成员，超过该套餐 " + limit + " 人的成员上限" : "";
+    boolean eligible = periods >= minimum;
+    String message = periods < minimum ? "改订周期不能少于 " + minimum + " 个周期" : "";
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("plan", plan);
     result.put("currentPlan", currentPlan);
@@ -320,9 +397,42 @@ public class FinanceServiceImpl implements FinanceService {
 
   private Map<String, Object> subscriptionView(Long enterpriseId) {
     Map<String, Object> sub = PortalMaps.camel(mapper.findSubscription(enterpriseId));
-    if (sub != null)
+    if (sub != null && sub.get("planId") != null)
       sub.put("plan", PortalMaps.camel(mapper.findPlan(((Number) sub.get("planId")).longValue())));
     return sub;
+  }
+
+  private Map<String, Object> activeSubscription(Map<String, Object> subscription) {
+    if (subscription == null || intValue(subscription.get("status")) != 1) return null;
+    Object endAt = subscription.get("endAt");
+    return endAt instanceof LocalDateTime && ((LocalDateTime) endAt).isAfter(LocalDateTime.now())
+        ? subscription
+        : null;
+  }
+
+  private int intValue(Object value) {
+    return value == null ? 0 : ((Number) value).intValue();
+  }
+
+  private Map<String, Object> walletView(Long enterpriseId) {
+    Map<String, Object> wallet = PortalMaps.camel(mapper.findWallet(enterpriseId));
+    if (wallet != null) return wallet;
+
+    Map<String, Object> emptyWallet = new LinkedHashMap<>();
+    emptyWallet.put("balanceAmount", BigDecimal.ZERO.setScale(2));
+    emptyWallet.put("currency", "CNY");
+    return emptyWallet;
+  }
+
+  private Map<String, Object> ensureWallet(Long enterpriseId) {
+    enterprises.lockEnterprise(enterpriseId);
+    Map<String, Object> wallet = PortalMaps.camel(mapper.lockWallet(enterpriseId));
+    if (wallet != null) return wallet;
+
+    enterprises.insertWallet(enterpriseId, context.userId());
+    wallet = PortalMaps.camel(mapper.lockWallet(enterpriseId));
+    if (wallet == null) throw new BusinessException(500, "企业钱包初始化失败");
+    return wallet;
   }
 
   private void decorateOrder(Map<String, Object> order) {

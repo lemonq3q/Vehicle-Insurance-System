@@ -11,12 +11,12 @@
     <div class="stat-grid">
       <div class="portal-card stat-card">
         <div class="stat-label">企业余额</div>
-        <div class="stat-value">¥{{ overview.wallet?.balanceAmount }}</div>
+        <div class="stat-value">¥{{ money(overview.wallet?.balanceAmount) }}</div>
         <div class="stat-note">币种 {{ overview.wallet?.currency || 'CNY' }}</div>
       </div>
       <div class="portal-card stat-card">
         <div class="stat-label">当前套餐</div>
-        <div class="stat-value">{{ overview.subscription?.plan?.name || '-' }}</div>
+        <div class="stat-value">{{ currentPlanName }}</div>
         <div class="stat-note">{{ overview.subscription?.userLimit || 0 }} 人上限</div>
       </div>
       <div class="portal-card stat-card">
@@ -28,7 +28,7 @@
         <div class="stat-label">自动续费</div>
         <div class="stat-value">{{ overview.subscription?.autoRenewEnabled ? '已开启' : '未开启' }}</div>
         <div class="stat-note">
-          <button class="layui-btn layui-btn-xs layui-btn-primary layui-border-green" :disabled="!canManageFinance" @click="toggleAutoRenew">
+          <button class="layui-btn layui-btn-xs layui-btn-primary layui-border-green" :disabled="!canUpdateAutoRenew" @click="toggleAutoRenew">
             {{ overview.subscription?.autoRenewEnabled ? '关闭' : '开启' }}
           </button>
         </div>
@@ -38,8 +38,8 @@
     <div class="portal-card plan-list">
       <article v-for="plan in plans" :key="plan.id" class="plan-card">
         <div class="plan-head">
-          <span class="portal-tag" :class="{ blue: plan.id === overview.subscription?.planId }">
-            {{ plan.id === overview.subscription?.planId ? '当前套餐' : '可订阅' }}
+          <span class="portal-tag" :class="{ blue: isCurrentPlan(plan) }">
+            {{ isCurrentPlan(plan) ? '当前套餐' : '可订阅' }}
           </span>
           <strong>{{ plan.name }}</strong>
         </div>
@@ -56,7 +56,6 @@
       </article>
     </div>
 
-    <p class="message" aria-live="polite">{{ message }}</p>
   </section>
 </template>
 
@@ -67,9 +66,8 @@ export default {
   name: 'SubscriptionServicePage',
   data() {
     return {
-      overview: { wallet: {}, subscription: { plan: {} } },
-      plans: [],
-      message: ''
+      overview: { wallet: {}, subscription: { status: 0, userLimit: 0, plan: {} } },
+      plans: []
     };
   },
   async created() {
@@ -78,21 +76,41 @@ export default {
   computed: {
     canManageFinance() {
       return this.$store.getters.canManageFinance;
+    },
+    canUpdateAutoRenew() {
+      return this.canManageFinance && this.hasActiveSubscription;
+    },
+    hasActiveSubscription() {
+      return Number(this.overview.subscription?.status) === 1;
+    },
+    currentPlanName() {
+      if (!this.hasActiveSubscription) return '暂未订阅';
+      return this.overview.subscription?.plan?.name || '套餐信息缺失';
     }
   },
   methods: {
     async loadData() {
       const [overview, plans] = await Promise.all([getFinanceOverview(), getPlans()]);
-      this.overview = overview.data;
+      const data = overview.data || {};
+      this.overview = {
+        ...data,
+        wallet: data.wallet || { balanceAmount: 0, currency: 'CNY' },
+        subscription: data.subscription || { status: 0, userLimit: 0, plan: {} }
+      };
       this.plans = plans.data;
-      this.message = this.$route.query.orderNo ? `订单 ${this.$route.query.orderNo} 已完成支付，套餐订阅已更新。` : '';
+    },
+    money(value) {
+      return Number(value || 0).toFixed(2);
     },
     periodName(period) {
       return period === 'YEAR' ? '年' : period === 'MONTH' ? '月' : '天';
     },
     actionName(plan) {
-      if (!this.overview.subscription?.id) return '订阅套餐';
+      if (!this.hasActiveSubscription) return '订阅套餐';
       return plan.id === this.overview.subscription.planId ? '续订套餐' : '改订套餐';
+    },
+    isCurrentPlan(plan) {
+      return this.hasActiveSubscription && plan.id === this.overview.subscription?.planId;
     },
     goToRecharge() {
       if (!this.canManageFinance) return;
@@ -106,9 +124,8 @@ export default {
       });
     },
     async toggleAutoRenew() {
-      if (!this.canManageFinance) return;
-      const response = await updateAutoRenew({ autoRenewEnabled: !this.overview.subscription?.autoRenewEnabled });
-      this.message = response.msg;
+      if (!this.canUpdateAutoRenew) return;
+      await updateAutoRenew({ autoRenewEnabled: !this.overview.subscription?.autoRenewEnabled });
       await this.loadData();
     }
   }
@@ -185,10 +202,6 @@ export default {
 .plan-action:disabled {
   cursor: not-allowed;
   opacity: 0.45;
-}
-
-.message {
-  color: #166534;
 }
 
 @media (max-width: 1100px) {
