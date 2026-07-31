@@ -23,7 +23,7 @@ const routes = [
     path: '/',
     name: 'marketing',
     component: MarketingPage,
-    meta: { title: '小马e保门户' }
+    meta: { title: 'iDatag 门户' }
   },
   {
     path: '/login',
@@ -63,7 +63,7 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-  document.title = to.meta.title ? `${to.meta.title} - 小马e保` : '小马e保';
+  document.title = to.meta.title ? `${to.meta.title} - iDatag` : 'iDatag';
   if (to.meta.requiresAuth && !store.getters.isLogin) {
     next('/login');
     return;

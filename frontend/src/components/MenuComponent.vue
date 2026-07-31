@@ -36,19 +36,6 @@
         </router-link>
       </el-sub-menu>
       
-      <el-sub-menu index="7" v-if="isHasPerm('all')">
-        <template #title>
-          <el-icon><User /></el-icon>
-          <span>用户管理</span>
-        </template>
-        <router-link to="/home/userManagement" v-if="isHasPerm('user:update')">
-          <el-menu-item index="/home/userManagement">用户管理</el-menu-item>
-        </router-link>
-        <router-link to="/home/userApproval" v-if="isHasPerm('user:update')">
-          <el-menu-item index="/home/userApproval">用户审批</el-menu-item>
-        </router-link>
-      </el-sub-menu>
-
       <router-link to="/home/personalCenter">
         <el-menu-item index="/home/personalCenter">
           <el-icon><HomeFilled /></el-icon>
@@ -65,8 +52,8 @@
 import { isHasPerm } from '@/utils/authenticate';
 import { onMounted, watch, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { 
-  List, User, Location, HomeFilled, Bell
+import {
+  List, Location, HomeFilled, Bell
 } from '@element-plus/icons-vue';
 
 // 获取当前路由实例

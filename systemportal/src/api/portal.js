@@ -29,6 +29,9 @@ export const exitEnterprise = () => post('/portal/enterprise/members/exit', {});
 
 export const getFinanceOverview = () => get('/portal/finance/overview');
 export const getPlans = () => get('/portal/finance/plans');
+export const getMarketingPlans = () => request.get('/portal/finance/plans', {
+  skipErrorNotification: true
+});
 export const createRechargeOrder = data => post('/portal/finance/recharge-orders', data);
 export const getRechargeOrder = id => get(`/portal/finance/recharge-orders/${id}`);
 export const completeRechargeOrder = data => post('/portal/finance/recharge-orders/complete', data);

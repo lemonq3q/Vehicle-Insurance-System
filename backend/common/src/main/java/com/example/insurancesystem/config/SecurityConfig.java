@@ -55,7 +55,7 @@ public class SecurityConfig {
                         "/auth/login", "/auth/register", "/auth/code", "/auth/forget",
                         "/portal/auth/login", "/portal/auth/register", "/portal/auth/sms-code",
                         "/portal/auth/forget-password", "/internal/sso/exchange",
-                        "/auth/sso/exchange"
+                        "/auth/sso/exchange", "/portal/finance/plans"
                 ).permitAll()
                 .anyRequest().authenticated();
         // 添加过滤器

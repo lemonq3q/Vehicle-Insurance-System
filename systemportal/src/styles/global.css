@@ -278,3 +278,7 @@ a:focus-visible {
     animation-duration: 0.01ms !important;
   }
 }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 76px;
+}

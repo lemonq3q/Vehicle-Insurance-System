@@ -6,11 +6,12 @@ import { normalizeDateTimes } from '@/utils/dateTime';
 const TOKEN_STORAGE_KEY = 'portalToken';
 const TOKEN_EXPIRE_SECONDS = 60 * 60 * 24;
 const REFRESHED_TOKEN_HEADER = 'new-token';
-const AUTH_WHITE_LIST = [
+const PUBLIC_REQUESTS = [
   '/portal/auth/login',
   '/portal/auth/register',
   '/portal/auth/sms-code',
-  '/portal/auth/forget-password'
+  '/portal/auth/forget-password',
+  '/portal/finance/plans'
 ];
 
 const request = axios.create({
@@ -24,8 +25,8 @@ export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler;
 }
 
-function isAuthRequest(url = '') {
-  return AUTH_WHITE_LIST.some(item => url.includes(item));
+function isPublicRequest(url = '') {
+  return PUBLIC_REQUESTS.some(item => url.includes(item));
 }
 
 function handleUnauthorized() {
@@ -59,7 +60,7 @@ function createBusinessError(payload, response) {
 }
 
 request.interceptors.request.use(config => {
-  if (isAuthRequest(config.url)) return config;
+  if (isPublicRequest(config.url)) return config;
 
   const token = Storage.get(TOKEN_STORAGE_KEY);
   if (token) {
@@ -79,10 +80,14 @@ request.interceptors.response.use(response => {
 
   const payload = normalizeDateTimes(response.data);
   if (payload && typeof payload === 'object' && 'code' in payload) {
-    if (Number(payload.code) === 401) handleUnauthorized();
+    if (Number(payload.code) === 401 && !isPublicRequest(response.config?.url)) {
+      handleUnauthorized();
+    }
     if (Number(payload.code) >= 400) {
       const businessError = createBusinessError(payload, response);
-      notifyRequestError(Number(payload.code), businessError.message);
+      if (!response.config?.skipErrorNotification) {
+        notifyRequestError(Number(payload.code), businessError.message);
+      }
       return Promise.reject(businessError);
     }
   }
@@ -90,15 +95,15 @@ request.interceptors.response.use(response => {
 }, error => {
   const payload = error.response?.data;
   const status = responseStatus(payload, error.response);
-  if (status === 401) handleUnauthorized();
+  if (status === 401 && !isPublicRequest(error.config?.url)) handleUnauthorized();
 
   if (status >= 400) {
     error.message = responseMessage(payload, status);
     error.code = payload?.code || status;
-    notifyRequestError(status, error.message);
+    if (!error.config?.skipErrorNotification) notifyRequestError(status, error.message);
   } else {
     error.message = '请求错误';
-    notifyError(error.message);
+    if (!error.config?.skipErrorNotification) notifyError(error.message);
   }
   return Promise.reject(error);
 });

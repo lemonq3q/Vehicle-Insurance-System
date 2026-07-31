@@ -15,12 +15,9 @@ const DownstreamUser = () => import('@/components/DownstreamUser.vue');
 const EditBaseWorkorder = () => import('@/components/EditBaseWorkorder.vue');
 const EditDownstreamMerchant = () => import('@/components/EditDownstreamMerchant.vue');
 const EditDownstreamUser = () => import('@/components/EditDownstreamUser.vue');
-const EditSystemUser = () => import('@/components/EditSystemUser.vue');
 const EditUpstream = () => import('@/components/EditUpstream.vue');
 const PersonalCenter = () => import('@/components/PersonalCenter.vue');
 const UpStream = () => import('@/components/UpStream.vue');
-const UserApproval = () => import('@/components/UserApproval.vue');
-const UserManagement = () => import('@/components/UserManagement.vue');
 
 const routes = [
   {
@@ -98,24 +95,12 @@ const routes = [
         component: PersonalCenter
       },
       {
-        path: 'userManagement',
-        component: UserManagement
-      },
-      {
         path: 'allWorkorder',
         component: AllWorkOrder
       },
       {
         path: 'renewWorkorder',
         component: RenewWorkorder
-      },
-      {
-        path: 'editSystemUser',
-        component: EditSystemUser
-      },
-      {
-        path: 'userApproval',
-        component: UserApproval
       }
     ]
   }

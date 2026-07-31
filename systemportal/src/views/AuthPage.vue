@@ -1,8 +1,8 @@
 <template>
   <main class="auth-page portal-shell">
     <router-link class="auth-brand" to="/">
-      <span class="brand-mark">XM</span>
-      <span>小马e保 SaaS</span>
+      <span class="brand-mark"><img src="@/assets/brand/idatag-logo.png" alt="" /></span>
+      <span>iDatag SaaS</span>
     </router-link>
 
     <section class="auth-panel">
@@ -260,9 +260,12 @@ export default {
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 8px;
-  background: #22c55e;
-  color: #052e16;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .auth-panel {

@@ -2,8 +2,8 @@
   <div class="portal-app" :class="{ collapsed: collapsed }">
     <aside class="portal-sidebar">
       <router-link class="sidebar-brand" to="/portal/dashboard">
-        <span>XM</span>
-        <strong>小马e保</strong>
+        <span><img src="@/assets/brand/idatag-logo.png" alt="" /></span>
+        <strong>iDatag</strong>
       </router-link>
       <nav class="sidebar-nav" aria-label="门户导航">
         <template v-for="group in menus" :key="group.title">
@@ -193,10 +193,13 @@ export default {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: #22c55e;
-  color: #052e16;
   font-weight: 800;
+}
+
+.sidebar-brand span img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .nav-group-title {
