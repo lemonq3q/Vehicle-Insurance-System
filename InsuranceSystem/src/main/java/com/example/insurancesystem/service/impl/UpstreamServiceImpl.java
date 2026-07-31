@@ -102,7 +102,7 @@ public class UpstreamServiceImpl implements UpstreamService {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
         }
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Merchant::getType, "保司");
+        wrapper.in(Merchant::getType, "保司", "机构");
         wrapper.eq(Merchant::getIsDelete, 0);
         wrapper.and(w -> {
             w.like(Merchant::getName, blurParam)
