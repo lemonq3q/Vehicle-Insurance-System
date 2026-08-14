@@ -14,9 +14,7 @@ const notInterceptUrls = [
   '/auth/sso/exchange'
 ];
 
-axios.defaults.baseURL = 'http://localhost:8080';
-// axios.defaults.baseURL = 'http://47.100.210.159:8080';
-// axios.defaults.baseURL = 'https://47.97.126.52:443/api';
+axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080';
 // axios.defaults.withCredentials = true;
 axios.defaults.timeout = 60000; // 全局60秒超时
 

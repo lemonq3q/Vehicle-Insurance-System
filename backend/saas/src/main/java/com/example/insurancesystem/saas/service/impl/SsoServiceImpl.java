@@ -18,7 +18,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class SsoServiceImpl implements SsoService {
-  private static final String CODE_PREFIX = "portal:sso:insurance:code:";
+  private static final String CODE_NAMESPACE = "sso:insurance:code:";
 
   private final PortalContextService context;
   private final EnterpriseMapper enterpriseMapper;
@@ -64,7 +64,7 @@ public class SsoServiceImpl implements SsoService {
     ticket.put("target", "INSURANCE");
     ticket.put("issuedAt", issuedAt);
     ticket.put("expiresAt", issuedAt + codeTtlSeconds * 1000L);
-    redisCache.setCacheObject(CODE_PREFIX + code, ticket, codeTtlSeconds, TimeUnit.SECONDS);
+    redisCache.setCacheObject(CODE_NAMESPACE + code, ticket, codeTtlSeconds, TimeUnit.SECONDS);
 
     String redirectUrl = UriComponentsBuilder.fromHttpUrl(insuranceFrontendUrl)
         .path("/sso/callback")
@@ -86,7 +86,7 @@ public class SsoServiceImpl implements SsoService {
     if (code.isEmpty()) throw new BusinessException(400, "授权码不能为空");
 
     Map<String, Object> ticket = redisCache.getAndDeleteOnce(
-        CODE_PREFIX + code, codeTtlSeconds, TimeUnit.SECONDS);
+        CODE_NAMESPACE + code, codeTtlSeconds, TimeUnit.SECONDS);
     if (ticket == null) throw new BusinessException(401, "授权码无效、已使用或已过期");
     if (!"INSURANCE".equals(ticket.get("target")))
       throw new BusinessException(401, "授权目标不正确");

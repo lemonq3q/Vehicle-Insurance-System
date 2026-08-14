@@ -20,10 +20,10 @@ public class MockSmsVerificationService implements SmsVerificationService {
 
   public Map<String, Object> send(String phone, String scene) {
     validate(phone, scene);
-    String cooldownKey = "portal:sms:cooldown:" + scene + ":" + phone;
+    String cooldownKey = "sms:cooldown:" + scene + ":" + phone;
     if (redisCache.getCacheObject(cooldownKey) != null)
       throw new BusinessException(429, "验证码发送过于频繁");
-    redisCache.setCacheObject("portal:sms:" + scene + ":" + phone, MOCK_CODE, 5, TimeUnit.MINUTES);
+    redisCache.setCacheObject("sms:" + scene + ":" + phone, MOCK_CODE, 5, TimeUnit.MINUTES);
     redisCache.setCacheObject(cooldownKey, "1", 60, TimeUnit.SECONDS);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("expiresInSeconds", 300);
@@ -34,7 +34,7 @@ public class MockSmsVerificationService implements SmsVerificationService {
 
   public void verify(String phone, String scene, String code) {
     validate(phone, scene);
-    String key = "portal:sms:" + scene + ":" + phone;
+    String key = "sms:" + scene + ":" + phone;
     String expected = redisCache.getCacheObject(key);
     if (expected == null || !expected.equals(code)) throw new BusinessException(400, "验证码错误或已失效");
     redisCache.deleteObject(key);

@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+portal:
+  sso:
+    insurance-frontend-url: ${INSURANCE_FRONTEND_URL:https://www.idatag.com/insurance}
+
+app:
+  cors:
+    enabled: false

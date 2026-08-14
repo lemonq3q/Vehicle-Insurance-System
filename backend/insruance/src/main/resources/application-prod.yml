@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+insurance:
+  sso:
+    saas-exchange-url: ${SAAS_SSO_EXCHANGE_URL:https://www.idatag.com/saasback/internal/sso/exchange}
+
+app:
+  cors:
+    enabled: false

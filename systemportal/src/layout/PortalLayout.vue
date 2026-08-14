@@ -144,10 +144,10 @@ export default {
       this.$store.commit('setSidebarCollapsed', !this.collapsed);
     },
     switchTestRole() {
-      const roles = ['OWNER', 'ADMIN', 'ISSUER'];
-      const currentIndex = roles.indexOf(this.$store.getters.roleCode);
-      const nextRole = roles[(currentIndex + 1) % roles.length];
-      this.$store.commit('setTestRoleCode', nextRole);
+      // const roles = ['OWNER', 'ADMIN', 'ISSUER'];
+      // const currentIndex = roles.indexOf(this.$store.getters.roleCode);
+      // const nextRole = roles[(currentIndex + 1) % roles.length];
+      // this.$store.commit('setTestRoleCode', nextRole);
     },
     confirmLogout() {
       this.logoutDialogVisible = false;

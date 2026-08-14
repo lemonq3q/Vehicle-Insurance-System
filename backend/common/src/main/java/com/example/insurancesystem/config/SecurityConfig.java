@@ -4,6 +4,7 @@ import com.example.insurancesystem.filter.JwtAuthenticationTokenFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -33,6 +34,9 @@ public class SecurityConfig {
 
     @Autowired
     private AccessDeniedHandler accessDeniedHandler;
+
+    @Autowired
+    private Environment environment;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -64,10 +68,9 @@ public class SecurityConfig {
         http.exceptionHandling()
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler);
-        // 允许跨域
-        http.cors();
-//        // 显式关闭跨域支持
-//        http.cors().disable();
+        if (!environment.acceptsProfiles("prod")) {
+            http.cors();
+        }
         return http.build();
     }
 }

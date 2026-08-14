@@ -2,6 +2,7 @@ package com.example.insurancesystem.filter;
 
 import com.example.insurancesystem.system.MaintenanceManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,9 @@ public class MaintenanceFilter implements Filter {
     @Autowired
     private MaintenanceManager maintenanceManager;
 
+    @Value("${app.cors.enabled:true}")
+    private boolean corsEnabled;
+
     @Override
     public void doFilter(ServletRequest request,
                          ServletResponse response,
@@ -26,10 +30,12 @@ public class MaintenanceFilter implements Filter {
 
         if (maintenanceManager.isMaintenance()) {
             // 维护中 → 直接返回
-            res.setHeader("Access-Control-Allow-Origin", "*");
-            res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
-            res.setHeader("Access-Control-Max-Age", "3600");
-            res.setHeader("Access-Control-Allow-Headers", "*");
+            if (corsEnabled) {
+                res.setHeader("Access-Control-Allow-Origin", "*");
+                res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+                res.setHeader("Access-Control-Max-Age", "3600");
+                res.setHeader("Access-Control-Allow-Headers", "*");
+            }
             res.setContentType("application/json;charset=UTF-8");
             res.getWriter().write("{\"code\":503,\"msg\":\"系统维护中，请稍后再试\"}");
             return;

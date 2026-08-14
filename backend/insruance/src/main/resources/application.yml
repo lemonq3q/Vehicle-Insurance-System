@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   application:
     name: InsuranceSystem
   datasource:
@@ -12,6 +14,11 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
       enabled: true
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    key-prefix: ${REDIS_KEY_PREFIX:insurance:}
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
@@ -20,11 +27,6 @@ mybatis-plus:
 server:
   port: 8080
 
-security:
-  session:
-    # 车险会话在 Redis 中的完整 Key 格式：insurance:login:{userId}
-    key-prefix: ${INSURANCE_LOGIN_KEY_PREFIX:insurance:login:}
-
 insurance:
   tenant-isolation:
     enabled: true
@@ -32,5 +34,9 @@ insurance:
     # 车险后端使用的 SaaS 后端内部授权码兑换地址。
     saas-exchange-url: ${SAAS_SSO_EXCHANGE_URL:http://localhost:8081/internal/sso/exchange}
     # 必须与 SaaS 服务器的 INSURANCE_SSO_CLIENT_SECRET 一致。
-    client-secret: ${INSURANCE_SSO_CLIENT_SECRET:change-me-in-production}
+    client-secret: ${INSURANCE_SSO_CLIENT_SECRET:wsbld2wjb56gjlmy}
 
+app:
+  cors:
+    enabled: true
+w 
