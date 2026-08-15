@@ -8,6 +8,9 @@ import lombok.Data;
 
 @Data
 @TableName("biz_merchant_staff")
+/**
+ * 商户员工关联实体，将企业用户绑定到具体合作机构并记录在该机构内的启停状态。
+ */
 public class MerchantStaff {
     @TableId(type = IdType.AUTO)
     private Long id;

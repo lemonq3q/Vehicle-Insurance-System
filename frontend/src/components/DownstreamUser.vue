@@ -164,6 +164,13 @@ const merchantLoading = ref(false);
 const roleLoading = ref(false);
 
 
+/**
+
+
+ * * 在启用和禁用之间切换机构员工，成功后重新查询列表以使用后端最终状态。
+
+
+ */
 const handleChangeStatus = async (index, row) => {
   try{
     Loading.open();
@@ -184,10 +191,20 @@ const handleChangeStatus = async (index, row) => {
   }
 }
 
+/**
+
+ * * 页码或每页条数变化时保留现有机构、角色和状态筛选重新查询。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 将列表当前选中的机构选项写入 sessionStorage，新增或编辑页可直接回显机构而无需再次远程搜索。
+
+ */
 const saveMerchantDefaultOption = () => {
   const merchantId = selectParams.value.merchantId;
   if (merchantId) {
@@ -198,6 +215,11 @@ const saveMerchantDefaultOption = () => {
   }
 };
 
+/**
+
+ * * 缓存更新模式、员工 ID 和当前机构选项，再进入机构员工编辑页。
+
+ */
 const handleEdit = (index, row) => {
   saveMerchantDefaultOption();
   sessionStorage.setItem('merchant_user_type', 'update');
@@ -207,6 +229,11 @@ const handleEdit = (index, row) => {
   });
 };
 
+/**
+
+ * * 缓存新增模式及列表预选机构后进入员工新增页。
+
+ */
 const handleAdd = () => {
   sessionStorage.setItem('merchant_user_type', 'add');
   saveMerchantDefaultOption();
@@ -215,6 +242,11 @@ const handleAdd = () => {
   });
 }
 
+/**
+
+ * * 清空员工关键字、机构、角色和状态筛选条件。
+
+ */
 const handleReset = () => {
   selectParams.value = {
     blurParam: '',
@@ -224,6 +256,11 @@ const handleReset = () => {
   };
 }
 
+/**
+
+ * * 模糊查询下游机构并建立带编码和名称的远程选项。
+
+ */
 const getMerchantOption = async (blurParam) => {
   try{
     merchantLoading.value = true;
@@ -244,6 +281,11 @@ const getMerchantOption = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 查询机构员工可分配角色并转换为筛选选项。
+
+ */
 const getRoleOption = async () => {
   try{
     roleLoading.value = true;
@@ -264,11 +306,21 @@ const getRoleOption = async () => {
   }
 }
 
+/**
+
+ * * 从第一页按最新条件查询机构员工，避免旧页码越界。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 将员工秒级创建时间转换为完整日期时间后写入表格数据源。
+
+ */
 const buildTableData = (data) => {
   tableData.value = data.map(element => {
     element.createTime = formatSecondTimestamp(element.createTime);
@@ -276,6 +328,11 @@ const buildTableData = (data) => {
   });
 }
 
+/**
+
+ * * 把当前分页状态合并到员工筛选条件中形成接口参数。
+
+ */
 const buildSelectParams = () => {
   let data = selectParams.value;
   data.pageSize = page.pageSize;
@@ -283,6 +340,11 @@ const buildSelectParams = () => {
   return data;
 }
 
+/**
+
+ * * 查询机构员工分页列表，同步总记录数并转换展示字段，异常时仍解除表格加载态。
+
+ */
 const getData = async () => {
   try{
     tableLoading.value = true;
@@ -301,6 +363,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 按当前员工筛选条件导出用户 Excel，并在下载完成后关闭全局遮罩。
+
+ */
 const handleExport = async () => {
   try{
     Loading.open();
@@ -312,6 +379,11 @@ const handleExport = async () => {
   }
 }
 
+/**
+
+ * * 经二次确认后删除机构员工，成功时刷新列表；取消确认不产生后端请求。
+
+ */
 const handleDelete = (index, row) => {
   ElMessageBox.confirm(
     '确认要删除此数据?',
@@ -342,6 +414,11 @@ const handleDelete = (index, row) => {
   })
 };
 
+/**
+
+ * * 页面挂载时加载角色选项和员工首屏数据，机构选项按用户输入延迟查询。
+
+ */
 onMounted(()=>{
   getRoleOption();
   getData();

@@ -45,6 +45,14 @@ export function buildObjectParams(data, useBracket = false) {
   return params.length > 0 ? `?${params.join('&')}` : '';
 }
 
+/**
+ * 将同一字段的一组基础类型值编码为重复 query 参数，供后端按数组接收筛选条件。
+ * 非字符串、数字或布尔值会被忽略，避免对象被隐式转换成无意义的查询文本。
+ *
+ * @param {Array<string|number|boolean>} array 待编码的筛选值。
+ * @param {string} key 每一项共同使用的参数名。
+ * @returns {string} 以问号开头的查询串；没有有效项时返回空串。
+ */
 export function buildArrayParams(array, key) {
   const params = [];
   const validItems = array.filter(item => ['string', 'number', 'boolean'].includes(typeof item));

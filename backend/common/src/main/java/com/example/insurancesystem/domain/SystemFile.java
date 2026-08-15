@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName(value = "sys_file")
+/**
+ * 系统文件元数据实体，记录 OSS 对象键、原始文件名、业务归属和上传状态，不直接保存文件二进制内容。
+ */
 public class SystemFile {
 
     @TableId(type = IdType.AUTO)

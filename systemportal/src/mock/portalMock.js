@@ -130,6 +130,10 @@ const memberChangeLogs = [
   }
 ];
 
+/**
+ * 模拟套餐席位变化后的成员启停策略。缩容时优先停用出单员、再停管理员且优先处理后加入者，始终保护拥有者；
+ * 扩容时按拥有者、管理员、出单员顺序恢复，并在同角色内优先恢复早加入成员，使 mock 行为贴近后端席位协调规则。
+ */
 function synchronizeMemberSeats(userLimit) {
   const enterpriseMembers = members.filter(item => item.enterpriseId === currentEnterpriseId);
   const active = enterpriseMembers.filter(item => item.status === 1);
@@ -381,18 +385,30 @@ const statusNames = {
   }
 };
 
+/**
+ * 对 mock 内存数据做 JSON 深拷贝，避免页面修改响应对象时直接污染模拟数据库。
+ */
 function clone(data) {
   return JSON.parse(JSON.stringify(data));
 }
 
+/**
+ * 构造与真实后端统一响应外壳一致的成功 Promise，并隔离返回数据引用。
+ */
 function ok(data, msg = '操作成功') {
   return Promise.resolve({ code: 200, msg, data: clone(data) });
 }
 
+/**
+ * 构造业务失败响应；mock 仍以 HTTP 成功返回，由请求拦截器依据业务 code 转换为异常。
+ */
 function fail(msg, code = 400) {
   return Promise.resolve({ code, msg, data: null });
 }
 
+/**
+ * 按统一 pageNum/pageSize 契约截取内存列表，并返回与后端 TableData 对齐的 total 和 table 字段。
+ */
 function paginate(source, query = {}) {
   const pageNum = Number(query.pageNum || 1);
   const pageSize = Number(query.pageSize || 10);
@@ -403,14 +419,23 @@ function paginate(source, query = {}) {
   };
 }
 
+/**
+ * 根据当前企业上下文 ID 从模拟企业库中读取企业，不存在时返回空值。
+ */
 function getCurrentEnterprise() {
   return enterprises.find(item => item.id === currentEnterpriseId) || null;
 }
 
+/**
+ * 在当前企业内匹配登录用户的成员记录，用于角色权限和成员状态模拟。
+ */
 function getCurrentMember() {
   return members.find(item => item.enterpriseId === currentEnterpriseId && item.userId === currentUser.id) || null;
 }
 
+/**
+ * 组合登录响应及上下文接口使用的用户、企业集合、当前企业和当前成员快照。
+ */
 function context() {
   return {
     user: currentUser,
@@ -421,30 +446,49 @@ function context() {
   };
 }
 
+/**
+ * 使用业务前缀和当前毫秒时间生成测试订单号，便于区分充值、套餐和流水记录。
+ */
 function createOrderNo(prefix) {
   return `${prefix}${new Date().getTime()}`;
 }
 
+/**
+ * 将后端常用的空格分隔日期时间转换为浏览器可解析的本地 Date。
+ */
 function parseDateTime(value) {
   return new Date(String(value).replace(' ', 'T'));
 }
 
+/**
+ * 将 Date 统一格式化为接口使用的 yyyy-MM-dd HH:mm:ss 本地时间字符串。
+ */
 function formatDateTime(value) {
   const date = new Date(value);
   const pad = number => String(number).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/**
+ * 在给定时间副本上增加自然日，用于推导套餐预计到期时间而不修改调用方对象。
+ */
 function addDays(value, days) {
   const date = new Date(value);
   date.setDate(date.getDate() + Number(days));
   return date;
 }
 
+/**
+ * 将 mock 金额按人民币两位小数收敛，防止 JavaScript 浮点误差进入余额和订单断言。
+ */
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
 }
 
+/**
+ * 模拟后端套餐订单试算：识别购买、续订或改订类型，计算剩余套餐抵扣、最低改订周期、应付或退款金额，
+ * 同时校验周期和成员席位。页面只消费这里返回的统一试算结构，以便切换真实接口时不改变展示逻辑。
+ */
 function calculateSubscriptionOrder(planId, periodCount) {
   const plan = plans.find(item => item.id === Number(planId));
   if (!plan) return null;
@@ -507,14 +551,24 @@ function calculateSubscriptionOrder(planId, periodCount) {
   };
 }
 
+/**
+ * 将企业角色代码转换为 mock 页面使用的中文名称。
+ */
 export function getRoleName(roleCode) {
   return roleNames[roleCode] || roleCode || '-';
 }
 
+/**
+ * 按订单类别选择状态字典并返回状态文案，未知值显示占位符。
+ */
 export function getStatusName(type, status) {
   return statusNames[type]?.[status] || '-';
 }
 
+/**
+ * 作为门户 mock 后端的统一路由分发器，依据 URL 与 HTTP 方法执行认证、企业成员、邀请、套餐、充值和流水逻辑。
+ * 所有分支直接操作本文件的内存数据集并返回与真实接口相同的响应外壳，确保前端联调契约具有可替换性。
+ */
 export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   if (url === '/portal/auth/login' && method === 'POST') {
     return ok({ token: 'mock-portal-token', ...context() }, '登录成功');

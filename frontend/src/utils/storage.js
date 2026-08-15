@@ -56,7 +56,9 @@ const Storage = {
   },
 
   /**
-   * 清空所有 localStorage 数据
+
+   * * 清空所有 localStorage 数据
+
    */
   clear() {
     localStorage.clear();

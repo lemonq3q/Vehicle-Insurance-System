@@ -15,7 +15,14 @@ const routes = [{
   ]
 }];
 
+/**
+ * 监控后台使用统一布局及路由级懒加载，并在页面切换时回到内容顶部。
+ */
 const router = createRouter({ history: createWebHistory(), routes, scrollBehavior: () => ({ top: 0 }) });
+/**
+ * 根据本地监控角色执行前端路由保护；带 roles 元数据的管理员页面对 VIEWER 重定向到仪表盘。
+ * 后端仍需执行最终权限校验，前端守卫只负责避免暴露不可操作页面。
+ */
 router.beforeEach(to => {
   const role = localStorage.getItem('monitorRole') || 'ADMIN';
   if (to.meta.roles && !to.meta.roles.includes(role)) return '/dashboard';

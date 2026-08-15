@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import store from '@/store';
 
+/**
+ * 门户页面使用路由级动态导入拆分构建产物，用户只下载当前访问的官网、认证或企业管理模块。
+ */
 const MarketingPage = () => import('@/views/MarketingPage.vue');
 const InformationPage = () => import('@/views/InformationPage.vue');
 const AuthPage = () => import('@/views/AuthPage.vue');
@@ -68,11 +71,18 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes,
+  /**
+   * 每次路由切换将主页面滚动到顶部；官网锚点滚动由 MarketingPage 自行处理。
+   */
   scrollBehavior() {
     return { top: 0 };
   }
 });
 
+/**
+ * 门户全局导航守卫依次完成标题设置、登录态分流、企业上下文补载和企业成员资格校验。
+ * 已登录用户不能返回访客登录页；需要企业的页面在无企业时跳转占位页，并保存原地址供后续流程使用。
+ */
 router.beforeEach(async (to, from, next) => {
   document.title = to.meta.title ? `${to.meta.title} - iDatag` : 'iDatag';
   if (to.meta.requiresAuth && !store.getters.isLogin) {

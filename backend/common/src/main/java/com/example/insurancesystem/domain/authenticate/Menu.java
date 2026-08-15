@@ -16,6 +16,9 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
+/**
+ * 权限菜单实体，同时描述前端菜单树节点和后端权限代码，支持父子层级、路由及显示状态配置。
+ */
 public class Menu implements Serializable {
     private static final long serialVersionUID = -54979041104113736L;
     @TableId(type = IdType.AUTO)

@@ -29,6 +29,10 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
+/**
+ * 编排车险系统的账号密码登录、SaaS 门户单点登录、会话注销和邮箱找回密码流程。
+ * 两种登录方式最终统一建立带会话标识的 JWT，并由会话管理器落实单账号会话控制。
+ */
 public class LoginServiceImpl implements LoginService {
 
     @Autowired
@@ -53,6 +57,9 @@ public class LoginServiceImpl implements LoginService {
     private MenuMapper menuMapper;
 
     @Override
+    /**
+     * 使用 Spring Security 校验账号密码，并要求用户已加入企业后才允许进入车险业务系统。
+     */
     public ResponseResult login(User user) {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
         Authentication authenticate;
@@ -74,6 +81,10 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    /**
+     * 用 SaaS 门户签发的一次性授权码换取用户和企业身份，再从本系统加载成员状态及菜单权限。
+     * 只有仍属于目标企业且账号、成员均启用的用户才能建立车险系统会话。
+     */
     public ResponseResult ssoLogin(String code) {
         if (code == null || code.isBlank()) {
             throw new BusinessException(400, "授权码不能为空");
@@ -93,6 +104,10 @@ public class LoginServiceImpl implements LoginService {
         return createSession(loginUser);
     }
 
+    /**
+     * 为已经完成身份校验的用户创建统一登录结果。
+     * JWT 中写入独立 jti，并将同一标识连同登录主体保存到会话存储，供后续鉴权及主动失效使用。
+     */
     private ResponseResult createSession(LoginUser loginUser) {
         String userid = loginUser.getUser().getId().toString();
         // 用jti来作为会话级标识
@@ -109,6 +124,9 @@ public class LoginServiceImpl implements LoginService {
         return result;
     }
 
+    /**
+     * 将 SaaS 身份响应中的数值字段安全转换为 Long；字段缺失或格式异常视为上游认证结果错误。
+     */
     private Long number(Object value, String label) {
         if (value instanceof Number) return ((Number) value).longValue();
         try {
@@ -119,6 +137,9 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    /**
+     * 删除当前 JWT 对应的服务端会话，使该令牌后续无法继续通过鉴权。
+     */
     public ResponseResult logout() {
         UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         LoginUser loginUser = (LoginUser) authentication.getPrincipal();
@@ -129,6 +150,10 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    /**
+     * 向已登记邮箱发送六位找回密码验证码。
+     * 同一邮箱一分钟内禁止重复发送，验证码及发送时间在 Redis 中保留五分钟。
+     */
     public ResponseResult getEmailCode(String email) {
         String storeCode = redisCache.getCacheObject("email:" + email);
         if (storeCode != null) {
@@ -155,6 +180,9 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    /**
+     * 校验邮箱验证码后更新密码，并在验证成功时立即删除验证码，防止重复使用。
+     */
     public ResponseResult forgetPassword(String email, String code, String password) {
         String realCode = redisCache.getCacheObject("email:" + email);
         if(realCode == null){

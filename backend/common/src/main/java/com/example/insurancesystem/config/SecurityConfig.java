@@ -21,6 +21,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
+/**
+ * 两个业务后端共享的 Spring Security 配置，采用无状态 JWT 与方法级权限控制。
+ * 登录、注册、SSO 交换和公开套餐接口允许匿名，其余请求必须由 JWT 过滤器建立认证上下文。
+ */
 public class SecurityConfig {
 
     @Autowired
@@ -39,16 +43,26 @@ public class SecurityConfig {
     private Environment environment;
 
     @Bean
+    /**
+     * 提供 BCrypt 密码编码器，登录校验、注册和密码重置使用同一不可逆哈希算法。
+     */
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
+    /**
+     * 暴露 Spring 自动装配的 AuthenticationManager，供登录服务执行用户名密码认证。
+     */
     public AuthenticationManager authenticationManager() throws Exception{
         return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
+    /**
+     * 构建无状态安全过滤链：关闭基于 Cookie 会话的 CSRF，声明匿名端点，将 JWT 过滤器置于用户名密码过滤器前，
+     * 并注册统一的未认证与无权限响应。非生产环境启用 Spring CORS，生产跨域由外部受控层处理。
+     */
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf().disable()
@@ -63,9 +77,7 @@ public class SecurityConfig {
                         "/auth/sso/exchange", "/portal/finance/plans"
                 ).permitAll()
                 .anyRequest().authenticated();
-        // 添加过滤器
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
-        // 配置异常处理器
         http.exceptionHandling()
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler);

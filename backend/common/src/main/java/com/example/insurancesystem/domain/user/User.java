@@ -16,6 +16,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @AllArgsConstructor
 @NoArgsConstructor
 @TableName(value = "tenant_user")
+/**
+ * 车险系统账号实体，保存认证资料、个人信息、审核状态和企业归属；密码字段仅持久化哈希值。
+ */
 public class User implements Serializable {
     private static final long serialVersionUID = -42345534L;
 

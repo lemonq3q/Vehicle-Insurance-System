@@ -8,6 +8,9 @@ import lombok.Data;
 
 @Data
 @TableName("tenant_member")
+/**
+ * 车险系统用户与 SaaS 企业租户的同步关联实体，为车险数据写入提供 enterprise_id 归属。
+ */
 public class TenantMember {
     @TableId(type = IdType.AUTO)
     private Long id;

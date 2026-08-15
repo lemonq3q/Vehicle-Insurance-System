@@ -13,6 +13,10 @@ import java.io.IOException;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+/**
+ * 维护模式入口过滤器以最高优先级运行，在安全认证及业务处理前拒绝新请求，
+ * 从而配合 MaintenanceManager 等待已进入的请求排空并建立稳定维护窗口。
+ */
 public class MaintenanceFilter implements Filter {
 
     @Autowired
@@ -22,6 +26,10 @@ public class MaintenanceFilter implements Filter {
     private boolean corsEnabled;
 
     @Override
+    /**
+     * 维护期间直接返回统一 JSON 503 业务响应；若应用启用跨域则同时补齐必要响应头，
+     * 使浏览器前端能够读取维护提示。非维护状态不改变请求并继续过滤链。
+     */
     public void doFilter(ServletRequest request,
                          ServletResponse response,
                          FilterChain chain) throws IOException, ServletException {
@@ -29,7 +37,9 @@ public class MaintenanceFilter implements Filter {
         HttpServletResponse res = (HttpServletResponse) response;
 
         if (maintenanceManager.isMaintenance()) {
-            // 维护中 → 直接返回
+            /*
+             * 响应在此终止，不进入认证、请求计数或控制器；因此维护任务开启后不会再增加活跃请求数。
+             */
             if (corsEnabled) {
                 res.setHeader("Access-Control-Allow-Origin", "*");
                 res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
@@ -41,7 +51,6 @@ public class MaintenanceFilter implements Filter {
             return;
         }
 
-        // 正常放行
         chain.doFilter(request, response);
     }
 }

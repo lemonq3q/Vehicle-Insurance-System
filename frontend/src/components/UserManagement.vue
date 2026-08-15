@@ -126,6 +126,10 @@ const selectParams = ref({
 
 const loading = ref(false);
 
+/**
+ * 在启用和禁用状态之间切换系统用户，成功后重新查询列表以采用后端最终状态。
+ * 更新期间使用全局遮罩，避免用户连续点击造成重复状态请求。
+ */
 const handleChangeStatus = async (index, row) => {
   try{
     Loading.open();
@@ -146,10 +150,20 @@ const handleChangeStatus = async (index, row) => {
   }
 }
 
+/**
+
+ * * 页码或每页条数变化时，保留角色、状态和关键字条件重新查询用户列表。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 携带用户 ID 进入系统用户编辑页，由目标页面读取完整资料并使用更新模式。
+
+ */
 const handleEdit = (index, row) => {
   router.push({
     path: '/home/editSystemUser',
@@ -160,6 +174,11 @@ const handleEdit = (index, row) => {
   });
 };
 
+/**
+
+ * * 进入系统用户新增页，不携带用户 ID，避免表单误加载已有账号。
+
+ */
 const handleAdd = () => {
   router.push({
     path: '/home/editSystemUser',
@@ -169,6 +188,11 @@ const handleAdd = () => {
   });
 }
 
+/**
+
+ * * 将用户关键字、机构、角色和状态筛选恢复为空值，为下一次查询准备默认条件。
+
+ */
 const handleReset = () => {
   selectParams.value = {
     blurParam: '',
@@ -179,6 +203,10 @@ const handleReset = () => {
 }
 
 
+/**
+ * 读取角色字典并转换为下拉选项，系统用户页面仅保留管理员与出单员两类可分配角色。
+ * 无论接口成功与否都会释放选项加载状态。
+ */
 const getRoleOption = async () => {
   try{
     loading.value = true;
@@ -200,11 +228,21 @@ const getRoleOption = async () => {
   }
 }
 
+/**
+
+ * * 从第一页执行新的用户筛选，避免旧分页位置超出新结果总页数。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 将后端秒级创建时间和性别编码转换为表格可读文本，其余用户字段保持接口原值。
+
+ */
 const buildTableData = (data) => {
   tableData.value = data.map(element => {
     element.createTime = formatSecondTimestamp(element.createTime);
@@ -213,6 +251,11 @@ const buildTableData = (data) => {
   });
 }
 
+/**
+
+ * * 把当前分页状态合并到用户筛选对象，形成系统用户查询接口的完整参数。
+
+ */
 const buildSelectParams = () => {
   let data = selectParams.value;
   data.pageSize = page.pageSize;
@@ -220,6 +263,11 @@ const buildSelectParams = () => {
   return data;
 }
 
+/**
+
+ * * 查询系统用户分页列表，转换展示字段并同步总记录数；异常时仍关闭表格加载态。
+
+ */
 const getData = async () => {
   try{
     tableLoading.value = true;
@@ -238,6 +286,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 经管理员二次确认后删除系统用户，成功时刷新列表；取消确认不会调用删除接口。
+
+ */
 const handleDelete = (index, row) => {
   ElMessageBox.confirm(
     '确认要删除此数据?',
@@ -268,6 +321,11 @@ const handleDelete = (index, row) => {
   })
 };
 
+/**
+
+ * * 页面挂载时并行启动角色选项与系统用户列表加载，使筛选框和表格尽快可用。
+
+ */
 onMounted(()=>{
   getRoleOption();
   getData();

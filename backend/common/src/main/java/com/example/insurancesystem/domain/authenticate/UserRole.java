@@ -11,6 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName(value = "user_role")
+/**
+ * 用户与系统角色的关联实体，用于持久化多角色授权关系。
+ */
 public class UserRole {
     @TableId(type = IdType.AUTO)
     private Long id;

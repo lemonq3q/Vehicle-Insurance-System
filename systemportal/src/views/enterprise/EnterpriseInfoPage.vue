@@ -122,6 +122,10 @@ import { getRoleName } from '@/utils/portalLabels';
 export default {
   name: 'EnterpriseInfoPage',
   components: { ConfirmDialog, InviteManagementPanel },
+  /**
+   * 保存企业资料页展示与编辑所需的完整上下文。企业、当前成员、钱包和订阅信息由同一接口返回，
+   * 编辑表单使用企业对象的副本，避免用户尚未保存时直接污染页面当前展示的数据。
+   */
   data() {
     return {
       enterprise: null,
@@ -135,37 +139,64 @@ export default {
       inviteForm: { code: '' }
     };
   },
+  /**
+   * 页面创建后获取当前用户所属企业的最新资料，确保权限区块、余额和套餐状态基于服务端结果渲染。
+   */
   async created() {
     await this.loadData();
   },
   computed: {
+    /**
+     * 优先使用全局企业上下文中的角色；上下文尚未加载完成时回退到详情接口返回的成员角色。
+     */
     activeRoleCode() {
       return this.$store.getters.roleCode || this.member?.roleCode || '';
     },
+    /**
+     * 企业基础资料属于拥有者专属配置，编辑入口只向 OWNER 开放。
+     */
     canEditEnterprise() {
       return this.$store.getters.isOwner;
     },
+    /**
+     * 拥有者不能直接退出企业；管理员和出单员可通过退出流程解除成员关系。
+     */
     canExitEnterprise() {
       return ['ADMIN', 'ISSUER'].includes(this.activeRoleCode);
     },
+    /**
+     * 邀请码管理沿用全局企业管理权限，统一覆盖拥有者和管理员两类角色。
+     */
     canManageInvites() {
       return this.$store.getters.canManageEnterprise;
     },
+    /**
+     * 仅将状态值为 1 的订阅视为当前有效套餐，并对套餐关联数据缺失给出可识别的兜底文案。
+     */
     subscriptionName() {
       if (Number(this.subscription?.status) !== 1) return '暂未订阅';
       return this.subscription?.plan?.name || '套餐信息缺失';
     }
   },
   watch: {
+    /**
+     * 企业上下文刷新可能改变当前角色；一旦失去拥有者权限，立即退出编辑态，防止继续提交过期权限下的表单。
+     */
     activeRoleCode() {
       if (!this.canEditEnterprise && this.isEditingEnterprise) this.cancelEnterpriseEdit();
     }
   },
   methods: {
     roleName: getRoleName,
+    /**
+     * 将接口返回的余额统一显示为两位小数；空值按零处理，避免未创建钱包时页面出现 NaN。
+     */
     money(value) {
       return Number(value || 0).toFixed(2);
     },
+    /**
+     * 一次性同步企业、成员、钱包和订阅快照，并为缺失的可选关联对象设置稳定默认值。
+     */
     async loadData() {
       const response = await getEnterpriseCurrent();
       const data = response.data || {};
@@ -175,15 +206,25 @@ export default {
       this.subscription = data.subscription || { status: 0, userLimit: 0, plan: {} };
       this.form = this.enterprise ? { ...this.enterprise } : {};
     },
+    /**
+     * 在确认拥有者权限后复制当前企业资料进入表单，开始一个可取消的本地编辑会话。
+     */
     beginEnterpriseEdit() {
       if (!this.canEditEnterprise) return;
       this.form = { ...this.enterprise };
       this.isEditingEnterprise = true;
     },
+    /**
+     * 丢弃尚未提交的字段修改，以服务端最近一次加载的企业资料恢复表单。
+     */
     cancelEnterpriseEdit() {
       this.form = { ...this.enterprise };
       this.isEditingEnterprise = false;
     },
+    /**
+     * 只提交允许编辑的企业名称和联系人字段。保存成功后同时刷新本页数据与 Vuex 企业上下文，
+     * 使侧栏、权限判断及其他依赖企业名称的区域立即保持一致。
+     */
     async saveEnterprise() {
       if (!this.canEditEnterprise) return;
       const response = await updateEnterprise({
@@ -196,13 +237,22 @@ export default {
       this.isEditingEnterprise = false;
       await this.$store.dispatch('loadContext');
     },
+    /**
+     * 仅允许可退出角色打开二次确认框，避免通过模板事件绕过按钮的显示条件。
+     */
     openExitDialog() {
       if (!this.canExitEnterprise) return;
       this.exitDialog.visible = true;
     },
+    /**
+     * 请求执行期间锁定确认框，防止用户关闭后误认为退出操作已取消。
+     */
     closeExitDialog() {
       if (!this.exitDialog.loading) this.exitDialog.visible = false;
     },
+    /**
+     * 解除当前成员与企业的关系，随后刷新全局企业上下文和本页快照，使页面切换到无企业状态。
+     */
     async confirmExitEnterprise() {
       if (!this.canExitEnterprise) return;
       this.exitDialog.loading = true;
@@ -215,11 +265,17 @@ export default {
         this.exitDialog.loading = false;
       }
     },
+    /**
+     * 创建新企业后重新加载用户企业上下文，再读取企业详情，完成无企业页面到管理页面的状态切换。
+     */
     async createNewEnterprise() {
       await createEnterprise(this.createForm);
       await this.$store.dispatch('loadContext');
       await this.loadData();
     },
+    /**
+     * 使用邀请码加入企业，并刷新全局角色与当前企业资料，保证后续菜单权限按新成员身份生效。
+     */
     async joinByInvite() {
       await joinEnterpriseByInvite(this.inviteForm);
       await this.$store.dispatch('loadContext');

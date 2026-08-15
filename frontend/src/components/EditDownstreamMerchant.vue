@@ -207,12 +207,21 @@ const oriInfo = ref({});
 
 // const defaultAreaOption = computed(() => buildSelectorOptionByArray(downstreamInfo.businessArea));
 
+/**
+
+ * * 更新模式读取指定下游机构详情；新增模式同时保留机构与首个用户两张空表单。
+
+ */
 onMounted(() => {
   if (type == 'update'){
     getDataById();
   }
 });
 
+/**
+ * 先校验机构资料；新增时还必须校验首个机构用户，更新时只保存机构本身。
+ * 两层表单均通过后才调用新增接口，避免创建没有可登录管理员的下游机构。
+ */
 const handleSubmit = (formEl1, formEl2) => {
   if (!formEl1) return;
   formEl1.validate((valid) => {
@@ -232,6 +241,11 @@ const handleSubmit = (formEl1, formEl2) => {
   });
 };
 
+/**
+
+ * * 把首个用户嵌入机构请求体后一次创建下游机构及其初始账号。
+
+ */
 const addSubmit = async () => {
   try{
     Loading.open();
@@ -249,6 +263,11 @@ const addSubmit = async () => {
   }
 }
 
+/**
+
+ * * 将机构所在地级联路径转换为后端保存的市级编码，其余银行和基础资料保持表单值。
+
+ */
 const buildInsertData = () => {
   const data = { ...downstreamInfo };
   data.location = downstreamInfo.location[1];
@@ -260,6 +279,11 @@ const buildInsertData = () => {
   return data;
 }
 
+/**
+
+ * * 把原始下游机构名称、类型、银行资料和地址回填表单，并将地区编码恢复为级联路径。
+
+ */
 const buildDownstreamInfo = () => {
   downstreamInfo.name = oriInfo.value.name;
   downstreamInfo.type = oriInfo.value.type;
@@ -274,6 +298,11 @@ const buildDownstreamInfo = () => {
   // downstreamInfo.defaultAreaCode = getCascadeAreaCode(oriInfo.value.defaultAreaCode);
 }
 
+/**
+
+ * * 查询待编辑下游机构并保存原始快照，成功后建立页面表单状态。
+
+ */
 const getDataById = async () => {
   try{
     Loading.open();
@@ -290,6 +319,11 @@ const getDataById = async () => {
   }
 }
 
+/**
+
+ * * 保留机构原 ID 和编码提交资料更新，不修改新增时创建的初始用户关系。
+
+ */
 const updateSubmit = async () => {
   try{
     Loading.open();
@@ -309,10 +343,20 @@ const updateSubmit = async () => {
   }
 }
 
+/**
+
+ * * 使用原始机构快照恢复当前表单，撤销尚未提交的编辑。
+
+ */
 const handleReset = () => {
   buildDownstreamInfo();
 }
 
+/**
+
+ * * 返回下游机构列表页，不触发保存操作。
+
+ */
 const handleBack = () => {
   router.push('/home/downstreamMerchant');
 }

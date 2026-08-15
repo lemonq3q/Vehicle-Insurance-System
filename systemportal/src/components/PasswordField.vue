@@ -30,6 +30,9 @@ export default {
     modelValue: { type: String, default: '' },
     autocomplete: { type: String, default: 'current-password' }
   },
+  /**
+   * 维护密码明文显示开关；密码值本身始终由父组件通过 v-model 管理，组件不额外复制敏感内容。
+   */
   data() {
     return { visible: false };
   }

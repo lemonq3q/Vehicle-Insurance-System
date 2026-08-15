@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
 @TableName(value = "biz_vehicle_license", autoResultMap = true)
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 机动车行驶证实体，保存车主、车牌、车架号、登记日期、使用性质和车辆规格等工单关联信息。
+ */
 public class VehicleLicense {
     /**
      * 主键ID

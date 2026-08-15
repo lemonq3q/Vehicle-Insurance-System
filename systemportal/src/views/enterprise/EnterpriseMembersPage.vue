@@ -142,6 +142,9 @@ import { getRoleName } from '@/utils/portalLabels';
 export default {
   name: 'EnterpriseMembersPage',
   components: { ConfirmDialog, LayPagination },
+  /**
+   * 分别维护成员列表与变更记录的查询、分页和总数，并保存移除成员及转让拥有者两个高风险操作的确认状态。
+   */
   data() {
     return {
       members: [],
@@ -155,29 +158,50 @@ export default {
     };
   },
   computed: {
+    /**
+     * 成员角色、状态和移除操作统一受企业管理权限控制。
+     */
     canManage() {
       return this.$store.getters.canManageEnterprise;
     },
+    /**
+     * 企业拥有者拥有转让所有权等不可由普通管理员执行的能力。
+     */
     isOwner() {
       return this.$store.getters.isOwner;
     },
+    /**
+     * 将目标成员姓名带入所有权转让警告，并明确转让后当前用户会降为管理员。
+     */
     transferDialogMessage() {
       const memberName = this.transferDialog.member?.realName || '';
       return `确定将企业拥有者转让给“${memberName}”吗？转让后你的角色将变更为管理员，请谨慎操作。`;
     },
+    /**
+     * 将待移除成员姓名和立即失去数据访问权的后果写入确认信息，降低误操作风险。
+     */
     removeDialogMessage() {
       const memberName = this.removeDialog.member?.realName || '';
       return `确定将“${memberName}”踢出当前企业吗？该成员将立即失去企业数据访问权限，重新加入时需要新的邀请码。`;
     }
   },
+  /**
+   * 页面初始化时并行加载成员与审计记录，两套分页互不依赖，无需串行等待。
+   */
   async created() {
     await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
   },
   methods: {
     roleName: getRoleName,
+    /**
+     * 将成员状态枚举映射为页面文案，并为后端未知状态保留明确兜底显示。
+     */
     memberStatusName(status) {
       return { 0: '已停用', 1: '已启用', 2: '待审核' }[status] || '未知';
     },
+    /**
+     * 将成员变更事件代码转换为可读业务动作，用于审计记录列表。
+     */
     eventName(eventType) {
       return {
         JOIN: '加入企业',
@@ -187,6 +211,9 @@ export default {
         OWNER_TRANSFER: '拥有者转让'
       }[eventType] || eventType || '未知';
     },
+    /**
+     * 根据退出、踢出和拥有者转让等事件风险选择标签样式，其余事件使用默认样式。
+     */
     changeTagClass(eventType) {
       return {
         EXIT: 'gray',
@@ -194,60 +221,99 @@ export default {
         OWNER_TRANSFER: 'blue'
       }[eventType] || '';
     },
+    /**
+     * 组合变更前后的角色名称；非角色类事件没有角色快照时显示占位符。
+     */
     roleChangeText(item) {
       if (!item.beforeRoleCode && !item.afterRoleCode) return '-';
       const beforeRole = item.beforeRoleCode ? this.roleName(item.beforeRoleCode) : '-';
       const afterRole = item.afterRoleCode ? this.roleName(item.afterRoleCode) : '-';
       return `${beforeRole} -> ${afterRole}`;
     },
+    /**
+     * 按成员筛选与分页条件查询列表，并同步总数供分页组件使用。
+     */
     async loadMembers() {
       const response = await getMembers(this.query);
       this.members = response.data.table;
       this.memberTotal = Number(response.data.total || 0);
     },
+    /**
+     * 按事件类型和独立分页条件查询成员变更审计记录。
+     */
     async loadChangeLogs() {
       const response = await getMemberChangeLogs(this.changeQuery);
       this.changeLogs = response.data.table;
       this.changeTotal = Number(response.data.total || 0);
     },
+    /**
+     * 发起新成员筛选时回到第一页，避免旧页码导致命中结果不可见。
+     */
     searchMembers() {
       this.query.pageNum = 1;
       this.loadMembers();
     },
+    /**
+     * 清空姓名关键字和角色筛选，同时保留当前每页条数并重新查询。
+     */
     resetMemberQuery() {
       this.query = { ...this.query, pageNum: 1, keyword: '', roleCode: '' };
       this.loadMembers();
     },
+    /**
+     * 响应成员分页页码变化并刷新列表。
+     */
     changeMemberPage(pageNum) {
       this.query.pageNum = pageNum;
       this.loadMembers();
     },
+    /**
+     * 修改成员列表每页数量后回到第一页，确保请求页码仍然有效。
+     */
     changeMemberPageSize(pageSize) {
       this.query.pageNum = 1;
       this.query.pageSize = pageSize;
       this.loadMembers();
     },
+    /**
+     * 应用审计事件筛选并将审计列表页码重置到首页。
+     */
     searchChanges() {
       this.changeQuery.pageNum = 1;
       this.loadChangeLogs();
     },
+    /**
+     * 清空审计事件筛选但保留每页条数，然后重新读取变更记录。
+     */
     resetChangeQuery() {
       this.changeQuery = { ...this.changeQuery, pageNum: 1, eventType: '' };
       this.loadChangeLogs();
     },
+    /**
+     * 响应审计记录页码变化并查询对应页。
+     */
     changeLogPage(pageNum) {
       this.changeQuery.pageNum = pageNum;
       this.loadChangeLogs();
     },
+    /**
+     * 调整审计记录每页数量并从第一页重新计算分页。
+     */
     changeLogPageSize(pageSize) {
       this.changeQuery.pageNum = 1;
       this.changeQuery.pageSize = pageSize;
       this.loadChangeLogs();
     },
+    /**
+     * 更新目标成员角色后同时刷新成员现状和审计记录，让角色结果及其操作记录同步呈现。
+     */
     async changeRole(item, roleCode) {
       await updateMemberRole({ memberId: item.id, roleCode });
       await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
     },
+    /**
+     * 在启用和停用状态间切换成员；请求异常由全局拦截器统一提示，本方法保留当前列表避免二次报错。
+     */
     async toggleMemberStatus(item) {
       try {
         await updateMemberStatus({
@@ -259,20 +325,32 @@ export default {
         // Request errors are displayed by the Axios interceptor.
       }
     },
+    /**
+     * 管理者不能移除企业拥有者或自己，防止企业失去唯一拥有者以及当前会话自我失效。
+     */
     canRemoveMember(item) {
       return this.canManage
         && item.roleCode !== 'OWNER'
         && Number(item.userId) !== Number(this.$store.state.user?.id);
     },
+    /**
+     * 保存待移除成员并打开二次确认框。
+     */
     openRemoveDialog(item) {
       this.removeDialog.member = item;
       this.removeDialog.visible = true;
     },
+    /**
+     * 移除请求期间锁定弹窗；空闲时清理目标成员，避免下次确认沿用旧对象。
+     */
     closeRemoveDialog() {
       if (this.removeDialog.loading) return;
       this.removeDialog.visible = false;
       this.removeDialog.member = null;
     },
+    /**
+     * 移除成员后并行刷新成员与审计记录；若当前非首页因删除变空，则回退一页获取有效数据。
+     */
     async confirmRemoveMember() {
       const member = this.removeDialog.member;
       if (!member) return;
@@ -290,15 +368,24 @@ export default {
         this.removeDialog.loading = false;
       }
     },
+    /**
+     * 记录拟接收企业所有权的成员并显示风险确认框。
+     */
     openTransferDialog(item) {
       this.transferDialog.member = item;
       this.transferDialog.visible = true;
     },
+    /**
+     * 所有权转让请求执行期间禁止关闭，空闲关闭时同步清除目标成员。
+     */
     closeTransferDialog() {
       if (this.transferDialog.loading) return;
       this.transferDialog.visible = false;
       this.transferDialog.member = null;
     },
+    /**
+     * 转让企业所有权后刷新全局角色上下文、成员列表与审计记录，确保当前用户降权和新拥有者状态立即生效。
+     */
     async confirmTransfer() {
       const member = this.transferDialog.member;
       if (!member) return;

@@ -12,6 +12,9 @@ import java.util.stream.Collectors;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 下游机构 Excel 导出行模型，通过 EasyExcel 注解定义面向业务人员的列名和展示顺序。
+ */
 public class DownstreamExcelDTO {
 
     @ExcelProperty("商家编号")

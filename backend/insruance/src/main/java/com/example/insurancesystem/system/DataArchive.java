@@ -10,6 +10,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
+/**
+ * 执行车险业务的物理归档与无主附件清理。
+ * 已逻辑删除的数据先复制到结构匹配的归档表，再从在线表移除，以控制业务表体量并保留历史记录。
+ */
 public class DataArchive {
     private static final List<String> ARCHIVE_TABLES = List.of(
             "tenant_user", "tenant_enterprise", "tenant_member",
@@ -23,16 +27,26 @@ public class DataArchive {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * 使用 JDBC 执行跨多张业务表的通用归档 SQL。
+     */
     public DataArchive(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional
+    /**
+     * 先清理超过保留期且未关联业务的 OSS 文件，再依次归档所有配置表中的逻辑删除记录。
+     */
     public void archive() {
         expiredFileClean();
         ARCHIVE_TABLES.forEach(this::archiveTable);
     }
 
+    /**
+     * 删除三天前上传但始终未关联业务的文件。只有 OSS 删除成功后才把数据库记录标记删除，
+     * 单个文件失败不会阻断其他文件及后续归档任务。
+     */
     public void expiredFileClean() {
         List<Map<String, Object>> files = jdbcTemplate.queryForList(
                 "SELECT id,path FROM sys_file WHERE deleted=0 AND is_linked=0 AND updated_at<DATE_SUB(NOW(),INTERVAL 3 DAY)");
@@ -46,6 +60,9 @@ public class DataArchive {
         }
     }
 
+    /**
+     * 根据源表和归档表共有列动态生成迁移语句，兼容两张表在演进过程中存在字段差异。
+     */
     private void archiveTable(String sourceTable) {
         String archiveTable = sourceTable + "_archive";
         List<String> columns = jdbcTemplate.queryForList(

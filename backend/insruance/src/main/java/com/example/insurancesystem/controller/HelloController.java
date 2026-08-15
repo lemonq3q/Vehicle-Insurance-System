@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/hello")
+/**
+ * 用于验证认证链和 hello:select 权限配置的轻量探活控制器，不承载实际车险业务。
+ */
 public class HelloController {
 
     @Autowired
@@ -17,6 +20,9 @@ public class HelloController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('hello:select')")
+    /**
+     * 在权限校验通过后返回固定文本，用于开发环境快速检查 JWT 与方法级鉴权是否生效。
+     */
     public String hello(){
         return "hello";
     }

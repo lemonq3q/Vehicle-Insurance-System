@@ -31,9 +31,21 @@ import { jsonStrToObj } from '@/utils/convert';
 const store = useStore();
 const router = useRouter();
 
+/**
+
+ * * 从 Vuex 读取已经按业务 key 去重的系统通知列表，供弹层统一渲染。
+
+ */
 const notices = computed(() => store.state.notice.notices);
+/**
+ * * 读取个人与全企业续保数量，作为通知角标的权威数据源。
+ */
 const renewCount = computed(() => store.state.notice.renewCount);
 
+/**
+ * 根据当前用户权限选择角标口径：拥有 all 权限的管理员优先显示全企业续保数，普通用户显示个人数。
+ * 接口尚未返回全企业数量时回退到个人数量，避免角标短暂显示 undefined。
+ */
 const badgeValue = computed(() => {
   const user = jsonStrToObj(localStorage.getItem('userInfo'));
   const isAdmin = user?.perms?.includes('all');
@@ -43,12 +55,22 @@ const badgeValue = computed(() => {
   return renewCount.value.selfCount ?? 0;
 });
 
+/**
+
+ * * 点击通知时进入通知携带的业务路由；没有路由的纯提示通知只展示内容，不改变当前页面。
+
+ */
 const handleClick = (item) => {
   if (item?.route) {
     router.push(item.route);
   }
 };
 
+/**
+
+ * * 清空当前账号运行时通知和续保角标；后续页头刷新仍可根据真实待办重新生成续保通知。
+
+ */
 const handleClear = () => {
   store.commit('notice/clear');
 };
@@ -115,4 +137,3 @@ const handleClear = () => {
   line-height: 18px;
 }
 </style>
-

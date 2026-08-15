@@ -60,14 +60,23 @@ export default {
   },
   emits: ['confirm', 'cancel'],
   computed: {
+    /**
+     * 使用组件实例唯一编号生成标题元素 ID，供 aria-labelledby 精确关联，避免同页多个弹窗发生 ID 冲突。
+     */
     titleId() {
       return `${this.$.uid}-confirm-dialog-title`;
     },
+    /**
+     * 为确认说明生成实例级唯一 ID，使辅助技术能够朗读当前弹窗的实际风险描述。
+     */
     messageId() {
       return `${this.$.uid}-confirm-dialog-message`;
     }
   },
   methods: {
+    /**
+     * 仅在异步确认操作未执行时发送取消事件，防止父组件请求处理中被关闭而产生状态错觉。
+     */
     cancel() {
       if (!this.loading) this.$emit('cancel');
     }

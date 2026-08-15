@@ -29,6 +29,10 @@
 <script>
 export default {
   name: 'MonitorLayout',
+  /**
+   * 维护侧栏折叠状态和监控后台菜单。平台用户管理菜单仅向 ADMIN 注入，
+   * VIEWER 即使手工访问对应路由也会由路由守卫再次拦截。
+   */
   data() {
     return {
       collapsed: false,
@@ -43,6 +47,11 @@ export default {
       ]
     };
   },
-  computed: { currentRole() { return localStorage.getItem('monitorRole') || 'ADMIN'; } }
+  computed: {
+    /**
+     * 从本地会话读取监控角色；开发和 mock 环境没有角色时默认以管理员展示完整功能。
+     */
+    currentRole() { return localStorage.getItem('monitorRole') || 'ADMIN'; }
+  }
 };
 </script>

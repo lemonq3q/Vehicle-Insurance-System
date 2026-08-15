@@ -396,6 +396,11 @@ const rules = reactive({
   ]
 })
 
+/**
+
+ * * 根据接单机构查询该机构下可选处理人员；机构为空时清空人员选项，防止提交上一机构的用户。
+
+ */
 const getUserOptionByMerchantId = async () => {
   loading.acceptUser = true;
   if (acceptOrderParams.handleMerchantId == null || acceptOrderParams.handleMerchantId == undefined){
@@ -417,6 +422,11 @@ const getUserOptionByMerchantId = async () => {
   loading.acceptUser = false;
 }
 
+/**
+
+ * * 监听接单机构变化并即时刷新所属人员，确保机构与负责人始终属于同一业务范围。
+
+ */
 watch(
   () => acceptOrderParams.handleMerchantId, 
   () => {
@@ -429,10 +439,22 @@ watch(
 );
 
 
+/**
+
+
+ * * 接单工作台挂载后按默认年度范围加载工单。
+
+
+ */
 onMounted(() => {
   getData();
 });
 
+/**
+
+ * * 恢复年度日期范围并清空工单机构、人员、地区、保险公司和状态筛选。
+
+ */
 const handleReset = () => {
   selectParams.blurParam = '';
   selectParams.dateRange = getLastYearRange();
@@ -445,10 +467,20 @@ const handleReset = () => {
   selectParams.status = ""
 }
 
+/**
+
+ * * 分页变化后保留现有接单筛选条件重新查询。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 模糊查询工单创建机构，构建带机构编码的远程筛选选项。
+
+ */
 const getCreateMerchantOption = async (blurParam) => {
   loading.createMerchant = true;
   await selectDownstreamOption(blurParam).then(res=>{
@@ -465,6 +497,11 @@ const getCreateMerchantOption = async (blurParam) => {
   loading.createMerchant = false;
 }
 
+/**
+
+ * * 模糊查询现有处理机构，用于列表筛选已分配工单。
+
+ */
 const getHandleMerchantOption = async (blurParam) => {
   loading.handleMerchant = true;
   await selectUpstreamOption(blurParam).then(res=>{
@@ -481,6 +518,11 @@ const getHandleMerchantOption = async (blurParam) => {
   loading.handleMerchant = false;
 }
 
+/**
+
+ * * 模糊查询现有处理人员，供接单列表按负责人过滤。
+
+ */
 const getHandleUserOpton = async (blurParam) => {
   loading.handleUser = true;
   await selectUserOption(blurParam).then(res=>{
@@ -497,6 +539,11 @@ const getHandleUserOpton = async (blurParam) => {
   loading.handleUser = false;
 }
 
+/**
+
+ * * 查询保险公司上游选项，用于按承保公司筛选待接或已接工单。
+
+ */
 const getInsuranceCompanyOption = async (blurParam) => {
   loading.insuranceCompany = true;
   await selectInusranceCompanyOptions(blurParam).then(res=>{
@@ -513,6 +560,11 @@ const getInsuranceCompanyOption = async (blurParam) => {
   loading.insuranceCompany = false;
 }
 
+/**
+
+ * * 查询可承接工单的机构选项，供接单弹窗选择目标机构。
+
+ */
 const getAcceptMerchantOption = async (blurParam) => { 
   loading.accpetMerchant = true;
   await selectUpstreamOption(blurParam).then(res=>{
@@ -529,6 +581,11 @@ const getAcceptMerchantOption = async (blurParam) => {
   loading.accpetMerchant = false;
 }
 
+/**
+
+ * * 标记详情页为可处理模式，并通过路由参数传递当前工单 ID。
+
+ */
 const handleDetail = (index, row) => {
   sessionStorage.setItem('workorderDetailType', 'handle');
   router.push({
@@ -539,6 +596,11 @@ const handleDetail = (index, row) => {
   });
 };
 
+/**
+
+ * * 打开接单弹窗：待接工单初始化为状态 2；重新分配时回填原机构、负责人及当前状态。
+
+ */
 const handleAccept = (index, row) => {
   dialog.value = true;
   acceptOrderParams.id = row.id;
@@ -559,11 +621,21 @@ const handleAccept = (index, row) => {
   }
 }
 
+/**
+
+ * * 重置到第一页后执行新的接单列表筛选。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 查询符合条件的工单并同步分页总数，再转换地区和业务时间用于表格展示。
+
+ */
 const getData = () => {
   let params = buildSearchParams();
   selectWorkorder(params).then(res => {
@@ -575,6 +647,11 @@ const getData = () => {
   });
 }
 
+/**
+
+ * * 将日期范围转换为秒级时间戳，并合并机构、人员、地区、保险公司、状态及分页条件。
+
+ */
 const buildSearchParams = () => {
   return {
     blurParam: selectParams.blurParam,
@@ -592,6 +669,11 @@ const buildSearchParams = () => {
   }
 }
 
+/**
+
+ * * 将工单地区编码与创建、跟进、承保时间转换为可读文本。
+
+ */
 const buildTableData = (data) => {
   data.forEach(item => {
     item.areaCode = getCascadeArea(item.areaCode);
@@ -602,11 +684,21 @@ const buildTableData = (data) => {
   tableData.value = data;
 }
 
+/**
+
+ * * 按当前接单列表筛选条件导出工单 Excel。
+
+ */
 const handleExport = () => {
   let params = buildSearchParams();
   getWorkorderExcel(params);
 }
 
+/**
+
+ * * 校验接单机构与处理人员的必填关系，通过后提交接单或重新分配。
+
+ */
 const handleAccpetSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -616,6 +708,11 @@ const handleAccpetSubmit = (formEl) => {
   });
 }
 
+/**
+
+ * * 保存目标机构、负责人和工单状态，成功后刷新接单列表采用后端最终结果。
+
+ */
 const handleAcceptUpdate = () => {
   acceptWorkorder(acceptOrderParams).then(res => {
     res = res.data;

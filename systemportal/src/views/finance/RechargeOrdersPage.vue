@@ -67,6 +67,9 @@ import { defaultMonthRange, rangeParams } from '@/utils/dateRange';
 export default {
   name: 'RechargeOrdersPage',
   components: { LayDatePicker, LayPagination },
+  /**
+   * 保存充值单号、状态、日期范围等查询条件以及分页结果；默认查询当前自然月以控制首次数据量。
+   */
   data() {
     return {
       query: { pageNum: 1, pageSize: 10, rechargeNo: '', status: '', dateRange: defaultMonthRange() },
@@ -74,31 +77,52 @@ export default {
       total: 0
     };
   },
+  /**
+   * 页面创建后按默认月份加载企业充值订单。
+   */
   created() {
     this.loadData();
   },
   methods: {
     statusName: getStatusName,
+    /**
+     * 将支付渠道枚举转换为列表中的紧凑文案，未知渠道直接展示代码。
+     */
     channelName(channel) {
       return { WECHAT: '微信', ALIPAY: '支付宝', BANK: '银行转账' }[channel] || channel;
     },
+    /**
+     * 将日期范围控件值转换为后端需要的起止参数，并移除仅供页面绑定的 dateRange 字段后查询分页数据。
+     */
     async loadData() {
       const response = await getRechargeOrders({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });
       this.rows = response.data.table;
       this.total = Number(response.data.total || 0);
     },
+    /**
+     * 应用当前筛选时回到第一页，避免旧页码在缩小结果集后超出范围。
+     */
     search() {
       this.query.pageNum = 1;
       this.loadData();
     },
+    /**
+     * 清空订单号和状态并恢复当前月范围，同时保留用户选择的每页条数。
+     */
     resetQuery() {
       this.query = { ...this.query, pageNum: 1, rechargeNo: '', status: '', dateRange: defaultMonthRange() };
       this.loadData();
     },
+    /**
+     * 切换充值订单页码并重新查询。
+     */
     changePage(pageNum) {
       this.query.pageNum = pageNum;
       this.loadData();
     },
+    /**
+     * 调整每页条数后从第一页重新加载，保证页码在新分页规模内有效。
+     */
     changePageSize(pageSize) {
       this.query.pageNum = 1;
       this.query.pageSize = pageSize;

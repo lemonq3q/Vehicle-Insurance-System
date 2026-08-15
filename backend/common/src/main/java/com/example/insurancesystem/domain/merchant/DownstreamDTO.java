@@ -10,6 +10,9 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 下游合作机构详情传输对象，聚合商户基础资料、区域和联系人信息供车险业务页面展示与编辑。
+ */
 public class DownstreamDTO {
     private Long id;
 

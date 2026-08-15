@@ -298,6 +298,9 @@ const registerRules = reactive({
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
     { 
+      /**
+       * * 校验注册页两次密码一致性，并通过 Element Plus callback 返回结果。
+       */
       validator: (rule, value, callback) => {
         if (value !== registerForm.password) {
           callback(new Error('两次输入的密码不一致'));
@@ -345,6 +348,9 @@ const forgetRules = reactive({
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     { 
+      /**
+       * * 校验找回密码流程中的确认密码，防止验证码通过后写入非预期密码。
+       */
       validator: (rule, value, callback) => {
         if (value !== forgetForm.password) {
           callback(new Error('两次输入的新密码不一致'));
@@ -358,6 +364,10 @@ const forgetRules = reactive({
 });
 
 // 获取验证码（60s倒计时）
+/**
+ * 校验邮箱后申请找回密码验证码；发送成功才启动 60 秒倒计时并禁用重复申请。
+ * 接口失败会立即恢复按钮，倒计时结束后重置文案和可用状态。
+ */
 const getCode = async () => {
   // 1. 先校验手机号
   if (!forgetForm.email || forgetForm.email == '' || !judgeEmail(forgetForm.email)) {
@@ -402,6 +412,9 @@ const getCode = async () => {
 };
 
 // 找回密码提交
+/**
+ * * 校验邮箱、验证码和两次新密码后提交重置；成功时切回登录标签并清除全部敏感表单数据。
+ */
 const handleForgetPassword = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -435,6 +448,10 @@ const handleForgetPassword = (formEl) => {
 };
 
 // 登录处理
+/**
+ * 校验账号密码并建立车险会话，成功后同步带过期时间的 token、本地用户资料和 Vuex 权限菜单，
+ * 最后进入工作台；失败时不覆盖浏览器现有身份数据。
+ */
 const handleLogin = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -460,6 +477,9 @@ const handleLogin = (formEl) => {
 };
 
 // 注册处理
+/**
+ * * 校验注册资料后移除仅用于前端比对的 confirmPassword，再提交待审核账号申请。
+ */
 const handleRegister = async (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -483,6 +503,9 @@ const handleRegister = async (formEl) => {
 };
 
 // 销毁定时器
+/**
+ * * 离开登录页时清理验证码倒计时，避免已销毁组件继续更新响应式状态。
+ */
 onUnmounted(() => {
   if (codeTimer) clearInterval(codeTimer);
 });

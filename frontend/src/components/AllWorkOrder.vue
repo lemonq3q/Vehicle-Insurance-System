@@ -390,14 +390,33 @@ const insuranceCompanyOptions = ref([]);
 
 
 
+/**
+
+
+
+ * * 工单总览挂载后按默认“最近一周”条件加载首屏数据。
+
+
+
+ */
 onMounted(() => {
   getData();
 });
 
+/**
+
+ * * 保留筛选和分页状态刷新列表，供新增抽屉关闭或其他业务操作完成后同步最新工单状态。
+
+ */
 const handleRefresh = () => {
   getData();
 }
 
+/**
+
+ * * 恢复工单总览默认查询口径：最近一周创建的全部工单，并清空机构、人员、地区和状态条件。
+
+ */
 const handleReset = () => {
   selectParams.blurParam = '';
   selectParams.dateRange = getLastWeekRange();
@@ -410,10 +429,20 @@ const handleReset = () => {
   selectParams.status = ""
 }
 
+/**
+
+ * * 分页状态变化后沿用当前工单筛选条件重新查询。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 模糊查询可接单的系统人员，并组合姓名与账号作为弹窗选项；finally 保证远程加载状态复位。
+
+ */
 const getAcceptUserOption = async (blurParam) => {
   try{
     loading.acceptUser = true;
@@ -434,6 +463,11 @@ const getAcceptUserOption = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 打开接单弹窗并建立待提交状态：初始工单推进到状态 2，已处理工单保留当前状态供调整负责人。
+
+ */
 const handleAccept = (index, row) => {
   dialog.value = true;
   acceptOrderParams.id = row.id;
@@ -448,6 +482,13 @@ const handleAccept = (index, row) => {
 }
 
 
+/**
+
+
+ * * 模糊查询工单创建机构，使用机构编码和名称构建筛选下拉选项。
+
+
+ */
 const getCreateMerchantOption = async (blurParam) => {
   try{
     loading.createMerchant = true;
@@ -484,6 +525,11 @@ const getCreateMerchantOption = async (blurParam) => {
 //   loading.handleMerchant = false;
 // }
 
+/**
+
+ * * 模糊查询工单处理人员，供总览列表按负责人筛选。
+
+ */
 const getHandleUserOpton = async (blurParam) => {
   try{
     loading.handleUser = true;
@@ -504,6 +550,11 @@ const getHandleUserOpton = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 模糊查询保险公司上游选项，供总览按承保公司限定工单范围。
+
+ */
 const getInsuranceCompanyOption = async (blurParam) => {
   try{
     loading.insuranceCompany = true;
@@ -524,6 +575,11 @@ const getInsuranceCompanyOption = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 将详情页设置为可处理模式并缓存工单 ID，再进入统一工单详情页面。
+
+ */
 const handleDetail = (index, row) => {
   sessionStorage.setItem('workorderDetailType', 'handle');
   sessionStorage.setItem('workorderId', row.id);
@@ -532,11 +588,20 @@ const handleDetail = (index, row) => {
   });
 };
 
+/**
+
+ * * 新筛选从第一页开始执行，防止旧页码超过新结果页数。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+ * 组装当前筛选条件查询工单分页数据，并在写入表格前转换地区与日期字段。
+ * 表格加载态在请求成功或异常时都会通过 finally 关闭。
+ */
 const getData = async () => {
   try{
     loading.table = true;
@@ -555,6 +620,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 把日期选择器转换为秒级边界、地区级联路径提取为市级编码，并合并机构、人员、状态及分页条件。
+
+ */
 const buildSearchParams = () => {
   return {
     blurParam: selectParams.blurParam,
@@ -572,6 +642,11 @@ const buildSearchParams = () => {
   }
 }
 
+/**
+
+ * * 将工单地区编码和创建、跟进、承保时间转换为表格使用的简短日期文本。
+
+ */
 const buildTableData = (data) => {
   data.forEach(item => {
     item.areaCode = getCascadeArea(item.areaCode);
@@ -582,6 +657,11 @@ const buildTableData = (data) => {
   tableData.value = data;
 }
 
+/**
+
+ * * 以新增模式打开工单抽屉，复用 EditBaseWorkorder 完成资料录入。
+
+ */
 const handleAdd = () => {
   type.value = 'add';
   drawer.value = true;
@@ -593,6 +673,11 @@ const handleAdd = () => {
 //   drawer.value = true;
 // }
 
+/**
+
+ * * 按当前列表完整筛选条件导出工单 Excel，并用全局遮罩覆盖文件生成与下载阶段。
+
+ */
 const handleExport = async () => {
   try{
     Loading.open();
@@ -604,6 +689,11 @@ const handleExport = async () => {
   }
 }
 
+/**
+
+ * * 在接单表单校验通过后提交负责人变更，缺少表单实例时直接终止。
+
+ */
 const handleAccpetSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -613,6 +703,11 @@ const handleAccpetSubmit = (formEl) => {
   });
 }
 
+/**
+
+ * * 保存接单人员和目标状态，成功后刷新总览列表；遮罩在所有结果路径中关闭。
+
+ */
 const handleAcceptUpdate = async () => {
   try{
     Loading.open();

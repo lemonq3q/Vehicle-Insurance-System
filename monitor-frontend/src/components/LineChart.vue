@@ -16,18 +16,27 @@ export default {
     ariaLabel: { type: String, default: '趋势图表' },
     type: { type: String, default: 'line' }
   },
+  /**
+   * DOM 就绪后创建 ECharts 实例、完成首次绘制，并通过 ResizeObserver 适配卡片或侧栏宽度变化。
+   */
   mounted() {
     this.chart = echarts.init(this.$refs.chart);
     this.render();
     this.resizeObserver = new ResizeObserver(() => this.chart?.resize());
     this.resizeObserver.observe(this.$refs.chart);
   },
+  /**
+   * 组件销毁时停止尺寸观察并释放 Canvas、事件监听等 ECharts 资源。
+   */
   beforeUnmount() {
     this.resizeObserver?.disconnect();
     this.chart?.dispose();
   },
   watch: { series: { deep: true, handler() { this.render(); } } },
   methods: {
+    /**
+     * 将标签和多组业务序列转换为统一趋势图配置。组件可在折线和柱状模式间复用，并为首序列提供更明显面积层次。
+     */
     render() {
       const colors = ['#2563eb', '#d97706', '#059669', '#7c3aed', '#dc2626'];
       this.chart.setOption({

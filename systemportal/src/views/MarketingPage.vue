@@ -202,6 +202,10 @@ const FALLBACK_PLANS = [
 
 export default {
   name: 'MarketingPage',
+  /**
+   * 保存官网导航状态、套餐加载状态、滚动动画观察器及产品展示内容。静态展示数据集中在页面状态中，
+   * 套餐价格优先读取服务端公开接口，接口不可用时使用与产品定位一致的兜底方案保障官网可浏览。
+   */
   data() {
     return {
       navScrolled: false,
@@ -229,23 +233,38 @@ export default {
     };
   },
   computed: {
+    /**
+     * 最多展示三个在售套餐；接口没有返回有效套餐时使用本地兜底数据，避免价格区域完全空白。
+     */
     displayPlans() {
       return this.plans.length ? this.plans.slice(0, 3) : FALLBACK_PLANS;
     }
   },
+  /**
+   * 页面挂载后监听滚动以切换导航栏样式、初始化内容入场动画并异步加载公开套餐。
+   */
   mounted() {
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     this.setupRevealAnimations();
     this.loadPlans();
   },
+  /**
+   * 离开官网时移除全局滚动监听并断开元素观察器，避免缓存页面外继续执行动画回调。
+   */
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
     this.revealObserver?.disconnect();
   },
   methods: {
+    /**
+     * 根据页面滚动距离切换导航栏的压缩背景样式，使首屏透明效果和正文阅读对比度兼顾。
+     */
     handleScroll() {
       this.navScrolled = window.scrollY > 20;
     },
+    /**
+     * 平滑滚动到官网指定业务区块，并同步更新地址栏锚点；系统偏好减少动画时改用即时滚动。
+     */
     scrollToSection(id) {
       const section = document.getElementById(id);
       if (!section) return;
@@ -253,6 +272,10 @@ export default {
       section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       window.history.replaceState(null, '', `#${id}`);
     },
+    /**
+     * 为尚未展示的 data-reveal 元素创建一次性可视区域观察。低性能兼容环境或减少动画偏好下直接显示；
+     * 正常情况下按元素顺序设置小幅错峰延迟，进入视口后取消单项观察以减少持续开销。
+     */
     setupRevealAnimations() {
       this.revealObserver?.disconnect();
       const elements = this.$el.querySelectorAll('[data-reveal]:not(.is-visible)');
@@ -275,6 +298,10 @@ export default {
         this.revealObserver.observe(element);
       });
     },
+    /**
+     * 请求无需登录的在售套餐。失败时保留兜底套餐并记录错误状态；DOM 更新后重新扫描套餐卡片，
+     * 使异步插入的内容同样参与入场动画。
+     */
     async loadPlans() {
       try {
         const response = await getMarketingPlans();
@@ -286,13 +313,22 @@ export default {
         this.$nextTick(this.setupRevealAnimations);
       }
     },
+    /**
+     * 整数价格使用中文千分位，小数金额保留两位，统一官网套餐价格的可读格式。
+     */
     money(value) {
       const amount = Number(value || 0);
       return Number.isInteger(amount) ? amount.toLocaleString('zh-CN') : amount.toFixed(2);
     },
+    /**
+     * 将套餐计费周期代码转换为价格后缀，未知周期使用中性“周期”文案。
+     */
     periodLabel(period) {
       return { MONTH: '月', YEAR: '年', DAY: '周期' }[period] || '周期';
     },
+    /**
+     * 按展示顺序生成套餐英文层级标签，超出预设层级时回退到通用标签。
+     */
     planLabel(index) {
       return ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'][index] || 'PLAN';
     }

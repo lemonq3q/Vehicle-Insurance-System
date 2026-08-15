@@ -15,6 +15,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Component
+/**
+ * 封装车险文件在阿里云 OSS 的服务端上传、浏览器直传签名、临时下载地址缓存和删除操作。
+ * 所有对象使用同一私有 Bucket，访问由短期预签名 URL 控制而不是公开读写权限。
+ */
 public class OSSUtil {
 
     @Autowired
@@ -22,6 +26,10 @@ public class OSSUtil {
 
     private final static String BUCKET_NAME = "lemonqwq";
 
+    /**
+     * 将 MultipartFile 暂存到本地临时文件后上传到指定 OSS 对象键。供应商拒绝、网络异常或本地文件异常返回 false，
+     * 调用方据此决定事务与错误提示；成功后临时文件登记为 JVM 退出时删除。
+     */
     public static boolean uploadFile(MultipartFile file, String objectName) {
         OSS ossClient = OSSClientSingleton.getInstance();
         try {
@@ -31,16 +39,8 @@ public class OSSUtil {
             File tmpFile = File.createTempFile(prefix, fileName);
             file.transferTo(tmpFile);
             PutObjectRequest putObjectRequest = new PutObjectRequest(BUCKET_NAME, objectName, tmpFile);
-            // 如果需要上传时设置存储类型和访问权限，请参考以下示例代码。
-            // ObjectMetadata metadata = new ObjectMetadata();
-            // metadata.setHeader(OSSHeaders.OSS_STORAGE_CLASS, StorageClass.Standard.toString());
-            // metadata.setObjectAcl(CannedAccessControlList.Private);
-            // putObjectRequest.setMetadata(metadata);
-
-            // 上传文件。
             PutObjectResult result = ossClient.putObject(putObjectRequest);
 
-            // 删除临时文件
             tmpFile.deleteOnExit();
             return true;
         } catch (OSSException oe) {
@@ -63,6 +63,10 @@ public class OSSUtil {
         }
     }
 
+    /**
+     * 生成指定有效毫秒数的 PUT 预签名 URL，供前端不经过应用服务器直接上传文件。
+     * contentType 非空时写入签名条件，客户端上传必须使用同一类型；生成失败返回 null。
+     */
     public static String generatePutSignedUrl(String objectName, long expire, String contentType) {
         OSS ossClient = OSSClientSingleton.getInstance();
         try {
@@ -91,6 +95,10 @@ public class OSSUtil {
         }
     }
 
+    /**
+     * 获取私有对象的 24 小时 GET 预签名地址，并在 Redis 缓存 23 小时。缓存提前一小时失效，
+     * 避免客户端取到即将过期的 URL；OSS 调用失败时返回当前空值，由上层决定是否重试。
+     */
     public String getTmpUrl(String objectName) {
         String tmpUrl = redisCache.getCacheObject("oss:" + objectName);
         if (tmpUrl != null && !tmpUrl.isEmpty()){
@@ -99,9 +107,7 @@ public class OSSUtil {
 
         OSS ossClient = OSSClientSingleton.getInstance();
         try {
-            // 设置预签名URL过期时间，单位为毫秒。设置过期时间为24小时。
             Date expiration = new Date(new Date().getTime() + 60 * 60 * 24 * 1000L);
-            // 统一使用 GeneratePresignedUrlRequest，避免 V4 签名下 GET/PUT 生成方式不一致。
             GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(BUCKET_NAME, objectName, HttpMethod.GET);
             request.setExpiration(expiration);
             URL url = ossClient.generatePresignedUrl(request);
@@ -124,14 +130,14 @@ public class OSSUtil {
     }
 
     /**
-     * 根据OSS文件路径删除文件
+     * 根据完整 OSS 对象键删除私有文件。OSS 服务拒绝、网络失败或其他异常均返回 false，成功返回 true；
+     * 调用方应在数据库记录处理时根据返回值决定是否继续，避免产生文件与业务记录不一致。
      * @param objectName OSS中的文件路径（例如：avatar/2025/xxx.jpg）
      * @return 删除成功返回true，失败返回false
      */
     public static boolean deleteFile(String objectName) {
         OSS ossClient = OSSClientSingleton.getInstance();
         try {
-            // 执行删除文件
             ossClient.deleteObject(BUCKET_NAME, objectName);
             return true;
         } catch (OSSException oe) {

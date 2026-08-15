@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 早期分页功能联调用的简单实体，保留用于验证 MyBatis-Plus 分页参数和返回结构。
+ */
 public class PageTest {
     @TableId
     private Long id;
@@ -17,6 +20,9 @@ public class PageTest {
     private Integer number;
 
     @Override
+    /**
+     * 输出分页测试实体字段，供早期 Mapper 分页联调日志检查。
+     */
     public String toString() {
         return "PageTest{" +
                 "id=" + id +

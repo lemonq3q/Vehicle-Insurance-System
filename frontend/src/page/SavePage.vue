@@ -219,6 +219,9 @@ const registerRules = reactive({
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
     { 
+      /**
+       * * 比较注册密码与确认密码，并把不一致结果交给表单展示。
+       */
       validator: (rule, value, callback) => {
         if (value !== registerForm.password) {
           callback(new Error('两次输入的密码不一致'));
@@ -232,6 +235,9 @@ const registerRules = reactive({
 });
 
 // 登录处理
+/**
+ * * 执行旧版备用页面的登录流程，成功后保存 token、用户资料和 Vuex 会话并进入工作台。
+ */
 const handleLogin = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -257,6 +263,9 @@ const handleLogin = (formEl) => {
 };
 
 // 注册处理
+/**
+ * * 执行旧版备用页面的注册流程，提交前移除前端专用确认密码字段。
+ */
 const handleRegister = async (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {

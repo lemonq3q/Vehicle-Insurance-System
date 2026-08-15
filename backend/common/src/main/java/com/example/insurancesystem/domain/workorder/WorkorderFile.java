@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @TableName(value = "biz_workorder_file")
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 工单与系统文件的关联实体，标识文件所属证件或业务阶段，并保持企业租户边界。
+ */
 public class WorkorderFile {
 
     @TableId(type = IdType.AUTO)

@@ -295,25 +295,50 @@ const followRules = {
   remindStatus: [{ required: true, message: '请选择续保状态', trigger: 'change' }]
 };
 
+/**
+
+ * * 将续保处理状态编码转换为列表文案；除已续保和已流失外统一视为未处理。
+
+ */
 const renderRemindStatus = (val) => {
   if (val === 1) return '已续保';
   if (val === 2) return '已流失';
   return '未处理';
 }
 
+/**
+
+ * * 续保页面挂载后加载当前续保窗口内的工单首屏数据。
+
+ */
 onMounted(() => {
   getData();
 });
 
+/**
+
+ * * 页码或每页条数变化时，使用当前续保筛选条件重新查询。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 从第一页执行新的续保客户筛选。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 清空续保关键字、机构、负责人、地区、保险公司和处理状态，并立即重新查询首屏。
+
+ */
 const handleReset = () => {
   selectParams.blurParam = '';
   selectParams.createMerchantId = undefined;
@@ -326,6 +351,11 @@ const handleReset = () => {
   getData();
 }
 
+/**
+
+ * * 将地区级联值、续保处理状态和分页信息整理为续保专用查询参数；空状态不传给后端。
+
+ */
 const buildSearchParams = () => {
   return {
     blurParam: selectParams.blurParam,
@@ -340,6 +370,11 @@ const buildSearchParams = () => {
   }
 }
 
+/**
+
+ * * 查询续保窗口工单，同步总数并转换展示字段；finally 确保请求异常后表格仍可继续操作。
+
+ */
 const getData = async () => {
   try{
     loading.table = true;
@@ -357,6 +392,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 将续保工单的地区与三个关键业务时间转换为列表可读文本。
+
+ */
 const buildTableData = (data) => {
   data.forEach(item => {
     item.areaCode = getCascadeArea(item.areaCode);
@@ -367,6 +407,11 @@ const buildTableData = (data) => {
   tableData.value = data;
 }
 
+/**
+
+ * * 缓存工单 ID 和可处理模式后进入详情页，续保人员可继续查看完整历史流程。
+
+ */
 const handleDetail = (index, row) => {
   sessionStorage.setItem('workorderDetailType', 'handle');
   sessionStorage.setItem('workorderId', row.id);
@@ -376,6 +421,13 @@ const handleDetail = (index, row) => {
 };
 
 
+/**
+
+
+ * * 校验续保工单负责人选择，只有表单通过时才执行接单更新。
+
+
+ */
 const handleAccpetSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -385,6 +437,11 @@ const handleAccpetSubmit = (formEl) => {
   });
 }
 
+/**
+
+ * * 更新续保工单负责人和状态，成功后关闭弹窗并刷新列表。
+
+ */
 const handleAcceptUpdate = async () => {
   try{
     Loading.open();
@@ -402,6 +459,11 @@ const handleAcceptUpdate = async () => {
   }
 }
 
+/**
+
+ * * 打开续保跟进弹窗并回填已有结果；只有已续保或已流失才作为有效已处理状态回显。
+
+ */
 const handleFollow = (index, row) => {
   followDialog.value = true;
   followParams.id = row.id;
@@ -409,6 +471,11 @@ const handleFollow = (index, row) => {
   followParams.followUpRes = row.followUpRes ?? '';
 }
 
+/**
+
+ * * 校验续保结果必填规则，通过后保存跟进状态和说明。
+
+ */
 const handleFollowSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -418,6 +485,11 @@ const handleFollowSubmit = (formEl) => {
   });
 }
 
+/**
+
+ * * 不级联修改工单主体，仅保存续保结果与跟进说明；成功后同步列表和全局续保角标。
+
+ */
 const handleFollowUpdate = async () => {
   try{
     Loading.open();
@@ -436,6 +508,10 @@ const handleFollowUpdate = async () => {
   }
 }
 
+/**
+ * 经明确二次确认后永久关闭该工单后续年度续保提醒。
+ * 取消确认被视为正常退出；成功后同时刷新当前列表和页头统计，其他异常继续抛出。
+ */
 const handleDisableReminder = async (row) => {
   try {
     await ElMessageBox.confirm(
@@ -463,6 +539,10 @@ const handleDisableReminder = async (row) => {
   }
 }
 
+/**
+ * 重新计算个人及企业续保数量，并按是否仍有待办新增、替换或移除全局续保通知。
+ * 统计请求失败不会覆盖已有通知，也不会阻断当前续保操作结果展示。
+ */
 const refreshRenewCount = async () => {
   try{
     await selectRenewCount().then(res => {
@@ -495,6 +575,11 @@ const refreshRenewCount = async () => {
   }
 }
 
+/**
+
+ * * 远程查询续保工单创建机构，组合机构编码与名称作为筛选选项。
+
+ */
 const getCreateMerchantOption = async (blurParam) => {
   try{
     loading.createMerchant = true;
@@ -515,6 +600,11 @@ const getCreateMerchantOption = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 远程查询当前企业处理人员，供续保列表按负责人筛选。
+
+ */
 const getHandleUserOpton = async (blurParam) => {
   try{
     loading.handleUser = true;
@@ -535,6 +625,11 @@ const getHandleUserOpton = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 远程查询可被指定为续保负责人的系统用户，供接单弹窗选择。
+
+ */
 const getAcceptUserOption = async (blurParam) => {
   try{
     loading.acceptUser = true;
@@ -555,6 +650,11 @@ const getAcceptUserOption = async (blurParam) => {
   }
 }
 
+/**
+
+ * * 远程查询承保公司选项，供续保列表按原保险公司过滤。
+
+ */
 const getInsuranceCompanyOption = async (blurParam) => {
   try{
     loading.insuranceCompany = true;
@@ -581,4 +681,3 @@ const getInsuranceCompanyOption = async (blurParam) => {
   white-space: pre-line !important;
 }
 </style>
-

@@ -14798,6 +14798,10 @@ const chinaCitys = [
 
 var selectOption = null;
 
+/**
+ * 将完整行政区数据压缩为省、市两级级联选项，供业务区域选择器使用。
+ * 区县仍保留在原始数据中供编码反查，但不进入该选择器，避免下拉层级和数据量过大。
+ */
 function handleSelectorOption(){
   let options = [];
   for(let i=0; i<chinaCitys.length; i++){
@@ -14817,6 +14821,10 @@ function handleSelectorOption(){
   return options;
 }
 
+/**
+ * 将后端保存的“省编码、城市编码”二维数组恢复为带中文标签的级联选项。
+ * 相同省份先合并，再从行政区字典补齐省市名称，结果可直接用于编辑页回显已授权区域。
+ */
 export function buildSelectorOptionByArray(array) {
   const tempMap = {};
 
@@ -14843,6 +14851,10 @@ export function buildSelectorOptionByArray(array) {
   return options;
 }
 
+/**
+ * 根据省、市或区县编码逐级匹配行政区字典，并返回“省 / 市 / 区县”的可读路径。
+ * 未传编码时返回空串，部分层级编码只展示能够确认的上级名称。
+ */
 export function getCascadeArea(code) {
   if(code === null || code === undefined){
     return '';
@@ -14877,6 +14889,10 @@ export function getCascadeArea(code) {
   return names.join(' / ');
 }
 
+/**
+ * 把单个行政区编码还原为级联选择器所需的省、市、区县编码路径。
+ * 输入为省级或市级编码时只返回实际存在的层级，不伪造下级值。
+ */
 export function getCascadeAreaCode(code){
   if(code === null || code === undefined){
     return [];
@@ -14911,16 +14927,25 @@ export function getCascadeAreaCode(code){
   return codes;
 }
 
+/**
+
+ * * 返回完整行政区原始字典，供需要区县级反查的页面读取；调用方只读使用该共享数据。
+
+ */
 export function getChinaCitys(){
   return chinaCitys;
 }
 
+/**
+
+ * * 延迟构建并缓存省市级联选项，后续地区组件复用同一数组，避免重复遍历大型静态字典。
+
+ */
 export function getSelectOption(){
   if (selectOption == null){
     selectOption = handleSelectorOption();
   }
   return selectOption;
 }
-
 
 

@@ -23,6 +23,9 @@ import { subscribeNotifications } from '@/utils/notification';
 
 export default {
   name: 'NotificationCenter',
+  /**
+   * 保存当前可见通知、全局订阅取消函数及每条通知的自动关闭计时器，便于逐条清理资源。
+   */
   data() {
     return {
       notifications: [],
@@ -30,6 +33,9 @@ export default {
       timers: new Map()
     };
   },
+  /**
+   * 订阅应用级通知流；新通知进入队列后启动独立的自动移除计时器，使接口层和页面层可共享提示出口。
+   */
   created() {
     this.unsubscribe = subscribeNotifications(notification => {
       this.notifications.push(notification);
@@ -37,12 +43,18 @@ export default {
       this.timers.set(notification.id, timer);
     });
   },
+  /**
+   * 组件卸载时取消全局订阅并清除所有未触发的计时器，避免路由切换后继续修改已销毁组件。
+   */
   beforeUnmount() {
     if (this.unsubscribe) this.unsubscribe();
     this.timers.forEach(timer => window.clearTimeout(timer));
     this.timers.clear();
   },
   methods: {
+    /**
+     * 将通知级别映射到 layui 图标；普通成功信息使用确认图标，错误和警告显示各自的风险标识。
+     */
     iconClass(type) {
       return type === 'error'
         ? 'layui-icon-close-fill'
@@ -50,6 +62,9 @@ export default {
           ? 'layui-icon-tips-fill'
           : 'layui-icon-ok-circle';
     },
+    /**
+     * 主动或定时关闭通知时同步取消计时器、移除计时器索引并更新可见队列，保证重复关闭是安全的。
+     */
     remove(id) {
       const timer = this.timers.get(id);
       if (timer) window.clearTimeout(timer);

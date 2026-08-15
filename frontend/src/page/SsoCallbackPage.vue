@@ -18,12 +18,20 @@ import { objToJsonStr } from '@/utils/convert';
 
 export default {
   name: 'SsoCallbackPage',
+  /**
+   * * 初始化 SSO 回调页的验证状态；默认先展示安全验证提示，只有换票失败时才开放返回登录页操作。
+   */
   data() {
     return {
       failed: false,
       message: '正在安全验证您的 SaaS 登录信息…'
     };
   },
+  /**
+   * 从 SaaS 门户回跳地址读取一次性 code，并调用车险后端完成换票。
+   * 成功后同时写入带过期时间的 token、本地用户资料和 Vuex 会话，再替换到工作台；缺少 code、
+   * 业务失败或网络异常都会进入统一失败状态，绝不使用可能残留的旧账号继续登录。
+   */
   async mounted() {
     const code = String(this.$route.query.code || '').trim();
     if (!code) {
@@ -47,6 +55,9 @@ export default {
     }
   },
   methods: {
+    /**
+     * * 将回调页切换为失败状态并从地址栏移除已经消费或无效的 code，避免刷新页面重复换票。
+     */
     fail(message) {
       this.failed = true;
       this.message = message;

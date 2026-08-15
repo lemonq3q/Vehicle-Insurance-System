@@ -13,6 +13,9 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 上游渠道机构详情传输对象，聚合渠道资料、覆盖区域、联系人及业务状态。
+ */
 public class UpstreamDTO{
 
     private Long id;

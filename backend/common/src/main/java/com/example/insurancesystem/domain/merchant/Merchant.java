@@ -14,6 +14,9 @@ import java.io.Serializable;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 企业租户下的上游或下游合作商户主实体，记录机构编码、类别、联系资料、结算信息和状态。
+ */
 public class Merchant implements Serializable {
     private static final long serialVersionUID = -23465523L;
 

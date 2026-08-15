@@ -68,6 +68,9 @@ import { defaultMonthRange, rangeParams } from '@/utils/dateRange';
 export default {
   name: 'WalletTransactionsPage',
   components: { LayDatePicker, LayPagination },
+  /**
+   * 保存流水号、收支方向、业务类型和日期范围等筛选条件，以及企业钱包流水分页结果。
+   */
   data() {
     return {
       query: { pageNum: 1, pageSize: 10, transactionNo: '', direction: '', transactionType: '', dateRange: defaultMonthRange() },
@@ -75,10 +78,16 @@ export default {
       total: 0
     };
   },
+  /**
+   * 页面创建后查询当前自然月的企业钱包流水。
+   */
   created() {
     this.loadData();
   },
   methods: {
+    /**
+     * 将钱包流水业务类型映射为充值、套餐购买、续费、退款等可读名称，未知枚举原样显示。
+     */
     typeName(type) {
       return {
         RECHARGE: '充值',
@@ -90,23 +99,38 @@ export default {
         ADJUST: '调整'
       }[type] || type;
     },
+    /**
+     * 将页面日期范围转换为接口起止时间后查询流水分页，并同步服务端总记录数。
+     */
     async loadData() {
       const response = await getWalletTransactions({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });
       this.rows = response.data.table;
       this.total = Number(response.data.total || 0);
     },
+    /**
+     * 应用流水筛选条件时从第一页开始展示结果。
+     */
     search() {
       this.query.pageNum = 1;
       this.loadData();
     },
+    /**
+     * 清空流水号、收支方向和业务类型，恢复当前月查询范围且保留每页条数。
+     */
     resetQuery() {
       this.query = { ...this.query, pageNum: 1, transactionNo: '', direction: '', transactionType: '', dateRange: defaultMonthRange() };
       this.loadData();
     },
+    /**
+     * 响应流水分页页码变化并重新查询。
+     */
     changePage(pageNum) {
       this.query.pageNum = pageNum;
       this.loadData();
     },
+    /**
+     * 调整每页条数后重置页码并刷新流水列表。
+     */
     changePageSize(pageSize) {
       this.query.pageNum = 1;
       this.query.pageSize = pageSize;

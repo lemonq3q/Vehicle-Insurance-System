@@ -26,6 +26,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+/**
+ * 管理当前企业合作的下游渠道商，包括车商、维修厂和代理机构。
+ * 除商户主体外，本服务还维护经营区域和联系人，使列表、详情及导出得到完整聚合数据。
+ */
 public class DownstreamServiceImp implements DownstreamService {
 
     @Autowired
@@ -38,6 +42,9 @@ public class DownstreamServiceImp implements DownstreamService {
     private MerchantStaffService merchantStaffService;
 
     @Override
+    /**
+     * 分页查询下游商户，并批量读取当前页商户的有效经营区域后回填，避免逐行访问数据库。
+     */
     public ResponseResult select(DownstreamSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
         List<DownstreamDTO> downstreamDTOList = merchantMapper.selectByDownstreamSearchDTO(params);
@@ -64,6 +71,9 @@ public class DownstreamServiceImp implements DownstreamService {
     }
 
     @Override
+    /**
+     * 按查询条件导出下游商户。导出不分页，并在转换 Excel 行模型前补齐经营区域。
+     */
     public List<DownstreamExcelDTO> getExcel(DownstreamSearchDTO params) {
         List<DownstreamDTO> downstreamDTOList = merchantMapper.selectByDownstreamSearchDTO(params);
 
@@ -87,6 +97,10 @@ public class DownstreamServiceImp implements DownstreamService {
 
     @Override
     @Transactional
+    /**
+     * 在同一事务中创建下游商户、经营区域和可选联系人。
+     * 商户编码通过唯一约束冲突重试生成；任一联系人创建失败都会回滚整个聚合创建过程。
+     */
     public ResponseResult insert(DownstreamDTO params) {
         Long userId = SystemCommonUtil.getNowUserId();
 
@@ -128,6 +142,10 @@ public class DownstreamServiceImp implements DownstreamService {
     }
 
     @Override
+    /**
+     * 更新下游商户资料。提交了经营区域时，先逻辑删除旧关系再写入新快照，
+     * 未提交区域字段则保留原有区域配置不变。
+     */
     public ResponseResult update(DownstreamDTO params) {
         Merchant downstream = new Merchant(params);
         if (params.getType() != null) {
@@ -162,6 +180,9 @@ public class DownstreamServiceImp implements DownstreamService {
     }
 
     @Override
+    /**
+     * 逻辑删除下游商户，并同步停用其经营区域和商户员工关系，防止已删除主体继续被业务选择。
+     */
     public ResponseResult delete(Long id) {
         Merchant params = new Merchant();
         params.setId(id);
@@ -183,6 +204,9 @@ public class DownstreamServiceImp implements DownstreamService {
     }
 
     @Override
+    /**
+     * 查询单个下游商户的聚合详情，并补充全部有效经营区域；不存在时返回资源缺失响应。
+     */
     public ResponseResult selectById(Long id) {
         DownstreamSearchDTO search = new DownstreamSearchDTO();
         search.setId(id);
@@ -202,6 +226,10 @@ public class DownstreamServiceImp implements DownstreamService {
     }
 
     @Override
+    /**
+     * 按名称或编码模糊检索有效下游商户选项。
+     * 为防止下拉框触发无条件全表扫描，空关键字直接返回空集合。
+     */
     public ResponseResult selectOptions(String blurParam) {
         if (blurParam == null || blurParam.isEmpty()) {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
@@ -221,6 +249,9 @@ public class DownstreamServiceImp implements DownstreamService {
         return new ResponseResult(200, downstreamList);
     }
 
+    /**
+     * 将历史中文商户类型转换为字典编码及数据库主键，兼容旧前端入参并统一新表关联方式。
+     */
     private Long resolveCategoryId(String legacyType) {
         String code = MerchantCategoryCode.fromLegacyName(legacyType == null ? "车商店铺" : legacyType);
         Long id = merchantMapper.selectCategoryIdByCode(code);

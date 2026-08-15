@@ -4,11 +4,17 @@ import java.math.BigDecimal;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 对 OCR 和通用 Map 中类型不稳定的值执行容错基础类型转换，失败以 null 表示而不打断证件识别流程。
+ */
 public class BaseTypeConvertUtil {
 
     // 预编译正则表达式（提升性能，避免重复编译）
     private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
 
+    /**
+     * 将整数文本或任意 Number 转为 Integer；空值、格式错误和不支持类型返回 null。
+     */
     public static Integer safeParseInt(Object value) {
         if (value == null) {
             return null;
@@ -20,75 +26,62 @@ public class BaseTypeConvertUtil {
                 return ((Number) value).intValue();
             }
         } catch (NumberFormatException e) {
-            // 转换失败时返回null
             return null;
         }
         return null;
     }
 
     /**
-     * 安全转换为金额类型（BigDecimal）
-     * 兼容：null、字符串（带千分位/人民币符号）、数字类型（Integer/Long/Double等）
-     * 转换失败返回null，避免抛出异常
+     * 将带人民币符号、千分位或空格的字符串以及常见 Number 转换为 BigDecimal。
+     * Number 先经字符串转换以避免直接从 double 构造产生二进制精度尾差；非法金额返回 null。
      * @param value 待转换的输入值
      * @return 金额BigDecimal，失败返回null
      */
     public static BigDecimal safeParseAmount(Object value) {
-        // 1. 处理null值
         if (value == null) {
             return null;
         }
 
         try {
-            // 2. 处理字符串类型（核心场景）
             if (value instanceof String) {
                 String str = ((String) value).trim();
-                // 空字符串直接返回null
                 if (str.isEmpty()) {
                     return null;
                 }
-                // 清理常见的金额格式干扰符（人民币符号、千分位逗号）
-                String cleanStr = str.replaceAll("¥", "")  // 移除人民币符号
-                        .replaceAll(",", "")  // 移除千分位逗号
-                        .replaceAll(" ", ""); // 移除空格
-                // 转换为BigDecimal（严格数字格式）
+                String cleanStr = str.replaceAll("¥", "")
+                        .replaceAll(",", "")
+                        .replaceAll(" ", "");
                 return new BigDecimal(cleanStr);
             }
-            // 3. 处理数字类型（Integer/Long/Double/Float等）
             else if (value instanceof Number) {
-                // 优先用String中转，避免Double转BigDecimal的精度问题（如0.1d转BigDecimal会失真）
                 return new BigDecimal(value.toString());
             }
         } catch (NumberFormatException e) {
-            // 数字格式错误（如"abc123"、"123.45.67"），返回null
             return null;
         }
-
-        // 4. 非字符串/数字类型（如Boolean/Object等），返回null
         return null;
     }
 
     /**
-     * 提取字符串中首个连续的数字字符串
+     * 使用预编译正则从混合文本中提取第一段连续数字，例如 OCR 的“核定载客5人”返回“5”。
      * @param inputStr 输入的任意字符串
      * @return 首个连续数字字符串；无数字/输入为空时返回null
      */
     public static String extractFirstNumberString(String inputStr) {
-        // 1. 处理空值和空字符串
         if (inputStr == null || inputStr.trim().isEmpty()) {
             return null;
         }
 
-        // 2. 匹配首个连续数字序列
         Matcher matcher = NUMBER_PATTERN.matcher(inputStr);
         if (matcher.find()) {
-            // 返回第一个匹配到的数字字符串
             return matcher.group();
         }
-        // 3. 无匹配的数字时返回null
         return null;
     }
 
+    /**
+     * 本地调试数字提取规则的独立入口，不参与应用业务链路。
+     */
     public static void main(String[] args) {
         System.out.println(extractFirstNumberString("123abc456"));
     }

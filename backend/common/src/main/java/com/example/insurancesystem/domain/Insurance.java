@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @TableName("biz_insurance_product")
+/**
+ * 保险产品主数据实体，描述承保公司、险种名称、状态及展示顺序等车险业务配置。
+ */
 public class Insurance {
     @TableId(type = IdType.AUTO)
     private Long id;

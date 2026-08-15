@@ -1,3 +1,6 @@
+/**
+ * 构造固定的三十天统计日期轴，使 mock 仪表盘和企业对比在每次启动时产生可复现数据。
+ */
 const days = Array.from({ length: 30 }, (_, index) => `2026-07-${String(index + 1).padStart(2, '0')}`);
 
 export const enterprises = [
@@ -31,6 +34,9 @@ export const members = [
   { id: 105, enterpriseId: 1, realName: '高静怡', username: 'gaojy', phone: '188****5506', roleName: '出单员', status: 0, joinedAt: '2026-04-16', lastLoginAt: '2026-07-09 14:18' }
 ];
 
+/**
+ * 基于企业序号和日期序号生成确定性的每日出单、系统调用及 OCR 用量，供趋势、排行和企业对比共用。
+ */
 export const dailyUsage = enterprises.flatMap((enterprise, enterpriseIndex) => days.map((statDate, dayIndex) => ({
   statDate, enterpriseId: enterprise.id,
   workorderCount: enterprise.status === 0 ? 0 : 70 + enterpriseIndex * 12 + dayIndex * 3,

@@ -109,6 +109,11 @@ const userInfo = reactive({
 
 const oriUserInfo = ref({});
 
+/**
+
+ * * 页面初始化时始终加载可分配角色，更新模式额外读取用户资料回填表单。
+
+ */
 onMounted(() => {
   if (type == 'update'){
     getDataById();
@@ -116,6 +121,11 @@ onMounted(() => {
   getRoleOption();
 });
 
+/**
+
+ * * 校验手机号、姓名、邮箱和角色后，根据页面模式新增或更新系统用户。
+
+ */
 const handleSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -130,6 +140,11 @@ const handleSubmit = (formEl) => {
   });
 };
 
+/**
+
+ * * 提交新系统用户资料，后端负责账号唯一性、初始密码及权限关系的最终校验。
+
+ */
 const addSubmit = async () => {
   try{
     Loading.open();
@@ -146,11 +161,21 @@ const addSubmit = async () => {
   }
 }
 
+/**
+
+ * * 复制当前用户表单形成独立请求体，避免接口处理过程中直接修改响应式对象。
+
+ */
 const buildInsertData = () => {
   const data = { ...userInfo };
   return data;
 }
 
+/**
+
+ * * 从原始用户快照回填手机号、姓名、邮箱和角色，用于初次展示及重置操作。
+
+ */
 const buildUserInfo = () => {
   userInfo.username = oriUserInfo.value.username;
   userInfo.name = oriUserInfo.value.name;
@@ -158,6 +183,11 @@ const buildUserInfo = () => {
   userInfo.roleId = oriUserInfo.value.roleId;
 }
 
+/**
+
+ * * 查询路由指定用户并保存原始快照，成功后建立可编辑表单。
+
+ */
 const getDataById = async () => {
   try{
     Loading.open();
@@ -174,6 +204,11 @@ const getDataById = async () => {
   }
 }
 
+/**
+
+ * * 在表单数据中补充原用户 ID 和业务编码后更新账号，保持用户身份不被重新创建。
+
+ */
 const updateSubmit = async () => {
   try{
     Loading.open();
@@ -192,14 +227,29 @@ const updateSubmit = async () => {
   }
 }
 
+/**
+
+ * * 从原始快照恢复用户表单，撤销尚未保存的资料和角色修改。
+
+ */
 const handleReset = () => {
   buildUserInfo();
 }
 
+/**
+
+ * * 返回系统用户管理列表。
+
+ */
 const handleBack = () => {
   router.push('/home/userManagement');
 }
 
+/**
+
+ * * 查询角色字典并转换为下拉选项，仅允许系统用户选择管理员或出单员角色。
+
+ */
 const getRoleOption = async () => {
   try{
     roleLoading.value = true;

@@ -68,6 +68,9 @@ import { getProfile, updateProfile } from '@/api/portal';
 
 export default {
   name: 'UserCenterPage',
+  /**
+   * 分离服务端个人资料快照与编辑表单副本，使取消编辑可以无损恢复已保存数据。
+   */
   data() {
     return {
       profile: {},
@@ -76,9 +79,15 @@ export default {
     };
   },
   computed: {
+    /**
+     * 优先取真实姓名首字符作为头像，回退到登录账号和默认字符。
+     */
     avatarText() {
       return (this.profile.realName || this.profile.username || '用').slice(0, 1);
     },
+    /**
+     * 证件号展示时仅保留前后各四位；较短证件号不强行遮盖，空值显示占位符。
+     */
     maskedIdNum() {
       const idNum = this.profile.idNum || '';
       if (!idNum) return '-';
@@ -86,20 +95,32 @@ export default {
       return `${idNum.slice(0, 4)}${'*'.repeat(idNum.length - 8)}${idNum.slice(-4)}`;
     }
   },
+  /**
+   * 页面创建后读取个人资料，并复制一份作为后续编辑表单初值。
+   */
   async created() {
     const response = await getProfile();
     this.profile = response.data;
     this.form = { ...response.data };
   },
   methods: {
+    /**
+     * 使用最新已保存资料重建表单并进入编辑态，防止沿用上次取消的字段。
+     */
     beginEdit() {
       this.form = { ...this.profile };
       this.isEditing = true;
     },
+    /**
+     * 丢弃本地修改，以服务端最近一次资料快照恢复表单并退出编辑态。
+     */
     cancelEdit() {
       this.form = { ...this.profile };
       this.isEditing = false;
     },
+    /**
+     * 提交完整个人资料后更新本页快照，并刷新全局用户上下文，使顶部姓名等跨页面信息同步变化。
+     */
     async saveProfile() {
       const response = await updateProfile(this.form);
       this.profile = response.data;

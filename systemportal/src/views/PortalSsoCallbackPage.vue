@@ -14,12 +14,19 @@ import { exchangePortalSsoCode } from '@/api/portal';
 
 export default {
   name: 'PortalSsoCallbackPage',
+  /**
+   * 初始化从车险系统返回门户的自动登录提示状态。
+   */
   data() {
     return {
       failed: false,
       message: '正在安全验证您的车险系统登录信息…'
     };
   },
+  /**
+   * 读取车险系统签发的一次性 code 并换取门户 token 与完整账号上下文，成功后替换到仪表盘。
+   * 缺少 code 或换票失败时不使用旧会话，并清除地址栏中的敏感 code。
+   */
   async mounted() {
     const code = String(this.$route.query.code || '').trim();
     if (!code) {
@@ -36,6 +43,9 @@ export default {
     }
   },
   methods: {
+    /**
+     * 切换为失败状态、显示原因并移除回调地址中的一次性授权码，防止刷新重复消费。
+     */
     fail(message) {
       this.failed = true;
       this.message = message;

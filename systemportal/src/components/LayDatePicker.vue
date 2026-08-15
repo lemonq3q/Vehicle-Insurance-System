@@ -16,6 +16,10 @@ export default {
     placeholder: { type: String, default: '请选择时间' }
   },
   emits: ['update:modelValue', 'change'],
+  /**
+   * 挂载后通过 layui 初始化日期控件，并在用户选定日期时同时更新 v-model 与发送业务 change 事件，
+   * 使组件既支持双向绑定，也支持页面执行额外校验或查询。
+   */
   mounted() {
     window.layui.use('laydate', laydate => {
       this.instance = laydate.render({
@@ -30,6 +34,9 @@ export default {
       });
     });
   },
+  /**
+   * 组件销毁时释放对 layui 实例的本地引用，避免后续逻辑误用已经脱离 DOM 的日期控件。
+   */
   beforeUnmount() {
     this.instance = null;
   }

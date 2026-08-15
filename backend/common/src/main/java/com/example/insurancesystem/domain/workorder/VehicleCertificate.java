@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @TableName(value = "biz_vehicle_certificate")
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 机动车整车出厂合格证实体，保存 OCR 或人工录入的车架号、发动机号、车型、质量和座位等建档字段。
+ */
 public class VehicleCertificate {
     /**
      * 主键ID

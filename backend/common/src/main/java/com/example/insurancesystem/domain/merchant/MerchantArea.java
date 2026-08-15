@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 商户与服务行政区域的关联实体，使一个合作机构可以覆盖多个省市区范围。
+ */
 public class MerchantArea {
     @TableId(type = IdType.AUTO)
     private Long id;

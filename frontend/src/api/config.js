@@ -18,6 +18,11 @@ axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8
 // axios.defaults.withCredentials = true;
 axios.defaults.timeout = 60000; // 全局60秒超时
 
+/**
+ * 在普通业务请求发出前补充车险系统登录令牌，并延长本地令牌的有效时间。
+ * 登录、注册、验证码和 SSO 换票接口尚未建立车险会话，因此必须跳过鉴权；Excel 请求则额外打标，
+ * 让响应拦截器能够把二进制响应作为文件下载，而不是按统一 JSON 结果处理。
+ */
 axios.interceptors.request.use(function (config) {
   const isIgnoreUrl = notInterceptUrls.some(item => config.url.includes(item));
   // 登陆相关接口不拦截
@@ -40,6 +45,11 @@ axios.interceptors.request.use(function (config) {
   return Promise.reject(error);
 });
 
+/**
+ * 统一处理车险后端响应：接收后端滚动刷新后的令牌、执行 Excel 下载，并识别统一响应中的业务错误。
+ * 401 会清除已失效的本地会话并回到登录页；其他业务错误只展示提示，原始响应仍返回给调用页面，
+ * 以便页面依据接口数据继续处理自己的加载态和交互状态。
+ */
 axios.interceptors.response.use(function (response) {
   const refreshedToken = response.headers[REFRESHED_TOKEN_HEADER];
   if (refreshedToken) {
@@ -85,6 +95,13 @@ axios.interceptors.response.use(function (response) {
   return Promise.reject(error);
 });
 
+/**
+ * 将后端 Excel 响应转换为浏览器下载任务。
+ * 文件名优先读取 Content-Disposition 中的 UTF-8 名称，缺失时使用“导出数据.xlsx”；下载完成后立即
+ * 移除临时链接并释放 Object URL，避免频繁导出时持续占用浏览器内存。
+ *
+ * @param {import('axios').AxiosResponse<Blob>} response 标记为 Excel 请求的 Axios 响应。
+ */
 function handleExcelDownload(response) {
   try {
     // 解析文件名

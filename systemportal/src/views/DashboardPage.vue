@@ -54,6 +54,9 @@ import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'DashboardPage',
+  /**
+   * 提供仪表盘当前阶段的经营指标和提醒样板数据；账号、企业与角色信息仍从实时 Vuex 上下文读取。
+   */
   data() {
     return {
       stats: [
@@ -70,15 +73,27 @@ export default {
     };
   },
   computed: {
+    /**
+     * 暴露当前登录用户供账号概况区域展示。
+     */
     user() {
       return this.$store.state.user;
     },
+    /**
+     * 暴露用户当前加入的企业；无企业时页面使用兜底文案。
+     */
     enterprise() {
       return this.$store.state.currentEnterprise;
     },
+    /**
+     * 将当前成员角色代码转换为中文角色名称。
+     */
     roleName() {
       return getRoleName(this.$store.state.currentMember?.roleCode);
     },
+    /**
+     * 取用户姓名首字符生成无图片头像，姓名缺失时使用“用户”首字。
+     */
     initials() {
       return (this.user?.realName || '用户').slice(0, 1);
     }

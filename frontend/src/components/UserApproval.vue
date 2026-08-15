@@ -110,11 +110,23 @@ const selectParams = ref({
 
 const loading = ref(false);
 
+/**
+
+ * * 审批列表分页变化时，保留当前关键字与角色条件重新查询待审核账号。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
 
+/**
+
+
+ * * 清空待审核用户的关键字、机构、角色和状态筛选条件。
+
+
+ */
 const handleReset = () => {
   selectParams.value = {
     blurParam: '',
@@ -125,6 +137,13 @@ const handleReset = () => {
 }
 
 
+/**
+
+
+ * * 加载审批时可查看的角色选项，并限定为管理员和出单员，避免分配非业务角色。
+
+
+ */
 const getRoleOption = async () => {
   try{
     loading.value = true;
@@ -146,11 +165,21 @@ const getRoleOption = async () => {
   }
 }
 
+/**
+
+ * * 重置到第一页后按最新条件查询待审核注册用户。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 把待审核账号的创建时间和性别编码转换为审批表格使用的中文展示值。
+
+ */
 const buildTableData = (data) => {
   tableData.value = data.map(element => {
     element.createTime = formatSecondTimestamp(element.createTime);
@@ -159,6 +188,11 @@ const buildTableData = (data) => {
   });
 }
 
+/**
+
+ * * 将审批筛选条件与分页状态组合为后端待审核用户查询参数。
+
+ */
 const buildSelectParams = () => {
   let data = selectParams.value;
   data.pageSize = page.pageSize;
@@ -166,6 +200,11 @@ const buildSelectParams = () => {
   return data;
 }
 
+/**
+
+ * * 查询尚未审批的注册用户，同步总数并转换表格展示字段，结束时解除加载状态。
+
+ */
 const getData = async () => {
   try{
     tableLoading.value = true;
@@ -183,6 +222,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 二次确认后删除不应通过的注册账号，成功后重新加载剩余审批队列。
+
+ */
 const handleDelete = (index, row) => {
   ElMessageBox.confirm(
     '确认要删除此数据?',
@@ -213,6 +257,11 @@ const handleDelete = (index, row) => {
   })
 };
 
+/**
+
+ * * 批准指定注册用户进入系统；后端完成状态变更后刷新列表，使该账号从待审队列移除。
+
+ */
 const handleApproval = async (index, row) => {
   try{
     Loading.open();
@@ -229,6 +278,11 @@ const handleApproval = async (index, row) => {
   }
 }
 
+/**
+
+ * * 审批页面挂载时加载角色筛选项和首屏待审核用户数据。
+
+ */
 onMounted(()=>{
   getRoleOption();
   getData();

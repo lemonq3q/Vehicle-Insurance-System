@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * 工单列表与续保查询条件，承载工单号、客户、机构、状态、时间范围和分页等筛选字段。
+ */
 public class WorkorderSearchDTO {
     private Long id;
 

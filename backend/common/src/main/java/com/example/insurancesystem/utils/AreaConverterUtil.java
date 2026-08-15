@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+/**
+ * 在应用启动时加载全国省市区树，并提供行政区划代码转名称及 OCR 地名模糊反查能力。
+ */
 public class AreaConverterUtil {
 
     public static List<Province> chinaCity;
@@ -22,9 +25,12 @@ public class AreaConverterUtil {
     private ObjectMapper objectMapper;
 
     @PostConstruct
+    /**
+     * 从 classpath ChinaCitys.json 反序列化完整省市区结构。基础数据缺失或格式错误会阻止应用启动，
+     * 避免业务运行后才在地址转换处出现空指针或返回错误地区。
+     */
     public void loadChinaCityData(){
         try {
-            // 读取resources下的JSON文件
             String jsonFileName = "ChinaCitys.json";
             InputStream inputStream = getClass().getClassLoader().getResourceAsStream(jsonFileName);
 
@@ -32,7 +38,6 @@ public class AreaConverterUtil {
                 throw new RuntimeException("未在resources目录下找到城市JSON文件：" + jsonFileName);
             }
 
-            // 解析JSON为List<Province>
             chinaCity = objectMapper.readValue(
                     inputStream,
                     new TypeReference<List<Province>>() {}
@@ -44,6 +49,10 @@ public class AreaConverterUtil {
         }
     }
 
+    /**
+     * 按行政区划代码前两位、前四位和完整代码逐级查找省、市、区，并以“ / ”连接已有层级。
+     * 传入空值返回 null，未匹配代码返回空字符串。
+     */
     public static String areaCodeConvert(String areaCode) {
         if (areaCode == null){
             return null;
@@ -79,29 +88,26 @@ public class AreaConverterUtil {
     }
 
     /**
-     * 模糊匹配名称，返回对应 省/市/区 的 code
+     * 以双向 contains 规则模糊匹配省、市或区县名称，并返回完整上级链及代码。
+     * 只匹配到省或市时使用该节点第一个下级补齐表单需要的完整区域选择；无匹配返回字段为空的结果对象。
      * @param name 省份/城市/区县名称（支持模糊，如：潍坊、陕西、东城）
      * @return 包含 provinceCode, cityCode, areaCode 的对象
      */
     public static CityCodeResult fuzzySearchCode(String name) {
-        // 空值直接返回空结果
         if (name == null || name.isBlank() || chinaCity == null) {
             return new CityCodeResult();
         }
 
         String search = name.trim();
 
-        // 遍历所有省份
         for (Province province : chinaCity) {
             String provinceName = province.getProvince();
             String provinceCode = province.getCode();
 
-            // 匹配省份
             if (provinceName.contains(search) || search.contains(provinceName)) {
                 CityCodeResult result = new CityCodeResult();
                 result.setProvinceCode(provinceCode);
                 result.setProvinceName(provinceName);
-                // 省份匹配到，默认取第一个市、第一个区（可选）
                 if (province.getCitys() != null && !province.getCitys().isEmpty()) {
                     City firstCity = province.getCitys().get(0);
                     result.setCityCode(firstCity.getCode());
@@ -116,13 +122,11 @@ public class AreaConverterUtil {
                 return result;
             }
 
-            // 遍历该省下的所有市
             if (province.getCitys() != null) {
                 for (City city : province.getCitys()) {
                     String cityName = city.getCity();
                     String cityCode = city.getCode();
 
-                    // 匹配城市
                     if (cityName.contains(search) || search.contains(cityName)) {
                         CityCodeResult result = new CityCodeResult();
                         result.setProvinceName(provinceName);
@@ -130,7 +134,6 @@ public class AreaConverterUtil {
                         result.setCityName(cityName);
                         result.setCityCode(cityCode);
 
-                        // 取第一个区
                         if (city.getAreas() != null && !city.getAreas().isEmpty()) {
                             Area firstArea = city.getAreas().get(0);
                             result.setAreaCode(firstArea.getCode());
@@ -139,13 +142,11 @@ public class AreaConverterUtil {
                         return result;
                     }
 
-                    // 遍历该市下的所有区
                     if (city.getAreas() != null) {
                         for (Area area : city.getAreas()) {
                             String areaName = area.getArea();
                             String areaCode = area.getCode();
 
-                            // 匹配区县
                             if (areaName.contains(search) || search.contains(areaName)) {
                                 CityCodeResult result = new CityCodeResult();
                                 result.setProvinceName(provinceName);
@@ -162,12 +163,11 @@ public class AreaConverterUtil {
             }
         }
 
-        // 没匹配到返回空
         return new CityCodeResult();
     }
 
     /**
-     * 封装返回结果：省市区名称 + code
+     * 封装模糊匹配得到的省、市、区名称与代码。允许只填充部分层级，供前端级联选择器逐级回显。
      */
     public static class CityCodeResult {
         private String provinceName;
@@ -177,24 +177,64 @@ public class AreaConverterUtil {
         private String areaName;
         private String areaCode;
 
-        // 全参/无参构造 + getter/setter
+        /**
+         * 创建所有行政区划字段为空的结果，表示未匹配或等待逐级填充。
+         */
         public CityCodeResult() {}
 
+        /**
+         * 返回匹配省份名称。
+         */
         public String getProvinceName() { return provinceName; }
+        /**
+         * 设置匹配省份名称。
+         */
         public void setProvinceName(String provinceName) { this.provinceName = provinceName; }
+        /**
+         * 返回匹配省份代码。
+         */
         public String getProvinceCode() { return provinceCode; }
+        /**
+         * 设置匹配省份代码。
+         */
         public void setProvinceCode(String provinceCode) { this.provinceCode = provinceCode; }
+        /**
+         * 返回匹配城市名称。
+         */
         public String getCityName() { return cityName; }
+        /**
+         * 设置匹配城市名称。
+         */
         public void setCityName(String cityName) { this.cityName = cityName; }
+        /**
+         * 返回匹配城市代码。
+         */
         public String getCityCode() { return cityCode; }
+        /**
+         * 设置匹配城市代码。
+         */
         public void setCityCode(String cityCode) { this.cityCode = cityCode; }
+        /**
+         * 返回匹配区县名称。
+         */
         public String getAreaName() { return areaName; }
+        /**
+         * 设置匹配区县名称。
+         */
         public void setAreaName(String areaName) { this.areaName = areaName; }
+        /**
+         * 返回匹配区县代码。
+         */
         public String getAreaCode() { return areaCode; }
+        /**
+         * 设置匹配区县代码。
+         */
         public void setAreaCode(String areaCode) { this.areaCode = areaCode; }
 
-        // 方便打印/调试
         @Override
+        /**
+         * 输出所有行政区划字段，便于本地匹配调试和日志诊断。
+         */
         public String toString() {
             return "CityCodeResult{" +
                     "provinceName='" + provinceName + '\'' +
@@ -207,6 +247,9 @@ public class AreaConverterUtil {
         }
     }
 
+    /**
+     * 预留的本地区划转换调试入口，不参与应用运行。
+     */
     public static void main(String[] args) {
 
     }

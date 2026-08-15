@@ -41,24 +41,47 @@
     male: 1
   })
 
-  // 4. 提交 mutations（同步修改状态）
+  /**
+
+   * * 触发示例模块的同步计数 mutation，用于验证 Vuex 组件绑定。
+
+   */
   const handleIncrement = () => {
     store.commit('hello/increment') // 调用 mutation
   }
 
-  // 5. 调用 actions（处理异步操作）
+  /**
+
+   * * 调度延迟一秒的示例计数 action，用于验证 Vuex 异步更新。
+
+   */
   const handleIncrementAsync = () => {
     store.dispatch('hello/incrementAsync', 1000) // 传递参数（延迟时间）
   }
 
+  /**
+
+   * * 调度示例用户加载 action，并由 mutation 更新展示名称。
+
+   */
   const handleFetchUser = () => {
     store.dispatch('hello/fetchUser') // 调用异步 action
   }
 
+  /**
+
+   * * 按子组件传入的增量修改页面本地计数，不影响 Vuex 全局计数。
+
+   */
   const handleNumAdd = (num) => {
     localNum.value += num
   }
 
+  /**
+
+   * * 接收子组件用户名事件并更新本地响应式用户对象。
+
+   */
   const handleUsernameChange = (username) => {
     localUser.username = username
   }

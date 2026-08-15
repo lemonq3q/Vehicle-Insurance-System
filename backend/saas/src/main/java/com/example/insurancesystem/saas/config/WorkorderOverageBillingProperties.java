@@ -4,7 +4,11 @@ import java.math.BigDecimal;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-/** 集中承载超额工单计费规则，避免周期和单价散落在维护、预览及套餐变更代码中。 */
+/**
+ * 承载 SaaS 超额工单计费的全局规则，供每日维护扣费和套餐变更试算共同使用。
+ * 周期天数与单工单周期价格由 {@code saas.billing.workorder-overage} 配置绑定，默认值仅作为
+ * 未配置环境的安全基线，避免不同计费入口各自硬编码后产生金额口径不一致。
+ */
 @Component
 @ConfigurationProperties(prefix = "saas.billing.workorder-overage")
 public class WorkorderOverageBillingProperties {
@@ -30,4 +34,3 @@ public class WorkorderOverageBillingProperties {
     this.unitPrice = unitPrice;
   }
 }
-

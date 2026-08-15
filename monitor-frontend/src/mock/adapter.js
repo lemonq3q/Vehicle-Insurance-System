@@ -1,17 +1,40 @@
 import { dailyUsage, enterprises, finance, members, plans, platformUsers } from './database';
 
+/**
+ * 构造与监控后端一致的成功响应外壳，并附加可追踪的模拟请求编号。
+ */
 const ok = data => ({ code: 200, message: 'success', data, requestId: `mock-${Date.now()}` });
+/**
+ * 将模拟业务失败转换为带业务码的 Promise 异常，使请求层错误处理与真实接口一致。
+ */
 const fail = (code, message) => Promise.reject(Object.assign(new Error(message), { code }));
+/**
+ * 按监控接口的 pageNo/pageSize 契约截取内存列表并返回分页元数据。
+ */
 const page = (list, pageNo = 1, pageSize = 10) => ({ list: list.slice((pageNo - 1) * pageSize, pageNo * pageSize), pageNo, pageSize, total: list.length });
+/**
+ * 将 Axios 序列化请求体还原为业务对象，空请求体转换为空对象。
+ */
 const parseBody = data => typeof data === 'string' ? JSON.parse(data || '{}') : (data || {});
+/**
+ * 模拟短暂网络延迟并把业务外壳包装成 Axios Adapter 响应。
+ */
 const delay = value => new Promise(resolve => setTimeout(() => resolve({ data: value, status: 200, headers: {}, config: {} }), 180));
 
+/**
+ * 从每日用量数据库中选取指定企业和最近天数，按公共日期轴补齐每家企业缺失日期的零值数据，
+ * 从而保证多企业趋势对比的序列长度和横轴严格对齐。
+ */
 function usageFor(ids, days = 14) {
   const selected = dailyUsage.filter(item => ids.includes(item.enterpriseId)).slice(-days * ids.length);
   const dates = [...new Set(selected.map(item => item.statDate))];
   return { dates, enterprises: ids.map(id => ({ enterpriseId: id, enterpriseName: enterprises.find(item => item.id === id)?.name, points: dates.map(date => selected.find(item => item.enterpriseId === id && item.statDate === date) || { statDate: date, workorderCount: 0, requestCount: 0, ocrCount: 0 }) })) };
 }
 
+/**
+ * 监控前端的模拟后端路由分发器。它覆盖仪表盘、企业用量与财务、套餐配置和后台账号管理，
+ * 并直接修改内存数据库以模拟后续查询可见的创建、调账、订阅及状态变化。
+ */
 export async function mockAdapter(config) {
   const method = (config.method || 'get').toUpperCase();
   const url = config.url.replace(/^\/api\/monitor/, '');

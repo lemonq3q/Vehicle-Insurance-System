@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * 商户员工 Excel 导出行模型，提供账号、机构、角色和状态等业务列。
+ */
 public class MerchantUserExcelDTO {
 
     @ExcelProperty("用户名称")

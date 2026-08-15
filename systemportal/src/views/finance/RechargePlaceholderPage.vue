@@ -84,6 +84,9 @@ import { notifyWarning } from '@/utils/notification';
 
 export default {
   name: 'RechargePlaceholderPage',
+  /**
+   * 保存充值表单、快捷金额、当前待处理订单和钱包余额。路由查询参数承担套餐订单与充值流程之间的上下文传递。
+   */
   data() {
     return {
       form: { amount: '', payChannel: 'WECHAT' },
@@ -94,19 +97,35 @@ export default {
     };
   },
   computed: {
+    /**
+     * 原套餐订单的最终应付金额，用于向用户说明充值原因。
+     */
     requiredAmount() {
       return Number(this.$route.query.requiredAmount || 0);
     },
+    /**
+     * 进入充值流程时的钱包余额快照，仅用于展示原始缺口计算背景。
+     */
     originalBalanceAmount() {
       return Number(this.$route.query.balanceAmount || 0);
     },
+    /**
+     * 读取套餐订单计算出的余额缺口，页面初始化时优先将其作为充值金额。
+     */
     shortfallAmount() {
       return Number(this.$route.query.shortfallAmount || 0);
     },
+    /**
+     * 路由携带 planId 表示充值结束后需要继续完成套餐订单，而非普通独立充值。
+     */
     hasOrderContext() {
       return Boolean(this.$route.query.planId);
     }
   },
+  /**
+   * 初始化钱包最新余额、按缺口预填充值金额，并在路由携带充值订单 ID 时恢复已有订单，
+   * 支持用户从详情或浏览器导航返回后继续支付。
+   */
   async created() {
     const response = await getFinanceOverview();
     this.balanceAmount = Number(response.data.wallet?.balanceAmount || 0);
@@ -117,12 +136,22 @@ export default {
     }
   },
   methods: {
+    /**
+     * 将充值金额、余额和缺口统一格式化为两位小数。
+     */
     money(value) {
       return Number(value || 0).toFixed(2);
     },
+    /**
+     * 将渠道代码转换为支付方式名称，未知渠道保留原始代码。
+     */
     channelName(channel) {
       return { WECHAT: '微信支付', ALIPAY: '支付宝', BANK: '银行转账' }[channel] || channel;
     },
+    /**
+     * 校验充值金额为正数后创建充值订单，并跳转订单详情；套餐上下文继续随路由保留，
+     * 但移除旧 rechargeOrderId，避免新订单与历史订单混淆。
+     */
     async createOrder() {
       const amount = Number(this.form.amount);
       if (!Number.isFinite(amount) || amount <= 0) {
@@ -141,6 +170,9 @@ export default {
         this.submitting = false;
       }
     },
+    /**
+     * 仅处理待支付订单。支付完成后同步订单和最新余额，并在套餐上下文存在时继续原套餐下单流程。
+     */
     async completeOrder() {
       if (!this.order || this.order.status !== 1) return;
       this.submitting = true;
@@ -153,12 +185,18 @@ export default {
         this.submitting = false;
       }
     },
+    /**
+     * 清除当前订单及路由中的订单 ID，让用户可以重新选择金额和渠道创建充值订单。
+     */
     resetOrder() {
       this.order = null;
       const query = { ...this.$route.query };
       delete query.rechargeOrderId;
       this.$router.replace({ query });
     },
+    /**
+     * 使用路由保存的套餐参数创建原计划的套餐订单，完成后返回套餐服务页并携带订单号。
+     */
     async completePendingSubscription() {
       if (!this.hasOrderContext) return;
       const response = await createSubscriptionOrder({
@@ -171,6 +209,9 @@ export default {
         query: { orderNo: response.data.orderNo }
       });
     },
+    /**
+     * 已支付订单的后续入口：普通充值直接返回套餐页；套餐补差充值则继续创建待完成的套餐订单。
+     */
     async handlePaidOrder() {
       if (!this.hasOrderContext) {
         this.returnToOrder();
@@ -183,6 +224,9 @@ export default {
         this.submitting = false;
       }
     },
+    /**
+     * 普通充值返回套餐服务页；套餐流程则回到对应订单试算页并恢复周期和自动续订选择。
+     */
     returnToOrder() {
       if (!this.hasOrderContext) {
         this.$router.push('/portal/finance/subscription');

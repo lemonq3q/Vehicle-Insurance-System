@@ -14,18 +14,27 @@ export default {
     data: { type: Array, required: true },
     ariaLabel: { type: String, default: '企业用量占比饼图' }
   },
+  /**
+   * 初始化饼图并监听容器尺寸，使仪表盘响应式布局变化后图形自动重排。
+   */
   mounted() {
     this.chart = echarts.init(this.$refs.chart);
     this.render();
     this.resizeObserver = new ResizeObserver(() => this.chart?.resize());
     this.resizeObserver.observe(this.$refs.chart);
   },
+  /**
+   * 离开页面时断开尺寸观察并销毁图表实例，防止 Canvas 和事件处理器泄漏。
+   */
   beforeUnmount() {
     this.resizeObserver?.disconnect();
     this.chart?.dispose();
   },
   watch: { data: { deep: true, handler() { this.render(); } } },
   methods: {
+    /**
+     * 汇总各业务系统调用量作为圆环中心数字，并构建带百分比、图例和悬浮明细的用量占比图。
+     */
     render() {
       const total = this.data.reduce((sum, item) => sum + Number(item.value || 0), 0);
       this.chart.setOption({

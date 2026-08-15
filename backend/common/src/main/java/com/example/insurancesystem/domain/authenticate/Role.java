@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName(value = "auth_role")
+/**
+ * 系统角色实体，作为用户与菜单权限之间的授权集合，并记录角色启停及数据状态。
+ */
 public class Role {
     @TableId(type = IdType.AUTO)
     private Long id;

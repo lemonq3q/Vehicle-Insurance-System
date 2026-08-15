@@ -14,15 +14,21 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 @Configuration
+/**
+ * 配置共享 RedisTemplate 的键和值序列化策略，使登录主体、验证码和业务缓存可稳定跨进程读取。
+ */
 public class RedisConfig {
 
     @Bean
     @SuppressWarnings(value = {"unchecked", "rawtypes"})
+    /**
+     * 键和 Hash 键使用可读字符串，值使用携带运行时类型信息的 JSON；独立 ObjectMapper 注册 Java 时间模块，
+     * 保证 LoginUser 等包含 LocalDateTime 的对象可完整写入并恢复为原类型，而不是无类型 Map。
+     */
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
 
-        // Redis 使用独立的 ObjectMapper，需要显式支持 LocalDateTime 等 Java 8 时间类型。
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         om.registerModule(new JavaTimeModule());
@@ -33,11 +39,9 @@ public class RedisConfig {
         GenericJackson2JsonRedisSerializer serializer =
                 new GenericJackson2JsonRedisSerializer(om);
 
-        // Key使用String序列化
         template.setKeySerializer(RedisSerializer.string());
         template.setHashKeySerializer(RedisSerializer.string());
 
-        // Value使用JSON序列化
         template.setValueSerializer(serializer);
         template.setHashValueSerializer(serializer);
 

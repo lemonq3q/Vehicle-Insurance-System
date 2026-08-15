@@ -22,34 +22,54 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+/**
+ * 管理商户联系人、收款人等员工资料以及员工在商户下承担的业务角色。
+ * 服务同时维护“默认收款人”唯一性，确保删除或改角色后仍有可用的默认收款对象。
+ */
 public class MerchantStaffServiceImpl implements MerchantStaffService {
     private final MerchantStaffMapper staffMapper;
     private final MerchantStaffRoleMapper roleMapper;
 
+    /**
+     * 注入员工和角色两个数据访问组件，所有聚合写入通过事务保持一致。
+     */
     public MerchantStaffServiceImpl(MerchantStaffMapper staffMapper, MerchantStaffRoleMapper roleMapper) {
         this.staffMapper = staffMapper;
         this.roleMapper = roleMapper;
     }
 
     @Override
+    /**
+     * 按商户、角色及关键字等条件分页查询员工聚合信息。
+     */
     public ResponseResult select(MerchantUserSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
         return new ResponseResult<>(200, new TableData<>(staffMapper.selectStaff(params)));
     }
 
     @Override
+    /**
+     * 查询员工及其当前有效角色，不存在时返回资源缺失响应。
+     */
     public ResponseResult selectById(Long id) {
         MerchantUserDTO staff = staffMapper.selectStaffById(id);
         return staff == null ? new ResponseResult(404, "资源不存在") : new ResponseResult(200, staff);
     }
 
     @Override
+    /**
+     * 返回指定商户下可供业务表单选择的员工列表。
+     */
     public ResponseResult selectByMerchantId(Long merchantId) {
         return new ResponseResult(200, staffMapper.selectOptionsByMerchantId(merchantId));
     }
 
     @Override
     @Transactional
+    /**
+     * 创建商户员工及角色关系。联系人角色在同一商户内只允许一人，
+     * 首位收款人会自动成为默认收款人。
+     */
     public ResponseResult insert(MerchantUserDTO params) {
         String roleCode = MerchantStaffRoles.codeOf(params.getRoleId());
         ResponseResult validation = validate(params, roleCode, null);
@@ -63,6 +83,10 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
 
     @Override
     @Transactional
+    /**
+     * 更新员工资料和当前角色。缺省字段沿用数据库原值；若默认收款人被改为其他角色，
+     * 会自动选择最早的有效收款人接替默认身份。
+     */
     public ResponseResult update(MerchantUserDTO params) {
         MerchantUserDTO current = params.getId() == null ? null : staffMapper.selectStaffById(params.getId());
         if (current == null) {
@@ -100,6 +124,10 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
 
     @Override
     @Transactional
+    /**
+     * 逻辑删除员工及其有效角色；删除默认收款人后同步补选新的默认收款人。
+     * 重复删除按幂等成功处理。
+     */
     public ResponseResult delete(Long id) {
         MerchantStaff staff = staffMapper.selectById(id);
         if (staff == null || Integer.valueOf(1).equals(staff.getIsDelete())) {
@@ -124,12 +152,19 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
 
     @Override
     @Transactional
+    /**
+     * 删除指定商户下的全部员工，复用单员工删除流程以保证角色和默认收款人规则一致。
+     */
     public ResponseResult deleteByMerchantId(Long merchantId) {
         List<MerchantUserDTO> rows = staffMapper.selectOptionsByMerchantId(merchantId);
         for (MerchantUserDTO row : rows) delete(row.getId());
         return new ResponseResult(200, "已删除" + rows.size() + "条数据");
     }
 
+    /**
+     * 校验商户归属、人员名称以及联系人角色的商户内唯一性。
+     * 更新时通过 excludeId 排除当前员工，避免把自身判定为重复记录。
+     */
     private ResponseResult validate(MerchantUserDTO params, String roleCode, Long excludeId) {
         if (params.getMerchantId() == null) return new ResponseResult(400, "请选择所属商家");
         if (params.getName() == null || params.getName().isBlank()) return new ResponseResult(400, "请输入人员名称");
@@ -140,6 +175,9 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
         return null;
     }
 
+    /**
+     * 将兼容旧用户结构的 DTO 转换为新的商户员工实体，并写入当前企业和审计信息。
+     */
     private MerchantStaff toEntity(MerchantUserDTO params) {
         MerchantStaff staff = new MerchantStaff();
         staff.setId(params.getId());
@@ -155,6 +193,9 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
         return staff;
     }
 
+    /**
+     * 为局部更新补齐未提交字段，避免 MyBatis 更新时意外清空员工已有资料或角色。
+     */
     private void mergeMissing(MerchantUserDTO target, MerchantUserDTO current) {
         if (target.getName() == null) target.setName(current.getName());
         if (target.getUsername() == null) target.setUsername(current.getUsername());
@@ -165,6 +206,9 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
         if (target.getStatus() == null) target.setStatus(current.getStatus());
     }
 
+    /**
+     * 构建员工角色关系。创建收款人时，仅当商户尚无其他有效收款人，才将其标记为默认。
+     */
     private MerchantStaffRole newRole(MerchantStaff staff, String roleCode) {
         MerchantStaffRole role = new MerchantStaffRole();
         role.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
@@ -178,6 +222,9 @@ public class MerchantStaffServiceImpl implements MerchantStaffService {
         return role;
     }
 
+    /**
+     * 在默认收款人离开后，按角色记录顺序提升最早的有效收款人，维持商户付款配置可用。
+     */
     private void promoteDefaultPayee(Long merchantId) {
         MerchantStaffRole next = roleMapper.selectOne(new LambdaQueryWrapper<MerchantStaffRole>()
                 .eq(MerchantStaffRole::getMerchantId, merchantId)

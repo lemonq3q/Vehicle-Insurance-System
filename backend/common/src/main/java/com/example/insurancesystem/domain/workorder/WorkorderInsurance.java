@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @TableName("biz_workorder_insurance")
+/**
+ * 工单与投保险种的关联实体，记录所选保险产品及该工单下的险种业务配置。
+ */
 public class WorkorderInsurance {
     @TableId(type = IdType.AUTO)
     private Long id;

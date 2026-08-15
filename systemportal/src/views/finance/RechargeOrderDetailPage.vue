@@ -56,29 +56,52 @@ import { getStatusName } from '@/utils/portalLabels';
 export default {
   name: 'RechargeOrderDetailPage',
   components: { ConfirmDialog },
+  /**
+   * 保存充值订单详情及提交、取消状态。路由查询参数可能同时携带待完成的套餐订单上下文，
+   * 充值完成后可无缝继续原套餐购买流程。
+   */
   data() {
     return { order: null, submitting: false, cancelDialog: false };
   },
   computed: {
+    /**
+     * 同时存在套餐和周期参数时，说明本次充值由余额不足的套餐订单引导而来。
+     */
     hasSubscriptionContext() {
       return Boolean(this.$route.query.planId && this.$route.query.periodCount);
     }
   },
+  /**
+   * 页面创建后按路由订单 ID 查询企业名下的充值订单详情。
+   */
   created() {
     this.loadOrder();
   },
   methods: {
     statusName: getStatusName,
+    /**
+     * 将订单金额和余额统一显示为两位小数。
+     */
     money(value) {
       return Number(value || 0).toFixed(2);
     },
+    /**
+     * 将支付渠道代码转换为详情页使用的完整名称，未知渠道保留原值便于排查。
+     */
     channelName(channel) {
       return { WECHAT: '微信支付', ALIPAY: '支付宝', BANK: '银行转账' }[channel] || channel;
     },
+    /**
+     * 读取当前企业范围内的充值订单，企业隔离及不存在校验由后端接口负责。
+     */
     async loadOrder() {
       const response = await getRechargeOrder(this.$route.params.id);
       this.order = response.data;
     },
+    /**
+     * 仅允许待支付订单进入模拟支付完成流程。入账成功后更新本地订单；若存在套餐上下文，
+     * 立即使用新增余额继续创建原套餐订单。
+     */
     async completePayment() {
       if (!this.order || this.order.status !== 1) return;
       this.submitting = true;
@@ -90,6 +113,9 @@ export default {
         this.submitting = false;
       }
     },
+    /**
+     * 根据充值流程保留的套餐、周期和自动续订参数创建套餐订单，成功后返回套餐服务页展示订单号。
+     */
     async completePendingSubscription() {
       if (!this.hasSubscriptionContext) return;
       this.submitting = true;
@@ -107,9 +133,15 @@ export default {
         this.submitting = false;
       }
     },
+    /**
+     * 打开取消充值订单的二次确认框。
+     */
     openCancelDialog() {
       this.cancelDialog = true;
     },
+    /**
+     * 请求取消当前充值订单，并以服务端返回状态覆盖页面快照，确保取消结果真实生效。
+     */
     async cancelOrder() {
       this.submitting = true;
       try {

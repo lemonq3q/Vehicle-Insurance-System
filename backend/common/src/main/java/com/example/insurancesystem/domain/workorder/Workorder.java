@@ -15,6 +15,9 @@ import java.math.RoundingMode;
 @TableName(value = "biz_workorder")
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 车险工单主实体，承载投保流程状态、客户车辆、上下游机构、创建时间及超额配额最近扣费日等核心字段。
+ */
 public class Workorder {
 
     @TableId(type = IdType.AUTO)
@@ -220,6 +223,10 @@ public class Workorder {
     @TableField("deleted")
     private Integer isDelete;
 
+    /**
+     * 从聚合详情 DTO 复制工单主表字段，供保存编辑结果时剥离证件、文件和保险等关联对象。
+     * 构造过程只做字段映射，不执行金额重算，调用方可在需要时显式调用 computeAmount。
+     */
     public Workorder(WorkorderDTO workorderDTO){
         this.id = workorderDTO.getId();
         this.code = workorderDTO.getCode();
@@ -293,6 +300,10 @@ public class Workorder {
         this.followUpRes = workorderDTO.getFollowUpRes();
     }
 
+    /**
+     * 按配置比例计算单项上下游费用。computeType 为 1 时先从含税保费中按 1.06 去税再乘百分比，
+     * 其他类型直接按原金额乘比例；金额或比例缺失时返回 null，保留“尚未配置”的业务语义。
+     */
     private BigDecimal percentageCompute(BigDecimal amount, BigDecimal percentage, Integer computeType){
         if(amount == null || percentage == null){
             return null;
@@ -303,6 +314,10 @@ public class Workorder {
         return amount.multiply(percentage.divide(new BigDecimal("100")));
     }
 
+    /**
+     * 为商业险、交强险、车船税和非车险补算上下游费用。仅在具体费用尚未手工填写时计算，
+     * 因而不会覆盖人工调整；非车险主金额为空时也不生成对应渠道费用。
+     */
     public void computeAmount(){
         if(upstreamCommercialAmount == null){
             upstreamCommercialAmount = percentageCompute(commercialAmount, upstreamCommercialPercentage, upstreamComputeType);

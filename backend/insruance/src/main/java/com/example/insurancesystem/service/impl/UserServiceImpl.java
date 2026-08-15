@@ -30,6 +30,10 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+/**
+ * 统一承接系统账号、企业成员和商户员工三类人员管理入口。
+ * 带商户归属的请求委托给商户员工服务；企业内部账号则同步维护用户主体和租户成员角色。
+ */
 public class UserServiceImpl implements UserService {
 
     @Autowired
@@ -55,11 +59,17 @@ public class UserServiceImpl implements UserService {
     private final String DEFAULT_PASSWORD = "qwer1234";
 
     @Override
+    /**
+     * 查询商户员工列表，沿用独立员工服务中的角色与商户隔离规则。
+     */
     public ResponseResult select(MerchantUserSearchDTO params) {
         return merchantStaffService.select(params);
     }
 
     @Override
+    /**
+     * 按邮箱查找未删除的系统账号，供找回密码流程确认账号归属。
+     */
     public ResponseResult<User> selectByEmail(String email) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getEmail, email);
@@ -74,6 +84,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 查询符合条件的传统商户用户数据并转换为 Excel 导出模型。
+     */
     public List<MerchantUserExcelDTO> getExcel(MerchantUserSearchDTO params) {
         List<MerchantUserDTO> merchantUserDTOList = userMapper.selectByMerchantUserSearchDTO(params);
         return merchantUserDTOList.stream()
@@ -82,6 +95,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 查询单个人员的聚合资料，包含其角色及关联业务信息。
+     */
     public ResponseResult selectById(Long id) {
         MerchantUserDTO merchantUserDTO = userMapper.selectMerchantUserDTOById(id);
         if (merchantUserDTO == null){
@@ -91,11 +107,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 返回指定商户下可供工单等业务表单选择的员工选项。
+     */
     public ResponseResult selectUserOptionsByMerchantId(Long merchantId) {
         return merchantStaffService.selectByMerchantId(merchantId);
     }
 
     @Override
+    /**
+     * 按关键字查询最多一页商户员工选项；空关键字不允许触发全量人员查询。
+     */
     public ResponseResult selectUserOptions(String blurParam) {
         if (blurParam == null || blurParam.isEmpty()) {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
@@ -108,6 +130,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 按用户主键直接重置密码，校验密码长度后统一使用安全编码器落库。
+     */
     public ResponseResult updatePassword(User params) {
         Long userid = params.getId();
         if(userid == null){
@@ -130,6 +155,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 邮箱验证码校验通过后按邮箱重置密码，只更新仍有效的账号。
+     */
     public ResponseResult updatePasswordByEmail(String email, String password) {
         LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(User::getEmail, email);
@@ -143,6 +171,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 分页查询当前企业已经纳入管理的系统账号及成员角色。
+     */
     public ResponseResult selectSystemUser(MerchantUserSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
         List<MerchantUserDTO> merchantUserDTOList = userMapper.selectSystemUserBySearchDTO(params);
@@ -151,6 +182,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 分页查询自行注册但尚待企业管理员审核的成员申请。
+     */
     public ResponseResult selectNotApprovalUser(MerchantUserSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
         List<MerchantUserDTO> merchantUserDTOList = userMapper.selectNotApprovalUser(params);
@@ -159,6 +193,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 创建个人注册账号并写入待审核企业成员关系。
+     * 手机号、邮箱必须唯一，管理员与出单员分别映射到对应的租户角色编码。
+     */
     public ResponseResult registerPersonal(User user) {
         if (user.getUsername() != null){
             if (judgeRepeatPhone(user.getUsername(), -1L)){
@@ -188,6 +226,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 将指定用户在当前企业下的有效成员关系改为启用状态，完成注册审核。
+     */
     public ResponseResult approvalUser(Long id) {
         LambdaUpdateWrapper<TenantMember> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(TenantMember::getUserId, id).eq(TenantMember::getIsDelete, 0)
@@ -201,6 +242,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 按关键字检索企业系统账号选项，空关键字直接返回空集合以避免全表查询。
+     */
     public ResponseResult selectSystemUserOptions(String blurParam) {
         if (blurParam == null || blurParam.isEmpty()) {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
@@ -210,6 +254,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 创建人员记录。带 merchantId 时创建商户员工；否则创建企业系统账号，
+     * 使用初始密码并同步建立已启用的租户成员角色关系。
+     */
     public ResponseResult insert(MerchantUserDTO params) {
         if (params.getMerchantId() != null) {
             return merchantStaffService.insert(params);
@@ -240,6 +288,10 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    /**
+     * 更新人员记录。商户员工交由专用服务处理；系统账号则校验手机和邮箱唯一性，
+     * 更新用户主体后同步调整其企业成员角色编码。
+     */
     public ResponseResult update(MerchantUserDTO params) {
         if (params.getMerchantId() != null) {
             return merchantStaffService.update(params);
@@ -272,6 +324,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 逻辑删除系统账号及其全部有效企业成员关系，保留历史业务引用。
+     */
     public ResponseResult delete(Long id) {
         LambdaUpdateWrapper<User> userWrapper = new LambdaUpdateWrapper<>();
         userWrapper.eq(User::getId, id);
@@ -290,10 +345,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 删除指定商户的全部员工，由商户员工服务维护角色清理和默认收款人规则。
+     */
     public ResponseResult deleteByMerchantId(Long merchantId) {
         return merchantStaffService.deleteByMerchantId(merchantId);
     }
 
+    /**
+     * 判断手机号是否已被其他有效账号使用；id 用于更新场景排除当前账号。
+     */
     private boolean judgeRepeatPhone(String phone, Long id) {
         LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
         userWrapper.eq(User::getUsername, phone);
@@ -303,6 +364,9 @@ public class UserServiceImpl implements UserService {
         return user != null;
     }
 
+    /**
+     * 判断邮箱是否已被其他有效账号使用；id 用于更新场景排除当前账号。
+     */
     private boolean judgeRepeatEmail(String email, Long id){
         LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
         userWrapper.eq(User::getEmail, email);
@@ -312,6 +376,9 @@ public class UserServiceImpl implements UserService {
         return user != null;
     }
 
+    /**
+     * 读取并验证可分配给企业系统账号的角色，只接受管理员和出单员两类业务角色。
+     */
     private Role findSystemRole(Long roleId) {
         if (roleId == null) return null;
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
@@ -321,14 +388,23 @@ public class UserServiceImpl implements UserService {
         return role;
     }
 
+    /**
+     * 将旧角色实体映射为租户成员表使用的稳定角色编码。
+     */
     private String roleCode(Role role) {
         return "admin".equals(role.getName()) ? "ADMIN" : "ISSUER";
     }
 
+    /**
+     * 将个人注册流程沿用的历史角色主键映射为租户角色编码。
+     */
     private String roleCode(long legacyRoleId) {
         return legacyRoleId == 1L ? "ADMIN" : "ISSUER";
     }
 
+    /**
+     * 为用户建立当前企业成员关系，并记录角色、审核状态和审计字段。
+     */
     private void insertMember(Long userId, String roleCode, int status) {
         TenantMember member = new TenantMember();
         member.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
@@ -340,6 +416,9 @@ public class UserServiceImpl implements UserService {
         tenantMemberMapper.insert(member);
     }
 
+    /**
+     * 为局部更新补齐未提交字段，避免更新用户主体时清空已有资料或角色。
+     */
     private void mergeMissing(MerchantUserDTO target, MerchantUserDTO current) {
         if (target.getName() == null) target.setName(current.getName());
         if (target.getUsername() == null) target.setUsername(current.getUsername());

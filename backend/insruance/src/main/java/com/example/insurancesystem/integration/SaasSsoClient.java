@@ -15,12 +15,19 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
+/**
+ * 封装车险系统与 SaaS 门户之间的服务端单点登录通信。
+ * 客户端使用共享密钥鉴别内部请求，并将网络或响应协议异常转换为统一业务异常。
+ */
 public class SaasSsoClient {
     private final RestTemplate restTemplate;
     private final String exchangeUrl;
     private final String portalAuthorizeUrl;
     private final String clientSecret;
 
+    /**
+     * 创建带连接和读取超时的 HTTP 客户端，并加载双向授权接口地址及内部共享密钥。
+     */
     public SaasSsoClient(
             RestTemplateBuilder builder,
             @Value("${insurance.sso.saas-exchange-url:http://localhost:8081/internal/sso/exchange}") String exchangeUrl,
@@ -36,6 +43,9 @@ public class SaasSsoClient {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 将门户签发的一次性授权码兑换为用户与企业身份，严格校验统一响应状态及数据结构。
+     */
     public Map<String, Object> exchange(String code) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -61,6 +71,9 @@ public class SaasSsoClient {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 请求 SaaS 为当前车险用户签发返回门户的授权信息；未加入企业的账号禁止发起该流程。
+     */
     public Map<String, Object> authorizePortal(Long userId, Long enterpriseId) {
         if (enterpriseId == null) {
             throw new BusinessException(403, "当前账号尚未加入企业");

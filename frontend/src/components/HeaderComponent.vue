@@ -77,6 +77,9 @@ import { jsonStrToObj } from '@/utils/convert';
 import SystemNotice from '@/components/SystemNotice.vue';
 
 const store = useStore();
+/**
+ * * 优先从用户资料中的姓名字段生成页头问候语，并兼容历史 realName、username 字段。
+ */
 const username = computed(() => {
   const user = jsonStrToObj(localStorage.getItem('userInfo')) ?? {};
   return user.name || user.realName || user.username || '';
@@ -84,6 +87,10 @@ const username = computed(() => {
 const router = useRouter();
 const returningPortal = ref(false);
 
+/**
+ * 申请车险系统到 SaaS 门户的单点登录授权，并跳转后端返回的完整门户地址。
+ * 请求期间锁定按钮防止重复签发 code；授权失败时恢复按钮并保留当前车险会话供用户重试。
+ */
 const handleReturnPortal = async () => {
   if (returningPortal.value) return;
   returningPortal.value = true;
@@ -127,6 +134,10 @@ const handleReturnPortal = async () => {
 //   ],
 // };
 
+/**
+ * 拉取个人及企业续保窗口数量，同步页头角标，并按固定 key 新增、替换或移除续保通知。
+ * 管理员可看到全企业数量，普通用户只使用个人数量；请求失败不阻断页头和其他业务页面加载。
+ */
 const refreshRenewCount = async () => {
   try{
     await selectRenewCount().then(res => {
@@ -159,11 +170,20 @@ const refreshRenewCount = async () => {
   }
 }
 
+/**
+
+ * * 页头挂载后立即刷新一次续保统计，使登录或 SSO 进入工作台时无需打开续保页即可看到提醒。
+
+ */
 onMounted(() => {
   refreshRenewCount();
 });
 
 
+/**
+ * 注销后端会话，并在成功响应后清除 Vuex 登录态、通知及浏览器身份缓存，最后返回登录页。
+ * 只有后端确认注销成功才清理本地数据，避免网络瞬断时用户被错误踢出当前页面。
+ */
 const handleLogout = () => {
   logout().then(res => { 
     res = res.data;

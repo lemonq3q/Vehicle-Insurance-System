@@ -21,10 +21,20 @@ const statusNames = {
   }
 };
 
+/**
+
+ * * 将企业成员角色编码转换为门户中文名称，未知编码保留原值便于发现新增角色。
+
+ */
 export function getRoleName(roleCode) {
   return roleNames[roleCode] || roleCode || '-';
 }
 
+/**
+
+ * * 根据订单类别分别翻译订阅订单或充值订单状态，无法识别时显示占位符。
+
+ */
 export function getStatusName(type, status) {
   return statusNames[type]?.[status] || '-';
 }

@@ -19,10 +19,17 @@ export default {
     pageNum: 'render',
     pageSize: 'render'
   },
+  /**
+   * DOM 容器就绪后加载 layui 分页模块，并进行首次渲染。
+   */
   mounted() {
     window.layui.use('laypage', () => this.render());
   },
   methods: {
+    /**
+     * 根据父组件传入的总数、页码和每页条数重建 layui 分页器。首次渲染不发送事件；
+     * 用户调整条数时优先发送 size-change，否则只在页码真正变化时发送 change，避免查询循环。
+     */
     render() {
       if (!this.$refs.container || !window.layui?.laypage) return;
       window.layui.laypage.render({

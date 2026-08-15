@@ -61,18 +61,30 @@ const route = useRoute();
 // 定义响应式的激活菜单索引
 const activeMenu = ref('');
 
-// 初始化/更新激活菜单
+/**
+
+ * * 使用当前路由完整路径更新侧栏激活项；菜单 index 与路由路径保持一致，因此无需额外映射表。
+
+ */
 const updateActiveMenu = () => {
   // 将当前路由路径赋值给activeMenu（核心：路由路径和menu-item的index保持一致）
   activeMenu.value = route.path;
 };
 
-// 页面挂载时初始化
+/**
+
+ * * 菜单挂载时立即同步一次路由，保证刷新子页面后仍高亮正确入口。
+
+ */
 onMounted(() => {
   updateActiveMenu();
 });
 
-// 监听路由变化，实时更新激活状态
+/**
+
+ * * 监听后续路由变化，在详情、编辑和列表之间切换时实时更新侧栏高亮。
+
+ */
 watch(
   () => route.path,
   () => {

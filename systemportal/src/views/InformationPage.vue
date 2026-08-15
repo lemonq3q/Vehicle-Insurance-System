@@ -36,15 +36,24 @@ export default {
   props: {
     page: { type: String, required: true }
   },
+  /**
+   * 协议阅读页默认展示中文版本，语言切换只改变当前页面本地状态，不修改原始静态文档内容。
+   */
   data() {
     return { language: 'zh' };
   },
   computed: {
+    /**
+     * 根据路由指定的文档类型和当前语言选择预生成的静态 HTML；内容来自对应 Markdown 的完整转换结果。
+     */
     documentHtml() {
       return documents[this.page][this.language].html;
     }
   },
   methods: {
+    /**
+     * 在同一协议的中英文版本间切换，保持当前路由及页面位置结构不变。
+     */
     toggleLanguage() {
       this.language = this.language === 'zh' ? 'en' : 'zh';
     }

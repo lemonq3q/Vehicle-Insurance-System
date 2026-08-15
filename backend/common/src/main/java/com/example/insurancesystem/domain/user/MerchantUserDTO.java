@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * 商户员工管理详情对象，组合用户账号资料、所属机构和机构内角色列表。
+ */
 public class MerchantUserDTO {
     private Long id;
 

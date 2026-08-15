@@ -1,3 +1,7 @@
+/**
+ * 将需要写入浏览器存储或表单字段的对象序列化为 JSON。
+ * 循环引用等序列化错误不会向页面扩散，而是返回 null 交由调用方按无数据处理。
+ */
 export function objToJsonStr(obj) {
   try {
     return JSON.stringify(obj, null);
@@ -7,6 +11,10 @@ export function objToJsonStr(obj) {
 }
 
 
+/**
+ * 解析登录用户、表单快照等 JSON 字符串。
+ * 非法或已损坏的本地数据统一返回 null，避免页面初始化阶段因 JSON.parse 异常中断。
+ */
 export function jsonStrToObj(jsonStr) {
   try {
     return JSON.parse(jsonStr);
@@ -38,10 +46,19 @@ const options1 = [
   }
 ];
 
+/**
+
+ * * 返回项目预设保额选项的 JSON 文本，供仍以字符串方式接收选项的旧表单组件使用。
+
+ */
 export function getOptionsJson(){
   return objToJsonStr(options1);
 }
 
+/**
+ * 将表单中的数字字符串恢复为数值，同时保留空值语义。
+ * 空字符串、null 和 undefined 返回 null，避免被 Number 转成 0 后误认为用户主动填写了零。
+ */
 export function transNumStrToNum(str){
   if (str == '' || str == undefined || str == null){
     return null;
@@ -65,6 +82,10 @@ export function extractNonEmptyProps(source, deep = false) {
     }
 
     // 定义“非空”判断函数（规则可按需调整）
+    /**
+     * 定义提交对象的“有效值”边界：空对象被过滤，但数字 0、布尔 false、空字符串和数组会保留。
+     * 该规则用于编辑表单，防止合法的清空或关闭操作在提交前被误删。
+     */
     function isNotEmpty(value) {
         // 排除 null/undefined
         if (value === null || value === undefined) return false;

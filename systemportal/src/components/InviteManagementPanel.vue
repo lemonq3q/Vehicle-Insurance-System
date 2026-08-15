@@ -65,6 +65,10 @@ import { getRoleName } from '@/utils/portalLabels';
 export default {
   name: 'InviteManagementPanel',
   components: { ConfirmDialog, LayDatePicker, LayPagination },
+  /**
+   * 管理邀请码分页列表、创建表单校验状态和删除确认框状态。创建与删除分别设置独立 loading，
+   * 避免网络请求期间重复提交或关闭正在执行的危险操作。
+   */
   data() {
     return {
       rows: [],
@@ -76,21 +80,34 @@ export default {
       deleteDialog: { visible: false, invite: null, loading: false }
     };
   },
+  /**
+   * 组件挂载到具备管理权限的企业页面后，加载当前页邀请码数据。
+   */
   created() {
     this.loadData();
   },
   methods: {
     roleName: getRoleName,
+    /**
+     * 按当前分页条件读取企业邀请码，并将后端总数显式转换为数字供分页组件计算。
+     */
     async loadData() {
       const response = await getInviteCodes(this.query);
       this.rows = response.data.table;
       this.total = Number(response.data.total || 0);
     },
+    /**
+     * 邀请人数必须是正整数，既限制无效额度，也避免小数经后端隐式取整造成实际可用次数歧义。
+     */
     validateCount() {
       const count = Number(this.form.maxUseCount);
       this.errors.maxUseCount = Number.isInteger(count) && count > 0 ? '' : '邀请人数必须为大于 0 的整数';
       return !this.errors.maxUseCount;
     },
+    /**
+     * 联合校验邀请人数和过期日期。日期按所选当天 23:59:59 计算，使用户选择的日期整天有效，
+     * 同时拒绝已经过期或无法解析的日期。
+     */
     validateForm() {
       const countValid = this.validateCount();
       const expiresAt = String(this.form.expiresAt || '').trim();
@@ -98,6 +115,9 @@ export default {
       this.errors.expiresAt = Number.isFinite(expiresTime) && expiresTime > Date.now() ? '' : '过期日期必须晚于当前时间';
       return countValid && !this.errors.expiresAt;
     },
+    /**
+     * 校验通过后创建邀请码，并回到第一页重新加载，确保新创建记录在默认排序下可立即看到。
+     */
     async createInvite() {
       if (!this.validateForm()) {
         notifyWarning(this.errors.maxUseCount || this.errors.expiresAt);
@@ -112,12 +132,21 @@ export default {
         this.creating = false;
       }
     },
+    /**
+     * 记录待删除的邀请码对象并打开确认框，确认文案可据此展示具体邀请码。
+     */
     openDeleteDialog(invite) {
       this.deleteDialog = { visible: true, invite, loading: false };
     },
+    /**
+     * 删除请求进行中禁止关闭弹窗，防止同一邀请码被重复操作。
+     */
     closeDeleteDialog() {
       if (!this.deleteDialog.loading) this.deleteDialog = { visible: false, invite: null, loading: false };
     },
+    /**
+     * 删除选中邀请码后刷新列表；若删除的是非首页最后一条记录，则回退一页再加载，避免停留在空白页。
+     */
     async confirmDelete() {
       this.deleteDialog.loading = true;
       try {
@@ -132,10 +161,16 @@ export default {
         this.deleteDialog.loading = false;
       }
     },
+    /**
+     * 切换页码后按原每页条数重新查询邀请码列表。
+     */
     changePage(pageNum) {
       this.query.pageNum = pageNum;
       this.loadData();
     },
+    /**
+     * 改变每页条数时重置到第一页，避免原页码在新分页规模下超出总页数。
+     */
     changePageSize(pageSize) {
       this.query = { pageNum: 1, pageSize };
       this.loadData();

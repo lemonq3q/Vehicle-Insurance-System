@@ -17,9 +17,15 @@ public final class UniqueCodeRetryUtil {
     private static final int MAX_RETRY_COUNT = 10;
     private static final int MYSQL_DUPLICATE_KEY_ERROR_CODE = 1062;
 
+    /**
+     * 静态重试工具不保存状态，禁止实例化。
+     */
     private UniqueCodeRetryUtil() {
     }
 
+    /**
+     * 使用系统通用业务编号生成器执行插入重试，适合商户和工单等统一编号格式。
+     */
     public static int insertWithGeneratedCode(String constraintName,
                                               Consumer<String> codeSetter,
                                               IntSupplier insertAction) {
@@ -27,6 +33,10 @@ public final class UniqueCodeRetryUtil {
                 constraintName, SystemCommonUtil::buildCode, codeSetter, insertAction);
     }
 
+    /**
+     * 每次尝试先生成并写入新编号，再执行数据库插入。只有 MySQL 1062 且命中调用方指定唯一约束时才重试，
+     * 其他完整性异常立即原样抛出；超过十次仍冲突则抛出最后一次编号冲突，避免无限循环掩盖故障。
+     */
     public static int insertWithGeneratedCode(String constraintName,
                                               Supplier<String> codeGenerator,
                                               Consumer<String> codeSetter,
@@ -46,6 +56,10 @@ public final class UniqueCodeRetryUtil {
         throw lastCodeConflict;
     }
 
+    /**
+     * 沿异常原因链查找 MySQL 重复键错误，并核对错误消息中的唯一约束名，确保重试只针对生成编号碰撞，
+     * 不会把手机号、外键或其他唯一字段冲突误认为可恢复问题。
+     */
     static boolean isSpecifiedCodeConflict(Throwable throwable, String constraintName) {
         Throwable current = throwable;
         while (current != null) {

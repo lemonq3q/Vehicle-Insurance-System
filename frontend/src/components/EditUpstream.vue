@@ -161,12 +161,22 @@ const oriUpstreamInfo = ref({});
 
 // const defaultAreaOption = computed(() => buildSelectorOptionByArray(upstreamInfo.businessArea));
 
+/**
+
+ * * 更新模式根据路由 ID 加载原上游资料；新增模式直接保留空白默认表单。
+
+ */
 onMounted(() => {
   if (type == 'update'){
     getDataById();
   }
 });
 
+/**
+
+ * * 校验机构名称、地区、联系人及业务区域，通过后按路由模式选择新增或更新接口。
+
+ */
 const handleSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -181,6 +191,11 @@ const handleSubmit = (formEl) => {
   });
 };
 
+/**
+
+ * * 将级联地区转换为后端编码后新增上游渠道，整个请求期间显示全局处理中遮罩。
+
+ */
 const addSubmit = async () => {
   try{
     Loading.open();
@@ -197,6 +212,11 @@ const addSubmit = async () => {
   }
 }
 
+/**
+
+ * * 把所在地单选路径和多个业务区域路径提取为市级编码，生成上游保存接口的数据结构。
+
+ */
 const buildInsertData = () => {
   const data = { ...upstreamInfo };
   data.location = upstreamInfo.location[1];
@@ -210,6 +230,11 @@ const buildInsertData = () => {
   return data;
 }
 
+/**
+
+ * * 将详情接口的地区编码恢复为级联路径，并回填机构类型、联系方式和全部业务区域。
+
+ */
 const buildUpstreamInfo = () => {
   upstreamInfo.name = oriUpstreamInfo.value.name;
   upstreamInfo.type = oriUpstreamInfo.value.type;
@@ -228,6 +253,11 @@ const buildUpstreamInfo = () => {
   // upstreamInfo.defaultAreaCode = getCascadeAreaCode(oriUpstreamInfo.value.defaultAreaCode);
 }
 
+/**
+
+ * * 查询路由指定的上游渠道详情并保存原始快照，随后构建可编辑表单。
+
+ */
 const getDataById = async () => {
   try{
     Loading.open();
@@ -244,6 +274,11 @@ const getDataById = async () => {
   }
 }
 
+/**
+
+ * * 在转换后的表单数据中保留原渠道 ID 和业务编码，提交更新且不重新生成渠道身份。
+
+ */
 const updateSubmit = async () => {
   try{
     Loading.open();
@@ -262,10 +297,20 @@ const updateSubmit = async () => {
   }
 }
 
+/**
+
+ * * 使用最近一次加载的原始渠道快照覆盖未保存修改。
+
+ */
 const handleReset = () => {
   buildUpstreamInfo();
 }
 
+/**
+
+ * * 返回上游渠道列表，不在离开页面时隐式保存当前表单。
+
+ */
 const handleBack = () => {
   router.push('/home/upstream');
 }

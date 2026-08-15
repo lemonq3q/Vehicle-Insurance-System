@@ -22,6 +22,9 @@
 </template>
 
 <script>
+/**
+ * 帮助中心占位页面保留未来客服、常见问题和服务公告的稳定路由，并提供返回业务页的导航入口。
+ */
 export default {
   name: 'HelpCenterPage'
 };

@@ -140,6 +140,11 @@ const userInfo = reactive({
 
 const oriUserInfo = ref({});
 
+/**
+
+ * * 从 sessionStorage 恢复新增/更新模式及列表预选机构，更新模式再查询员工详情；同时加载机构员工角色。
+
+ */
 onMounted(() => {
   if(defaultMerchantOption){
     merchantOptions.value.push(defaultMerchantOption);
@@ -151,6 +156,11 @@ onMounted(() => {
   getRoleOption();
 });
 
+/**
+
+ * * 校验手机号、姓名、身份证、所属机构和角色后，按页面模式新增或更新机构员工。
+
+ */
 const handleSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate((valid) => {
@@ -165,6 +175,11 @@ const handleSubmit = (formEl) => {
   });
 };
 
+/**
+
+ * * 创建下游机构员工并建立其机构和角色关系，请求期间使用全局遮罩防止重复提交。
+
+ */
 const addSubmit = async () => {
   try{
     Loading.open();
@@ -181,11 +196,21 @@ const addSubmit = async () => {
   }
 }
 
+/**
+
+ * * 复制员工表单为独立请求体，保留机构和角色 ID 的后端契约。
+
+ */
 const buildInsertData = () => {
   const data = { ...userInfo };
   return data;
 }
 
+/**
+
+ * * 回填员工资料和角色，并把所属机构补成带编码名称的选项，确保远程下拉框能显示历史值。
+
+ */
 const buildUserInfo = () => {
   userInfo.username = oriUserInfo.value.username;
   userInfo.name = oriUserInfo.value.name;
@@ -201,6 +226,11 @@ const buildUserInfo = () => {
   }
 }
 
+/**
+
+ * * 查询 sessionStorage 指定的机构员工详情并保存原始快照。
+
+ */
 const getDataById = async () => {
   try{
     Loading.open();
@@ -217,6 +247,11 @@ const getDataById = async () => {
   }
 }
 
+/**
+
+ * * 保留员工原 ID 和业务编码，提交资料、机构或角色调整。
+
+ */
 const updateSubmit = async () => {
   try{
     Loading.open();
@@ -235,15 +270,32 @@ const updateSubmit = async () => {
   }
 }
 
+/**
+
+ * * 使用原始员工快照恢复未保存的表单修改。
+
+ */
 const handleReset = () => {
   buildUserInfo();
 }
 
+/**
+
+ * * 返回下游机构员工列表页。
+
+ */
 const handleBack = () => {
   router.push('/home/downstreamUser');
 }
 
 
+/**
+
+
+ * * 查询后端限定的机构员工角色集合并转换为选择项，不在前端硬编码角色 ID。
+
+
+ */
 const getRoleOption = async () => {
   try{
     roleLoading.value = true;
@@ -265,6 +317,11 @@ const getRoleOption = async () => {
   }
 }
 
+/**
+
+ * * 模糊查询下游机构，组合机构编码和名称供员工归属选择。
+
+ */
 const getMerchantOption = async (blurParam) => {
   try{
     merchantLoading.value = true;

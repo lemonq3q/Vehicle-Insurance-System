@@ -12,6 +12,9 @@ import java.util.stream.Collectors;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * 上游渠道 Excel 导出行模型，将数据库字段转换为业务人员可读列。
+ */
 public class UpstreamExcelDTO {
 
     @ExcelProperty("机构编号")

@@ -205,6 +205,9 @@ const pwdRules = reactive({
   ],
   confirmPassword: [
     {
+      /**
+       * * 比较两次密码输入并通过 Element Plus callback 返回校验结果，防止提交不一致的新密码。
+       */
       validator: (rule, value, callback) => {
         if (value !== pwdForm.password) {
           callback(new Error('两次输入的密码不一致'));
@@ -218,11 +221,21 @@ const pwdRules = reactive({
 });
 
 // 生命周期 - 挂载时初始化编辑表单
+/**
+ * * 个人中心挂载后通过当前登录上下文读取用户资料，不接受页面传入任意用户 ID。
+ */
 onMounted(() => {
   getPersonalUser();
 });
 
 
+/**
+
+
+ * * 查询当前账号个人资料，保存原始快照并同步展示区和编辑表单。
+
+
+ */
 const getPersonalUser = async () => {
   try{
     Loading.open();
@@ -239,6 +252,11 @@ const getPersonalUser = async () => {
   }
 };
 
+/**
+
+ * * 将原始用户资料转换为个人中心展示值，包括状态、角色和格式化后的创建时间。
+
+ */
 const buildInfo = () => {
   userInfo.name = oriInfo.value.name;
   // userInfo.gender = oriInfo.value.gender == 1 ? '男' : '女';
@@ -252,6 +270,9 @@ const buildInfo = () => {
 }
 
 // 重置编辑表单（同步原始数据）
+/**
+ * * 清除表单校验状态并从原始快照恢复姓名、手机号、邮箱和只读状态，撤销未保存修改。
+ */
 const resetInfoForm = () => {
   if (infoFormRef.value) {
     infoFormRef.value.resetFields();
@@ -265,6 +286,11 @@ const resetInfoForm = () => {
   editInfoForm.status = oriInfo.value.status == 1 ? '正常' : '禁用';
 };
 
+/**
+
+ * * 只提取个人中心允许修改的姓名、手机号和邮箱，并携带当前用户 ID，避免覆盖角色和状态。
+
+ */
 const buildInsertData = () => {
   return {
     id: oriInfo.value.id,
@@ -275,6 +301,9 @@ const buildInsertData = () => {
 };
 
 // 保存个人信息
+/**
+ * * 校验个人资料后提交更新，成功时重新查询后端数据并刷新展示区。
+ */
 const saveInfo = async (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -298,6 +327,9 @@ const saveInfo = async (formEl) => {
 };
 
 // 重置密码表单
+/**
+ * * 清除密码表单的校验状态及两次密码输入，避免弹窗再次打开时残留敏感信息。
+ */
 const resetPwdForm = () => {
   if (pwdFormRef.value) {
     pwdFormRef.value.resetFields();
@@ -307,6 +339,9 @@ const resetPwdForm = () => {
 };
 
 // 修改密码
+/**
+ * * 校验密码长度和两次输入一致性后更新当前用户密码；请求体不包含其他个人资料字段。
+ */
 const changePassword = async (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {

@@ -72,6 +72,9 @@ import { createInsuranceAuthorization } from '@/api/portal';
 export default {
   name: 'PortalLayout',
   components: { ConfirmDialog },
+  /**
+   * * 初始化退出弹窗、跨系统跳转状态及门户侧栏菜单结构，菜单按企业、财务和服务职责分组。
+   */
   data() {
     return {
       logoutDialogVisible: false,
@@ -110,31 +113,56 @@ export default {
     };
   },
   computed: {
+    /**
+     * * 读取 Vuex 侧栏折叠状态，驱动布局宽度和菜单文字显示。
+     */
     collapsed() {
       return this.$store.state.sidebarCollapsed;
     },
+    /**
+     * * 使用当前路由元数据生成门户页头标题。
+     */
     pageTitle() {
       return this.$route.meta.title || '门户后台';
     },
+    /**
+     * * 显示当前企业名称；账号尚未加入企业时展示明确占位文案。
+     */
     enterpriseName() {
       return this.$store.state.currentEnterprise?.name || '暂未加入企业';
     },
+    /**
+     * * 将当前有效角色转换为页头短名称，兼容无企业成员状态。
+     */
     currentRoleName() {
       return { OWNER: '拥有者', ADMIN: '管理员', ISSUER: '出单员' }[this.$store.getters.roleCode] || '无';
     }
   },
+  /**
+   * * 布局创建时确保账号上下文已经加载，使菜单权限和企业名称在子页面渲染前可用。
+   */
   async created() {
     if (!this.$store.state.contextLoaded) {
       await this.$store.dispatch('loadContext');
     }
   },
+  /**
+   * * 监听浏览器 pageshow；用户从车险系统按浏览器返回时需要解除“正在进入”按钮状态。
+   */
   mounted() {
     window.addEventListener('pageshow', this.resetEnteringSystem);
   },
+  /**
+   * * 布局卸载时移除 pageshow 监听，避免重复进入门户后积累回调。
+   */
   beforeUnmount() {
     window.removeEventListener('pageshow', this.resetEnteringSystem);
   },
   methods: {
+    /**
+     * 基于当前门户会话申请进入车险系统的一次性授权地址并执行整页跳转。
+     * 请求期间锁定按钮防止重复签发 code；失败时恢复状态，错误提示由请求拦截器统一发布。
+     */
     async enterInsuranceSystem() {
       if (this.enteringSystem) return;
       this.enteringSystem = true;
@@ -146,18 +174,30 @@ export default {
         // Request errors are displayed by the Axios interceptor.
       }
     },
+    /**
+     * * 反转并提交侧栏折叠状态，使页头、侧栏和内容区域同时调整位置。
+     */
     toggleSidebar() {
       this.$store.commit('setSidebarCollapsed', !this.collapsed);
     },
+    /**
+     * * 在页面从浏览器前进后退缓存恢复时清除跨系统跳转加载态。
+     */
     resetEnteringSystem() {
       this.enteringSystem = false;
     },
+    /**
+     * * 保留测试角色切换入口；当前实现停用，不改变真实或临时角色权限。
+     */
     switchTestRole() {
       // const roles = ['OWNER', 'ADMIN', 'ISSUER'];
       // const currentIndex = roles.indexOf(this.$store.getters.roleCode);
       // const nextRole = roles[(currentIndex + 1) % roles.length];
       // this.$store.commit('setTestRoleCode', nextRole);
     },
+    /**
+     * * 关闭确认弹窗、清理门户会话并返回登录页，确保企业和财务上下文不在下一账号中残留。
+     */
     confirmLogout() {
       this.logoutDialogVisible = false;
       this.$store.dispatch('logout');

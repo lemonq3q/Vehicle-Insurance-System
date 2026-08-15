@@ -329,14 +329,29 @@ const handleUserOptions = ref([]);
 
 const insuranceCompanyOptions = ref([]);
 
+/**
+
+ * * 分派工作台挂载后按默认年度时间范围加载工单首屏。
+
+ */
 onMounted(() => {
   getData();
 });
 
+/**
+
+ * * 保留当前筛选条件刷新分派列表，供新增或编辑抽屉完成后调用。
+
+ */
 const handleRefresh = () => {
   getData();
 }
 
+/**
+
+ * * 清空机构、人员、地区、保险公司和状态筛选，并恢复默认年度日期范围。
+
+ */
 const handleReset = () => {
   selectParams.blurParam = '';
   selectParams.dateRange = getLastYearRange();
@@ -349,10 +364,20 @@ const handleReset = () => {
   selectParams.status = ""
 }
 
+/**
+
+ * * 分页变化后按当前条件重新查询工单。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 查询工单创建机构的远程选项，用于限定来源机构。
+
+ */
 const getCreateMerchantOption = async (blurParam) => {
   loading.createMerchant = true;
   await selectDownstreamOption(blurParam).then(res=>{
@@ -369,6 +394,11 @@ const getCreateMerchantOption = async (blurParam) => {
   loading.createMerchant = false;
 }
 
+/**
+
+ * * 查询上游处理机构选项，用于筛选已分派到特定渠道的工单。
+
+ */
 const getHandleMerchantOption = async (blurParam) => {
   loading.handleMerchant = true;
   await selectUpstreamOption(blurParam).then(res=>{
@@ -385,6 +415,11 @@ const getHandleMerchantOption = async (blurParam) => {
   loading.handleMerchant = false;
 }
 
+/**
+
+ * * 查询处理人员远程选项，供分派列表按负责人筛选。
+
+ */
 const getHandleUserOpton = async (blurParam) => {
   loading.handleUser = true;
   await selectUserOption(blurParam).then(res=>{
@@ -401,6 +436,11 @@ const getHandleUserOpton = async (blurParam) => {
   loading.handleUser = false;
 }
 
+/**
+
+ * * 查询保险公司选项，供分派工作台按承保公司筛选。
+
+ */
 const getInsuranceCompanyOption = async (blurParam) => {
   loading.insuranceCompany = true;
   await selectInusranceCompanyOptions(blurParam).then(res=>{
@@ -417,6 +457,11 @@ const getInsuranceCompanyOption = async (blurParam) => {
   loading.insuranceCompany = false;
 }
 
+/**
+
+ * * 以只读模式进入工单详情，防止分派列表直接修改流程节点数据。
+
+ */
 const handleDetail = (index, row) => {
   sessionStorage.setItem('workorderDetailType', 'look');
   router.push({
@@ -427,11 +472,21 @@ const handleDetail = (index, row) => {
   });
 };
 
+/**
+
+ * * 将页码恢复为第一页后执行新的分派筛选。
+
+ */
 const handleSearch = () => {
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 查询分派工作台工单，同步分页总数并转换表格展示字段。
+
+ */
 const getData = () => {
   let params = buildSearchParams();
   selectWorkorder(params).then(res => {
@@ -443,6 +498,11 @@ const getData = () => {
   });
 }
 
+/**
+
+ * * 整理秒级日期边界、地区编码、机构人员条件、工单状态及分页参数。
+
+ */
 const buildSearchParams = () => {
   return {
     blurParam: selectParams.blurParam,
@@ -460,6 +520,11 @@ const buildSearchParams = () => {
   }
 }
 
+/**
+
+ * * 把地区编码和关键业务时间转换为分派表格使用的文本。
+
+ */
 const buildTableData = (data) => {
   data.forEach(item => {
     item.areaCode = getCascadeArea(item.areaCode);
@@ -471,17 +536,32 @@ const buildTableData = (data) => {
   tableData.value = data;
 }
 
+/**
+
+ * * 以新增模式打开工单基础资料抽屉。
+
+ */
 const handleAdd = () => {
   type.value = 'add';
   drawer.value = true;
 }
 
+/**
+
+ * * 以更新模式打开工单抽屉，并传入待编辑记录 ID。
+
+ */
 const handleUpdate = (index, row) => {
   type.value = 'update';
   id.value = row.id;
   drawer.value = true;
 }
 
+/**
+
+ * * 按分派列表当前筛选条件导出工单 Excel。
+
+ */
 const handleExport = () => {
   let params = buildSearchParams();
   getWorkorderExcel(params);

@@ -988,6 +988,9 @@ const loadingFlag = reactive({
 });
 
 const refresh = ref(1);
+/**
+ * * 将组件内部新增或更新成功事件转换为父组件 refresh 事件，使外层列表无需读取编辑器内部状态即可刷新。
+ */
 watch(refresh, (newVal, oldVal) => {
   emit('refresh', { newVal, oldVal });
 });
@@ -1148,6 +1151,10 @@ const oriInfo = ref({});
 
 const createByOptions = ref([]);
 
+/**
+ * 初始化工单编辑器：始终加载险种定义，更新模式额外并行查询工单详情，随后把持久化数据还原为表单状态。
+ * 全局遮罩覆盖整个初始化过程，并在接口异常时通过 finally 关闭。
+ */
 onMounted(async () => {
   try{
     Loading.open();
@@ -1166,6 +1173,10 @@ onMounted(async () => {
   }
 });
 
+/**
+ * 清除证件文件关联、预览列表和所有 OCR 成功标记，供编辑撤销或重新回填前恢复干净状态。
+ * 这里只重置上传相关状态，不直接清空工单主体表单。
+ */
 const reset = () => {
   workorderFileId.idCardFrontId = undefined;
   workorderFileId.idCardBackId = undefined;
@@ -1190,6 +1201,11 @@ const reset = () => {
   file.licenseBack = [];
 }
 
+/**
+
+ * * 根据工单创建机构查询可作为提交人的机构用户；机构未选择时清空候选人，防止跨机构沿用旧人员。
+
+ */
 const getUserOptionByMerchantId = async () => {
   loading.createBy = true;
   if (info.createMerchantId == null || info.createMerchantId == undefined){
@@ -1246,6 +1262,11 @@ const getUserOptionByMerchantId = async () => {
 //   loading.insurance = false;
 // }
 
+/**
+
+ * * 使用地区级联选择的最后一级编码查询当地可承保公司；地区为空时同步清空保险公司选项。
+
+ */
 const getInsuranceCompanyOption = async () => {
   let areaCode = info.areaCode[info.areaCode.length-1];
   if(areaCode == null || areaCode == undefined || areaCode == ''){
@@ -1267,6 +1288,10 @@ const getInsuranceCompanyOption = async () => {
   loading.insurance = false;
 }
 
+/**
+ * 监听创建机构变化并刷新提交人范围。新增状态默认选择返回的首位人员；编辑初次回填时保留原提交人，
+ * 通过 pageStatus 跳过一次自动覆盖，避免异步选项加载破坏历史数据。
+ */
 watch(
   () => info.createMerchantId, 
   async () => {
@@ -1292,6 +1317,11 @@ watch(
   }
 );
 
+/**
+
+ * * 监听业务地区变化，联动刷新该地区可选择的保险公司。
+
+ */
 watch(
   () => info.areaCode,
   () => {
@@ -1303,10 +1333,20 @@ watch(
   }
 );
 
+/**
+
+ * * 切换险种明细区域的展开状态，不修改已经选择的险种和保额数据。
+
+ */
 const handleExpandInsurance = () => {
   showFlag.insuranceVisible = !showFlag.insuranceVisible;
 }
 
+/**
+
+ * * 根据输入关键字远程查询工单创建机构，并组合机构编码和名称作为下拉标签。
+
+ */
 const getCreateMerchantOption = async (blurParam) => {
   loading.createMerchant = true;
   await selectDownstreamOption(blurParam).then(res=>{
@@ -1325,11 +1365,24 @@ const getCreateMerchantOption = async (blurParam) => {
 
 
 
+/**
+
+
+
+ * * 将当前上传文件地址写入预览弹窗，使用户在提交前核对证件影像。
+
+
+
+ */
 const handlePictureCardPreview = (file) => {
   dialogImageUrl.value = file.url
   showFlag.dialogVisible = true
 }
 
+/**
+ * 在提交工单前轮询七类证件的上传状态，确保请求体中的文件 ID 均已生成。
+ * 每 200ms 检查一次，30 秒仍未完成则拒绝提交，避免保存只有本地预览而没有 OSS 文件的工单。
+ */
 const waitFileUpload = async () => {
   return new Promise((resolve, reject) => {
     const checkupInterval = setInterval(() => {
@@ -1346,6 +1399,10 @@ const waitFileUpload = async () => {
   })
 }
 
+/**
+ * 先执行表单规则校验，再等待全部异步文件上传结束，最后依据 add/update 模式进入对应保存流程。
+ * 上传超时会提示用户并主动关闭遮罩，不会发送不完整工单数据。
+ */
 const handleSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -1368,6 +1425,11 @@ const handleSubmit = (formEl) => {
   });
 };
 
+/**
+
+ * * 构建新增工单请求并持久化；成功后通知父列表刷新，并跳转到新工单详情继续处理后续流程。
+
+ */
 const addSubmit = async () => {
   try{
     let data = buildInsertData();
@@ -1386,6 +1448,11 @@ const addSubmit = async () => {
   }
 }
 
+/**
+
+ * * 查询系统险种字典，并交给选项构建逻辑解析保额、免赔额默认值及险种分组。
+
+ */
 const getAllInsuranceOption = async () => {
   let res = await selectAllInsurance();
   res = res.data;
@@ -1394,6 +1461,11 @@ const getAllInsuranceOption = async () => {
   }
 }
 
+/**
+
+ * * 解析险种记录中的 JSON 选项和默认值，再按商业险、交强险及附加险类型分组供表单渲染。
+
+ */
 const buildInsuranceOption = (data) => {
   data.forEach(item => {
     item.options = jsonStrToObj(item.optionsJson);
@@ -1411,6 +1483,11 @@ const buildInsuranceOption = (data) => {
   insuranceOptions.value = options;
 }
 
+/**
+ * 将响应式表单转换为新增或更新接口的工单聚合数据。
+ * 根据个人/企业车主和行驶证/发票/合格证录入类型清除互斥字段，日期转换为秒级时间戳，数值字段
+ * 规范为整数或金额，并把所选险种、证件文件 ID 组装成后端可一次持久化的关联列表。
+ */
 const buildInsertData = () => {
   const data = { ...info };
   data.vehicleLicense = undefined;
@@ -1524,6 +1601,11 @@ const buildInsertData = () => {
   return data;
 }
 
+/**
+ * 将详情接口返回的工单聚合数据回填到编辑表单。
+ * 该过程恢复机构与保险公司下拉选项、日期对象、车辆证件、文件预览和历史险种选择；接口中不存在于
+ * 当前险种字典的旧选项会按类型回退匹配，保证历史工单仍可查看和再次保存。
+ */
 const buildInfo = () => {
   pageStatus.value = 'loading';
   info.ownerType = oriInfo.value.ownerType;
@@ -1664,6 +1746,11 @@ const buildInfo = () => {
 
 }
 
+/**
+
+ * * 按组件传入的工单 ID 查询完整详情，并暂存原始数据供 buildInfo 回填和更新时保留工单编码。
+
+ */
 const getDataById = async () => {
   let res = await selectWorkorderById(id);
   res = res.data;
@@ -1672,6 +1759,11 @@ const getDataById = async () => {
   }
 }
 
+/**
+
+ * * 在统一请求体基础上补充原工单 ID 和业务编码，保存基础资料修改；成功后通知父列表刷新。
+
+ */
 const updateSubmit = async () => {
   try{
     let data = buildInsertData();
@@ -1690,11 +1782,21 @@ const updateSubmit = async () => {
   }
 }
 
+/**
+
+ * * 丢弃当前未保存的文件和表单编辑，再从 oriInfo 重新构建原始工单状态。
+
+ */
 const handleReset = () => {
   reset();
   buildInfo();
 }
 
+/**
+
+ * * 为上传项提供可预览地址：优先复用已有远程或 Blob URL，本地 File 则临时创建 Object URL。
+
+ */
 const ensureUploadPreviewUrl = (uploadFile) => {
   if (uploadFile.url != null && uploadFile.url !== '') {
     return uploadFile.url;
@@ -1706,6 +1808,11 @@ const ensureUploadPreviewUrl = (uploadFile) => {
   return '';
 }
 
+/**
+
+ * * 将 Element Plus 本地上传项与后端系统文件记录合并，统一补齐文件 ID、名称和预览地址。
+
+ */
 const buildUploadFileItem = (uploadFile, fileInfo) => {
   return {
     ...uploadFile,
@@ -1715,6 +1822,10 @@ const buildUploadFileItem = (uploadFile, fileInfo) => {
   };
 }
 
+/**
+ * 校验上传项包含原始 File 后执行 OSS 直传，并要求后端返回可关联的文件记录。
+ * 返回值同时包含业务 fileInfo 和组件预览项，供普通证件上传复用。
+ */
 const handleSingleFileUpload = async (uploadFile) => {
   const rawFile = uploadFile?.raw;
   if (!rawFile) {
@@ -1730,6 +1841,10 @@ const handleSingleFileUpload = async (uploadFile) => {
   };
 }
 
+/**
+ * 先把证件原图写入 OSS，再以系统文件信息调用指定 OCR 类型。
+ * OCR 失败会整体按上传失败处理；成功时返回最终文件记录、识别字段和本地预览项。
+ */
 const handleOcrFileUpload = async (uploadFile, ocrType) => {
   const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
   const response = await imgRecognition(fileInfo, ocrType);
@@ -1744,6 +1859,11 @@ const handleOcrFileUpload = async (uploadFile, ocrType) => {
   };
 }
 
+/**
+
+ * * 按证件类型同时清空上传列表和对应工单文件 ID，保证移除或失败后请求体不引用旧文件。
+
+ */
 const clearUploadState = (type) => {
   const fileIdMap = {
     idCardFront: 'idCardFrontId',
@@ -1761,6 +1881,11 @@ const clearUploadState = (type) => {
   }
 }
 
+/**
+
+ * * 统一回滚失败证件的文件状态和 OCR 成功标记，并向用户展示具体错误原因。
+
+ */
 const handleUploadFail = (type, message = '图片上传失败，请重新上传') => {
   clearUploadState(type);
   if (type == 'idCardBack'){
@@ -1781,6 +1906,11 @@ const handleUploadFail = (type, message = '图片上传失败，请重新上传'
   Message.error(message);
 }
 
+/**
+
+ * * 校验并上传身份证国徽面，仅保存文件关联，不使用该面覆盖车主姓名和证件号码。
+
+ */
 const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.idCardFront = validFiles;
@@ -1801,6 +1931,11 @@ const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 上传身份证人像面并执行身份证 OCR，成功后保存文件 ID 并回填车主姓名和身份证号。
+
+ */
 const handleIdCardBackChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.idCardBack = validFiles;
@@ -1822,12 +1957,22 @@ const handleIdCardBackChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 将身份证 OCR 的姓名和号码写入个人车主字段，并标记页面已经完成身份证识别。
+
+ */
 const buildIdCardInfo = (data) => {
   info.ownerName = data.name;
   info.ownerIdNum = data.idNum;
   showFlag.idCardRecognition = true;
 }
 
+/**
+
+ * * 上传行驶证正页并执行车辆行驶证 OCR，成功后回填车辆登记资料。
+
+ */
 const handleLicenseFrontChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.licenseFront = validFiles;
@@ -1849,6 +1994,11 @@ const handleLicenseFrontChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 上传行驶证副页并使用同一行驶证 OCR 规则补充车辆核定载重、尺寸等资料。
+
+ */
 const handleLicenseBackChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.licenseBack = validFiles;
@@ -1870,6 +2020,10 @@ const handleLicenseBackChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+ * 把 OCR 返回的秒级登记、发证和过户时间恢复为 Date，只用非空字段覆盖当前行驶证表单。
+ * 这样分别识别正副页时不会用缺失字段清空另一页已经识别或人工填写的内容。
+ */
 const buildLicenseInfo = (data) => {
   if (data.registrationDate != null && data.registrationDate != undefined){
     data.registrationDate = new Date(data.registrationDate*1000);
@@ -1886,6 +2040,11 @@ const buildLicenseInfo = (data) => {
   showFlag.licenseRecognition = true;
 }
 
+/**
+
+ * * 上传车辆合格证并执行合格证 OCR，保存文件关联后回填车型、车架号及车辆参数。
+
+ */
 const handleCertificateChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.certificate = validFiles;
@@ -1907,11 +2066,21 @@ const handleCertificateChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 使用合格证 OCR 结果替换合格证表单，并显示识别成功状态供用户复核。
+
+ */
 const buildCertificateInfo = (data) => {
   info.vehicleCertificate = data;
   showFlag.certificateRecognition = true;
 }
 
+/**
+
+ * * 上传机动车发票并执行发票 OCR，成功后回填购车金额、买方和车辆识别资料。
+
+ */
 const handleInvoiceChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.invoice = validFiles;
@@ -1933,11 +2102,21 @@ const handleInvoiceChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 使用发票 OCR 结果更新发票录入区域，并标记该证件已完成识别。
+
+ */
 const buildInvoiceInfo = (data) => {
   info.vehicleInvoice = data;
   showFlag.invoiceRecognition = true;
 }
 
+/**
+
+ * * 企业车主上传营业执照后执行 OCR，保存文件关联并回填企业名称和统一社会信用代码。
+
+ */
 const handleBusinessLicenseChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   file.businessLicense = validFiles;
@@ -1959,12 +2138,21 @@ const handleBusinessLicenseChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 将营业执照识别结果写入企业车主字段，并标记识别完成。
+
+ */
 const buildBusinessLicenseInfo = (data) => {
   info.organizationName = data.organizationName;
   info.socialCreditCode = data.socialCreditCode;
   showFlag.businessLicenseRecognition = true;
 }
 
+/**
+ * 按证件类型选择当前文件地址和业务化文件名，再交由统一下载工具保存。
+ * 未找到对应上传文件时不触发下载，避免生成空白文件。
+ */
 const handleDownload = (ElUploadFile, type) => {
   let url;
   let name = Date.now().toString();
@@ -2002,10 +2190,19 @@ const handleDownload = (ElUploadFile, type) => {
   downloadByUrl(url, name);
 }
 
+/**
+
+ * * 用户从上传控件移除证件时同步清除文件列表和请求体中的系统文件 ID。
+
+ */
 const handleRemove = (ElUploadFile, type) => {
   clearUploadState(type);
 }
 
+/**
+ * 限制座位数、载重、整备质量、排量和发票金额等字段只能保留普通数字文本。
+ * 非法输入会按字段类型清空对应值，避免提交时 Number 转换产生 NaN。
+ */
 const handleNumberInputChange = (event, type) => {
   let newValue = event.target.value;
   if (newValue == '' || isNumber(newValue)){
@@ -2043,6 +2240,11 @@ const handleNumberInputChange = (event, type) => {
   }
 }
 
+/**
+
+ * * 新增成功后缓存可处理模式和新工单 ID，并进入统一详情页继续报价、核保等后续阶段。
+
+ */
 const routeToDetail = (id) => {
   sessionStorage.setItem('workorderDetailType', 'handle');
   sessionStorage.setItem('workorderId', id);

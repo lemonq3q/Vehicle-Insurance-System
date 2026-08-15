@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.util.Date;
 
 @Component
+/**
+ * 每个请求执行一次的 JWT 认证过滤器，同时兼容历史 token 请求头和标准 Bearer 头。
+ * 令牌验签后还需与 Redis 单登录会话核对 jti，成功才向 SecurityContext 写入完整用户权限。
+ */
 public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
     private static final String TOKEN_HEADER = "new-token";
@@ -31,6 +35,10 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
+    /**
+     * 提取并验证 JWT，检查 Redis 中当前会话，刷新活跃会话有效期，并在 JWT 临近过期时通过 new-token 响应头续签。
+     * 令牌非法或会话已失效时直接交给统一认证入口返回 401，不再进入业务过滤链；匿名请求则不建立认证上下文并继续放行。
+     */
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String token = request.getHeader("token");
         if (token == null) {
@@ -71,7 +79,10 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
             );
             return;
         }
-        // 刷新过期时间
+        /*
+         * Redis 会话采用滑动过期：每次合法请求都会续期，而 JWT 只在达到刷新阈值时重新签发，
+         * 避免每个响应都生成新令牌，同时保持活跃会话连续可用。
+         */
         sessionManager.refresh(userId, loginUser);
 
         Date expiration = claims.getExpiration();

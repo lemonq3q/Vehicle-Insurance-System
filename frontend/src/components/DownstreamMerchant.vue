@@ -137,10 +137,20 @@ const selectParams = reactive({
   channel: []
 });
 
+/**
+
+ * * 页面挂载后加载当前企业的下游机构首页数据。
+
+ */
 onMounted(() => {
   getData();
 });
 
+/**
+
+ * * 清空下游机构的关键字、地区、业务区域和渠道筛选条件。
+
+ */
 const handleReset = () => {
   selectParams.blurParam = '';
   selectParams.location = [];
@@ -149,10 +159,20 @@ const handleReset = () => {
 
 }
 
+/**
+
+ * * 保留当前筛选条件，根据分页器最新状态重新查询机构列表。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 携带机构 ID 进入下游机构编辑页，并明确使用更新模式。
+
+ */
 const handleEdit = (index, row) => {
   router.push({
     path: '/home/editDownstreamMerchant',
@@ -163,6 +183,11 @@ const handleEdit = (index, row) => {
   });
 };
 
+/**
+
+ * * 二次确认后删除下游机构；成功后刷新列表，取消操作不产生任何状态变化。
+
+ */
 const handleDelete = (index, row) => {
   ElMessageBox.confirm(
     '确认要删除此数据?',
@@ -193,12 +218,22 @@ const handleDelete = (index, row) => {
   })
 };
 
+/**
+
+ * * 将页码重置为第一页后按最新筛选条件查询下游机构。
+
+ */
 const handleSearch = () => {
   // console.log(selectParams);
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 获取下游机构分页结果、同步总数并转换表格字段，始终在结束时解除表格加载态。
+
+ */
 const getData = async () => {
   try{
     tableLoading.value = true;
@@ -216,6 +251,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 提取地区级联选择中的市级编码，并与渠道条件和分页状态组装为接口参数。
+
+ */
 const buildSearchParams = () => {
   return {
     blurParam: selectParams.blurParam,
@@ -228,6 +268,11 @@ const buildSearchParams = () => {
   }
 }
 
+/**
+
+ * * 将地区和创建时间转成展示文本，并把银行名称与卡号合并为同一表格单元。
+
+ */
 const buildTableData = (data) => {
   data.forEach(item => {
     item.location = getCascadeArea(item.location);
@@ -240,6 +285,11 @@ const buildTableData = (data) => {
   tableData.value = data;
 }
 
+/**
+
+ * * 进入下游机构新增页，不传入已有记录 ID。
+
+ */
 const handleAdd = () => {
   router.push({
     path: '/home/editDownstreamMerchant',
@@ -250,6 +300,11 @@ const handleAdd = () => {
   });
 }
 
+/**
+
+ * * 按当前机构筛选条件导出 Excel，并用全局遮罩覆盖整个异步下载阶段。
+
+ */
 const handleExport = async () => {
   try{
     Loading.open();
@@ -269,4 +324,3 @@ const handleExport = async () => {
   white-space: pre-line !important;
 }
 </style>
-

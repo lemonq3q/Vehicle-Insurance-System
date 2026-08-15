@@ -10,6 +10,9 @@
 </template>
 
 <script>
+/**
+ * 无企业占位页用于承接尚未创建或加入企业的用户，实际创建和邀请码加入入口由企业资料流程提供。
+ */
 export default { name: 'NoEnterprisePage' };
 </script>
 

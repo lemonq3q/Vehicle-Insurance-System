@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 下游机构列表查询条件，承载关键字、区域、状态和分页等可选筛选字段。
+ */
 public class DownstreamSearchDTO {
     private Long id;
 

@@ -9,9 +9,14 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 通过反射把非空查询 DTO 或实体字段转换为 MyBatis-Plus QueryWrapper/UpdateWrapper，
+ * 统一驼峰到下划线映射、精确与模糊条件分组，并对更新和删除执行空条件保护。
+ */
 public class WrapperUtil {
     /**
-     * 反射获取实体类非空字段（过滤null/空串/特殊字段）
+     * 递归读取实体及父类字段，排除序列化常量、null 和空字符串，并转换为数据库列名和值。
+     * 无法访问字段时抛出带字段名的异常，避免静默遗漏查询条件。
      * @param entity 实体对象
      * @param <T> 泛型类型
      * @return 非空字段列表（字段名+字段值）
@@ -27,7 +32,6 @@ public class WrapperUtil {
 
         for (Field field : allFields) {
             try {
-                // 排除特殊字段
                 if (isExcludeField(field.getName())) {
                     continue;
                 }
@@ -35,7 +39,6 @@ public class WrapperUtil {
                 field.setAccessible(true);
                 Object fieldValue = field.get(entity);
 
-                // 过滤null值（字符串额外过滤空串）
                 if (isNullOrEmptyValue(fieldValue)) {
                     continue;
                 }
@@ -48,20 +51,26 @@ public class WrapperUtil {
         return validFields;
     }
 
+    /**
+     * 将多个模糊查询字段组扁平化并去重，结果用于从精确 eq 条件中排除所有将参与 LIKE 的字段。
+     */
     private static <T> List<String> getAllBlurFields(List<List<String>> blurField) {
         if (blurField == null || blurField.isEmpty()) {
             return List.of();
         }
-        // 扁平化嵌套列表，去重并返回所有模糊查询字段
         return blurField.stream()
-                .filter(Objects::nonNull) // 过滤null的内层列表
-                .flatMap(List::stream)    // 扁平化
-                .filter(Objects::nonNull) // 过滤null的字段名
-                .distinct()               // 去重
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
     }
 
 
+    /**
+     * 将调用方声明的模糊字段名分组映射为实际存在且有值的字段对，忽略空组、未知字段和空值。
+     * 每个返回内层列表随后生成一组括号包围的 OR LIKE 条件，不同组之间由 AND 连接。
+     */
     private static <T> List<List<FieldValuePair<T>>> getBlurFieldValuePairByString(List<FieldValuePair<T>> validFields, List<List<String>> blurField){
         if (validFields == null || validFields.isEmpty() || blurField == null || blurField.isEmpty()) {
             return List.of();
@@ -86,9 +95,8 @@ public class WrapperUtil {
                 .collect(Collectors.<List<FieldValuePair<T>>>toList());
     }
 
-    // ===================== 对外暴露的快捷方法（查询/更新/删除） =====================
     /**
-     * 构建查询条件 QueryWrapper（默认eq条件）
+     * 将实体全部有效字段构造成 AND 连接的精确 eq 查询条件；空实体返回无条件 Wrapper。
      * @param entity 查询参数实体
      * @param <T> 泛型类型
      * @return QueryWrapper
@@ -96,13 +104,12 @@ public class WrapperUtil {
     public static <T> QueryWrapper<T> buildQueryWrapper(T entity) {
         QueryWrapper<T> wrapper = new QueryWrapper<>();
         List<FieldValuePair<T>> validFields = getValidFields(entity);
-        // 拼接eq查询条件
         validFields.forEach(pair -> wrapper.eq(true, pair.getFieldName(), pair.getFieldValue()));
         return wrapper;
     }
 
     /**
-     * 构建带模糊查询的查询条件
+     * 构建一组模糊字段的查询条件，内部转为多组入口，使该组字段以 OR LIKE 连接并与其他精确条件 AND 连接。
      * @param entity 查询参数实体
      * @param blurField 使用and拼接的模糊查询字段
      * @return QueryWrapper
@@ -113,7 +120,8 @@ public class WrapperUtil {
     }
 
     /**
-     *
+     * 将实体有效字段拆分为精确条件和模糊条件：未列入 blurFields 的字段使用 eq；
+     * 每个内层字段组使用括号内 OR LIKE，不同内层组以及精确条件之间使用 AND。
      * @param entity 查询参数实体
      * @param blurFields 使用and拼接的模糊查询字段列表，列表内的条件使用or拼接
      * @return QueryWrapper
@@ -125,10 +133,8 @@ public class WrapperUtil {
 
         List<List<FieldValuePair<T>>> blurValidFields = getBlurFieldValuePairByString(validFields, blurFields);
 
-        // 提取所有需要模糊查询的字段，放入一个集合中（方便后续排除）
         List<String> allBlurFields = getAllBlurFields(blurFields);
 
-        // 拼接eq条件，但排除模糊查询的字段
         validFields = validFields.stream()
                 .filter(field -> !allBlurFields.contains(field.fieldName))
                 .collect(Collectors.toList());
@@ -159,16 +165,16 @@ public class WrapperUtil {
         return wrapper;
     }
 
-    // 重载方法：简化调用（默认参数
     /**
-     * 简化更新条件构建：默认用id作为where条件，更新所有非空字段
+     * 使用 id 作为默认 WHERE 字段构造更新 Wrapper，其余非空字段全部作为 SET 值。
      */
     public static <T> UpdateWrapper<T> buildUpdateWrapper(T entity) {
         return buildUpdateWrapper(entity, null);
     }
 
     /**
-     * 构建更新条件 UpdateWrapper
+     * 按指定字段构造 WHERE，其他有效字段构造 SET；未指定时默认使用 id。
+     * 若实体中没有任何有效 WHERE 字段立即拒绝，防止反射式更新意外影响全表。
      * @param entity 更新参数实体（需包含主键字段，如id，作为where条件）
      * @param whereFieldNames 指定作为where条件的字段（null则默认主键字段：id）
      * @param <T> 泛型类型
@@ -178,7 +184,6 @@ public class WrapperUtil {
         UpdateWrapper<T> wrapper = new UpdateWrapper<>();
         List<FieldValuePair<T>> validFields = getValidFields(entity);
 
-        // 1. 处理where条件（默认用id作为where条件）
         List<String> finalWhereFields = (whereFieldNames == null || whereFieldNames.isEmpty())
                 ? List.of("id")
                 : whereFieldNames;
@@ -186,12 +191,10 @@ public class WrapperUtil {
                 .filter(pair -> finalWhereFields.contains(pair.getFieldName()))
                 .forEach(pair -> wrapper.eq(true, pair.getFieldName(), pair.getFieldValue()));
 
-        // 2. 处理set更新条件（所有非where字段）
         validFields.stream()
-                .filter(pair -> !finalWhereFields.contains(pair.getFieldName())) // 排除where字段
+                .filter(pair -> !finalWhereFields.contains(pair.getFieldName()))
                 .forEach(pair -> wrapper.set(true, pair.getFieldName(), pair.getFieldValue()));
 
-        // 校验：where条件不能为空，避免全表更新
         if (wrapper.getExpression().getNormal().isEmpty()) {
             throw new IllegalArgumentException("更新条件不能为空！请确保实体包含where字段（如id）且值非空");
         }
@@ -199,15 +202,13 @@ public class WrapperUtil {
     }
 
     /**
-     * 构建删除条件 QueryWrapper（默认eq条件，逻辑同查询）
+     * 复用精确查询规则构造删除条件，并在条件为空时拒绝执行，防止调用方传空实体导致全表删除。
      * @param entity 删除参数实体（需包含主键字段，如id）
      * @param <T> 泛型类型
      * @return QueryWrapper
      */
     public static <T> QueryWrapper<T> buildDeleteWrapper(T entity) {
-        // 删除条件和查询条件逻辑一致，直接复用查询Wrapper构建逻辑
         QueryWrapper<T> wrapper = buildQueryWrapper(entity);
-        // 校验：删除条件不能为空，避免全表删除
         if (wrapper.getExpression().getNormal().isEmpty()) {
             throw new IllegalArgumentException("删除条件不能为空！请确保实体包含非空的条件字段（如id）");
         }
@@ -215,7 +216,7 @@ public class WrapperUtil {
     }
 
     /**
-     * 递归获取类的所有字段（包括父类）
+     * 从当前类向上递归收集所有声明字段，直到 Object 为止，使 DTO 继承的分页或公共字段也能参与条件提取。
      */
     private static <T> List<Field> getAllFields(Class<T> clazz, List<Field> fields) {
         fields.addAll(List.of(clazz.getDeclaredFields()));
@@ -227,14 +228,14 @@ public class WrapperUtil {
     }
 
     /**
-     * 判断是否为需要排除的特殊字段
+     * 判断字段是否为不应进入 SQL 的 Java 序列化元数据，目前排除 serialVersionUID。
      */
     private static boolean isExcludeField(String fieldName) {
         return "serialVersionUID".equals(fieldName);
     }
 
     /**
-     * 判断字段值是否为null或空串
+     * 判断字段是否没有有效查询值：null 和空字符串被忽略，数字零和 false 等合法值必须保留。
      */
     private static boolean isNullOrEmptyValue(Object fieldValue) {
         if (fieldValue == null) {
@@ -243,38 +244,49 @@ public class WrapperUtil {
         if (fieldValue instanceof String) {
             return StringUtils.isEmpty((String) fieldValue);
         }
-        // 可扩展：处理集合/数组等类型的空值判断
         return false;
     }
 
+    /**
+     * 保存转换后的数据库列名及字段值，隔离反射字段表示与 Wrapper 条件生成逻辑。
+     */
     private static class FieldValuePair<T> {
         private final String fieldName;
         private final Object fieldValue;
 
+        /**
+         * 创建字段值对时立即将 Java 驼峰字段名转换为数据库下划线列名。
+         */
         public FieldValuePair(String fieldName, Object fieldValue) {
             this.fieldName = camelToUnderline(fieldName);
             this.fieldValue = fieldValue;
         }
 
+        /**
+         * 返回已转换的数据库列名。
+         */
         public String getFieldName() {
             return fieldName;
         }
 
+        /**
+         * 返回反射读取的原始字段值。
+         */
         public Object getFieldValue() {
             return fieldValue;
         }
 
+        /**
+         * 将非首位大写字母替换为下划线加小写形式，例如 enterpriseId 转为 enterprise_id；空值原样返回。
+         */
         public static String camelToUnderline(String camelCaseStr) {
-            // 空值判断
             if (camelCaseStr == null || camelCaseStr.isEmpty()) {
                 return camelCaseStr;
             }
 
-            // 定义正则：匹配除首字符外的大写字母
             String regex = "(?<!^)([A-Z])";
             String replacement = "_$1";
 
-            // 替换大写字母为_+对应小写字母
             String result = camelCaseStr.replaceAll(regex, replacement).toLowerCase();
 
             return result;

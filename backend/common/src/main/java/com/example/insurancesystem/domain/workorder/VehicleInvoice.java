@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 @TableName(value = "biz_vehicle_invoice")
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 机动车销售发票实体，记录购方身份、车辆标识、开票金额及载重座位等投保资料。
+ */
 public class VehicleInvoice {
     /**
      * 主键ID

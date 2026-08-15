@@ -7,6 +7,10 @@ import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.aliyun.oss.common.auth.CredentialsProviderFactory;
 import com.aliyun.oss.common.comm.SignVersion;
 
+/**
+ * 以线程安全懒加载方式复用阿里云 OSS 客户端，避免每次上传、签名或删除都重新创建连接资源。
+ * 客户端使用 V4 签名和杭州区域，凭证从系统统一配置读取。
+ */
 public class OSSClientSingleton {
 
     private static volatile OSS ossClient;
@@ -15,11 +19,14 @@ public class OSSClientSingleton {
     private static final String INTERNAL_ENDPOINT = "https://oss-cn-hangzhou-internal.aliyuncs.com";
     private static final String REGION = "cn-hangzhou";
 
-    // 私有构造函数防止外部实例化
+    /**
+     * 单例工具不允许外部实例化。
+     */
     private OSSClientSingleton() {}
 
     /**
-     * 获取单例 OSSClient 实例
+     * 使用 volatile 与双重检查锁延迟创建 OSS 客户端。首次创建配置默认凭证、V4 签名、外网端点和区域，
+     * 后续线程直接复用已安全发布的实例，减少同步开销。
      */
     public static OSS getInstance() {
         if (ossClient == null) {
@@ -44,7 +51,7 @@ public class OSSClientSingleton {
     }
 
     /**
-     * 关闭 OSSClient 实例
+     * 关闭底层连接资源并清空单例引用，供应用停机或凭证配置需要重新初始化时使用。
      */
     public static void shutdown() {
         if (ossClient != null) {

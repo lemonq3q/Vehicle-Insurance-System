@@ -138,10 +138,20 @@ const selectParams = reactive({
   businessChannel: []
 });
 
+/**
+
+ * * 页面首次进入时按默认分页和空筛选条件加载上游渠道。
+
+ */
 onMounted(() => {
   getData();
 });
 
+/**
+
+ * * 清空渠道关键字、所在地、业务区域和业务渠道筛选，但等待用户重新发起查询。
+
+ */
 const handleReset = () => {
   selectParams.blurParam = '';
   selectParams.location = [];
@@ -150,10 +160,20 @@ const handleReset = () => {
 
 }
 
+/**
+
+ * * 分页器改变页码或每页条数后，使用当前筛选条件重新获取列表。
+
+ */
 const handlePaginationChange = () => {
   getData();
 };
 
+/**
+
+ * * 携带上游记录 ID 进入编辑页，使编辑页按 update 模式加载完整渠道资料。
+
+ */
 const handleEdit = (index, row) => {
   router.push({
     path: '/home/editUpstream',
@@ -164,6 +184,11 @@ const handleEdit = (index, row) => {
   });
 };
 
+/**
+
+ * * 用户确认后删除上游渠道；请求期间展示全局遮罩，成功后刷新当前列表。
+
+ */
 const handleDelete = (index, row) => {
   ElMessageBox.confirm(
     '确认要删除此数据?',
@@ -194,12 +219,22 @@ const handleDelete = (index, row) => {
   })
 };
 
+/**
+
+ * * 从第一页执行新筛选，避免沿用旧页码导致筛选结果看起来为空。
+
+ */
 const handleSearch = () => {
   // console.log(selectParams);
   page.pageNum = 1;
   getData();
 }
 
+/**
+
+ * * 查询上游分页数据并转换为表格展示结构，finally 确保加载态在异常时也能恢复。
+
+ */
 const getData = async () => {
   try{
     tableLoading.value = true;
@@ -217,6 +252,11 @@ const getData = async () => {
   }
 }
 
+/**
+
+ * * 将级联选择器路径转换成后端需要的市级编码，并合并渠道筛选与分页参数。
+
+ */
 const buildSearchParams = () => {
   return {
     blurParam: selectParams.blurParam,
@@ -229,6 +269,11 @@ const buildSearchParams = () => {
   }
 }
 
+/**
+
+ * * 将地区编码、秒级创建时间及数组字段转换为用户可读文本后写入表格数据源。
+
+ */
 const buildTableData = (data) => {
   data.forEach(item => {
     item.location = getCascadeArea(item.location);
@@ -241,6 +286,11 @@ const buildTableData = (data) => {
   tableData.value = data;
 }
 
+/**
+
+ * * 以 add 模式进入上游编辑页，新建记录不携带现有渠道数据。
+
+ */
 const handleAdd = () => {
   router.push({
     path: '/home/editUpstream',
@@ -251,6 +301,11 @@ const handleAdd = () => {
   });
 }
 
+/**
+
+ * * 使用与列表相同的筛选条件导出上游 Excel，并在下载完成或失败后关闭全局遮罩。
+
+ */
 const handleExport = async () => {
   try{
     Loading.open();

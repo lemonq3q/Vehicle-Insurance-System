@@ -99,6 +99,9 @@ const SMS_CODE_PATTERN = /^\d{6}$/;
 export default {
   name: 'AuthPage',
   components: { PasswordField },
+  /**
+   * 初始化登录、注册、找回密码三组表单，以及注册和找回场景彼此独立的短信发送与倒计时状态。
+   */
   data() {
     return {
       mode: 'login',
@@ -112,26 +115,44 @@ export default {
       }
     };
   },
+  /**
+   * 页面卸载时清理所有短信倒计时，避免离开认证页后定时器继续修改已销毁组件。
+   */
   beforeUnmount() {
     Object.values(this.smsState).forEach(state => window.clearInterval(state.timer));
   },
   methods: {
+    /**
+     * 在登录、注册和找回密码面板间切换，不清除用户已经填写的其他面板内容。
+     */
     switchMode(mode) {
       this.mode = mode;
     },
+    /**
+     * 判断手机号是否符合大陆 11 位有效号段格式，供发送验证码和提交校验共用。
+     */
     isPhoneValid(phone) {
       return PHONE_PATTERN.test(phone || '');
     },
+    /**
+     * 短信正在发送或处于冷却倒计时时禁用对应场景按钮。
+     */
     isSmsDisabled(key) {
       const state = this.smsState[key];
       return state.sending || state.seconds > 0;
     },
+    /**
+     * 根据发送中、倒计时或可发送状态生成短信按钮文案。
+     */
     codeButtonText(key) {
       const state = this.smsState[key];
       if (state.sending) return '发送中...';
       if (state.seconds > 0) return `${state.seconds}s 后重发`;
       return '获取验证码';
     },
+    /**
+     * 为指定短信场景启动后端建议时长的重发倒计时，启动前先清理旧计时器避免重复递减。
+     */
     startCountdown(key, seconds) {
       const state = this.smsState[key];
       window.clearInterval(state.timer);
@@ -144,6 +165,9 @@ export default {
         }
       }, 1000);
     },
+    /**
+     * 校验手机号后按注册或找回场景申请短信验证码；成功才启动冷却倒计时，失败由请求层统一提示。
+     */
     async sendCode(scene, phone, key) {
       if (!phone) {
         notifyWarning('请输入手机号');
@@ -165,6 +189,10 @@ export default {
         state.sending = false;
       }
     },
+    /**
+     * 按短信业务统一校验手机号、六位验证码和至少八位密码；注册场景额外要求真实姓名。
+     * 返回首个错误文案，空串表示可以提交。
+     */
     validateSmsForm(form, requireName = false) {
       if (!form.phone) return '请输入手机号';
       if (!this.isPhoneValid(form.phone)) return '请输入正确的 11 位手机号';
@@ -175,11 +203,17 @@ export default {
       if (form.password.length < 8) return '密码长度不能少于 8 位';
       return '';
     },
+    /**
+     * 校验门户登录账号和密码是否已填写，具体凭据正确性由后端认证。
+     */
     validateLoginForm() {
       if (!String(this.loginForm.username || '').trim()) return '请输入登录账号';
       if (!this.loginForm.password) return '请输入密码';
       return '';
     },
+    /**
+     * 校验并提交门户登录，通过 Vuex action 保存 token 和账号上下文后进入仪表盘。
+     */
     async submitLogin() {
       const validationMessage = this.validateLoginForm();
       if (validationMessage) {
@@ -196,6 +230,9 @@ export default {
         this.submitting.login = false;
       }
     },
+    /**
+     * 提交短信验证后的注册资料，成功时切回登录面板并自动带入新手机号。
+     */
     async submitRegister() {
       const validationMessage = this.validateSmsForm(this.registerForm, true);
       if (validationMessage) {
@@ -214,6 +251,9 @@ export default {
         this.submitting.register = false;
       }
     },
+    /**
+     * 使用短信验证码重置门户密码，成功后返回登录面板并回填手机号。
+     */
     async submitForgot() {
       const validationMessage = this.validateSmsForm(this.forgotForm);
       if (validationMessage) {

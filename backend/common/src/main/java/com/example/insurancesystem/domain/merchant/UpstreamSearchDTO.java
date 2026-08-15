@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 上游渠道分页查询条件，承载机构关键字、地区和状态等可选过滤项。
+ */
 public class UpstreamSearchDTO {
     private Long id;
 

@@ -11,6 +11,9 @@ import java.math.BigDecimal;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+/**
+ * 工单 Excel 导出行模型，将流程状态、客户车辆、上下游机构和金额字段转换为业务人员可读列。
+ */
 public class WorkorderExcelDTO {
 
     @ExcelProperty("工单号")

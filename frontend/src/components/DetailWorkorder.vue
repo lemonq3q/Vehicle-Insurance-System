@@ -2521,6 +2521,11 @@ const acceptInsuranceRules = {
   ]
 }
 
+/**
+
+ * * 将工单状态 1 至 10 映射为页头业务阶段文案，未知状态按“待处理”安全展示。
+
+ */
 const computeHeadInfo = () => {
   switch (oriInfo.value.status) {
     case 1:
@@ -2548,6 +2553,11 @@ const computeHeadInfo = () => {
   }
 }
 
+/**
+
+ * * 报价、核保、支付和承保失败状态使用失败图标，其余进行中或成功状态使用正常图标。
+
+ */
 const computeHeadIcon = () => {
   let failedStatus = [3,5,7,9];
   if(failedStatus.includes(oriInfo.value.status)){
@@ -2559,6 +2569,11 @@ const headTitle = computed(computeHeadInfo);
 
 const headIcon = computed(computeHeadIcon);
 
+/**
+
+ * * 根据是否属于四个失败状态计算页头主题色，使失败结果在视觉上与正常流程区分。
+
+ */
 const statusColor = computed(()=> {
   let failedStatus = [3,5,7,9];
   if(failedStatus.includes(oriInfo.value.status)){
@@ -2567,6 +2582,11 @@ const statusColor = computed(()=> {
   return "#1F89FF";
 });
 
+/**
+
+ * * 按险种类型把基础字典分成商业险、交强险和附加险三组，供详情按历史投保项反查名称。
+
+ */
 const buildInsuranceOption = (data) => {
   let options = {};
   let type1 = data.filter(item => item.type==1);
@@ -2578,6 +2598,10 @@ const buildInsuranceOption = (data) => {
   insuranceOptions.value = options;
 }
 
+/**
+ * 汇总当前表单中的商业险、交强险、车船税和非车险金额。
+ * 所有字段均为空或非数字时返回空串，避免页面把“尚未报价”误显示为零元。
+ */
 const sumAmount = computed(() => {
   let sum = 0;
   let flag = 0;
@@ -2605,6 +2629,11 @@ const sumAmount = computed(() => {
   }
 });
 
+/**
+
+ * * 查询险种基础字典并建立类型分组，必须在历史投保险种回填之前完成。
+
+ */
 const getAllInsuranceOption = async () => {
   let res = await selectAllInsurance();
   res = res.data;
@@ -2613,6 +2642,10 @@ const getAllInsuranceOption = async () => {
   }
 }
 
+/**
+ * 从 sessionStorage 恢复详情查看模式和工单 ID，再并行加载险种字典与工单数据并构建页面。
+ * 初始化遮罩覆盖全部异步步骤，并在异常情况下可靠关闭。
+ */
 onMounted(async () => {
   try{
     Loading.open();
@@ -2631,6 +2664,11 @@ onMounted(async () => {
   }
 });
 
+/**
+
+ * * 并行获取险种字典和工单详情，二者完成后统一回填页面，避免险种尚未加载时丢失历史选择。
+
+ */
 const buildPage = async () => {
   await Promise.all([
     getAllInsuranceOption(),
@@ -2639,6 +2677,11 @@ const buildPage = async () => {
   buildInfo();
 }
 
+/**
+ * 将工单聚合详情恢复为流程表单与展示状态。
+ * 该过程回填报价、上下游计算方式、支付和承保资料，重建各类附件预览及文件 ID，依据历史比例字段
+ * 决定页面使用固定金额还是百分比输入，并把有效历史险种重新归入三类展示区域。
+ */
 const buildInfo = () => {
   console.log(oriInfo.value);
   info.upstreamComputeType = oriInfo.value.upstreamComputeType ?? 0;
@@ -2862,6 +2905,11 @@ const buildInfo = () => {
   }
 }
 
+/**
+
+ * * 查询当前工单完整详情，并为可能缺失的三类车辆证件对象提供空对象，保证模板读取嵌套字段安全。
+
+ */
 const getDataById = async () => {
   let res = await selectWorkorderById(id);
   res = res.data;
@@ -2876,10 +2924,20 @@ const getDataById = async () => {
   }
 }
 
+/**
+
+ * * 切换非车险报价区域是否参与当前工单报价和上下游金额计算。
+
+ */
 const handleNonMotorChange = (flag) => {
   showFlag.is_have_non_motor = flag;
 }
 
+/**
+
+ * * 按上下游及险种维度切换“直接金额”与“百分比计算”输入模式，其他维度状态保持不变。
+
+ */
 const handleAmountShowChange = (type, flag) => {
   if (type == 'upstreamCommercial'){
     showFlag.upstream_commercial = flag;
@@ -2907,6 +2965,11 @@ const handleAmountShowChange = (type, flag) => {
   }
 }
 
+/**
+
+ * * 汇总后端原始工单的四类保费金额；没有任何历史金额时返回空串表示尚未报价。
+
+ */
 const computeSumAmount = () => {
   let sum = 0;
   let flag = 0;
@@ -2932,6 +2995,11 @@ const computeSumAmount = () => {
   return sum;
 }
 
+/**
+
+ * * 汇总历史上游商业险、交强险、车船税和非车险结算金额，无数据时保留空值语义。
+
+ */
 const computeUpstreamAmount = () => {
   let sum = 0;
   let flag = 0;
@@ -2957,6 +3025,11 @@ const computeUpstreamAmount = () => {
   return sum; 
 }
 
+/**
+
+ * * 汇总历史下游四类业务金额，用于详情的下游结算合计展示。
+
+ */
 const computeDownstreamAmount = () => {
   let sum = 0;
   let flag = 0;
@@ -2982,6 +3055,10 @@ const computeDownstreamAmount = () => {
   return sum;  
 }
 
+/**
+ * 提交流程节点前等待报价单、商业保单、交强保单及其他附件全部完成上传。
+ * 每 200ms 检查一次，30 秒超时后阻止状态推进，避免工单引用尚未生成的文件 ID。
+ */
 const waitFileUpload = async () => {
   return new Promise((resolve, reject) => {
     const checkupInterval = setInterval(() => {
@@ -2997,6 +3074,10 @@ const waitFileUpload = async () => {
   })
 }
 
+/**
+ * 校验当前流程表单并等待附件上传，再按操作类型分派到报价、核保、支付、承保成功或失败更新。
+ * 承保成功后返回工单列表；任何上传超时都保持原工单状态并提示用户重试。
+ */
 const handleSubmit = async (formEl, type) => {
   formEl.validate(async (valid) => {
     if (valid) {
@@ -3041,10 +3122,20 @@ const handleSubmit = async (formEl, type) => {
   });
 }
 
+/**
+
+ * * 放弃当前流程表单的未保存修改，使用最近一次后端详情重新构建页面。
+
+ */
 const handleResetForm = () => {
   buildInfo();
 }
 
+/**
+
+ * * 为流程附件提供预览地址，优先复用已有 URL，本地文件则创建临时 Object URL。
+
+ */
 const ensureUploadPreviewUrl = (uploadFile) => {
   if (uploadFile.url != null && uploadFile.url !== '') {
     return uploadFile.url;
@@ -3056,6 +3147,11 @@ const ensureUploadPreviewUrl = (uploadFile) => {
   return '';
 }
 
+/**
+
+ * * 合并上传组件条目与系统文件记录，使附件同时具备后端文件 ID、名称和本地预览能力。
+
+ */
 const buildUploadFileItem = (uploadFile, fileInfo) => {
   return {
     ...uploadFile,
@@ -3065,6 +3161,11 @@ const buildUploadFileItem = (uploadFile, fileInfo) => {
   };
 }
 
+/**
+
+ * * 校验原始 File 后执行 OSS 直传，并要求返回可持久化关联的系统文件信息。
+
+ */
 const handleSingleFileUpload = async (uploadFile) => {
   const rawFile = uploadFile?.raw;
   if (!rawFile) {
@@ -3080,6 +3181,11 @@ const handleSingleFileUpload = async (uploadFile) => {
   };
 }
 
+/**
+
+ * * 单文件上传失败或移除时，同时清空组件列表和请求体文件 ID，并按需显示错误信息。
+
+ */
 const clearSingleUploadState = (listKey, fileIdKey, message) => {
   fileStore[listKey] = [];
   workorderFileIds[fileIdKey] = undefined;
@@ -3088,6 +3194,11 @@ const clearSingleUploadState = (listKey, fileIdKey, message) => {
   }
 }
 
+/**
+
+ * * 多附件中某一文件上传失败时仅按 uid 移除该项，不影响已经成功上传的其他承保附件。
+
+ */
 const removeUploadFileByUid = (listKey, uploadFile, message) => {
   fileStore[listKey] = fileStore[listKey].filter(item => item.uid !== uploadFile.uid);
   if (message) {
@@ -3095,6 +3206,11 @@ const removeUploadFileByUid = (listKey, uploadFile, message) => {
   }
 }
 
+/**
+
+ * * 校验并上传唯一报价单附件，成功后保存报价文件 ID；失败时回滚整个报价单上传状态。
+
+ */
 const handleQuotationChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   fileStore.quotationFile = validFiles;
@@ -3116,6 +3232,11 @@ const handleQuotationChange = async (uploadFile, uploadFiles) => {
 
 }
 
+/**
+
+ * * 上传唯一商业险保单并记录系统文件 ID，供承保完成请求建立附件关系。
+
+ */
 const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   fileStore.acceptInsuranceCommercialFile = validFiles;
@@ -3136,6 +3257,11 @@ const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) =>
   }
 }
 
+/**
+
+ * * 上传唯一交强险保单并同步预览项和承保请求中的文件 ID。
+
+ */
 const handleAcceptInsuranceCompulsoryChange = async (uploadFile, uploadFiles) => {
   const validFiles = validFileSize(uploadFiles);
   fileStore.acceptInsuranceCompulsoryFile = validFiles;
@@ -3156,6 +3282,10 @@ const handleAcceptInsuranceCompulsoryChange = async (uploadFile, uploadFiles) =>
   }
 }
 
+/**
+ * 并发上传可多选的其他承保附件，按 uid 用上传成功项替换本地占位，并累加对应文件 ID。
+ * 任一文件超限或失败只移除该项，loadingFlag.other 以计数方式支持多个上传同时进行。
+ */
 const handleAcceptInsuranceOtherChange = async (uploadFile, uploadFiles) => {
   let oriLength = uploadFiles.length;
   const validFiles = validFileSize(uploadFiles);
@@ -3181,15 +3311,30 @@ const handleAcceptInsuranceOtherChange = async (uploadFile, uploadFiles) => {
   }
 }
 
+/**
+
+ * * 移除其他承保附件时同步更新界面文件列表和待提交文件 ID 数组。
+
+ */
 const handleAcceptInsuranceOtherRemove = (file, files) => {
   fileStore.acceptInsuranceOtherFile = files;
   workorderFileIds.acceptInsuranceOtherFile = workorderFileIds.acceptInsuranceOtherFile.filter(item => item != file.id);
 }
 
+/**
+
+ * * 记录当前正在编辑的流程节点，控制页面展示与该阶段匹配的表单和提交按钮。
+
+ */
 const handleFormStatusChange = (status) => {
   formStatus.value = status;
 }
 
+/**
+
+ * * 独立切换报价资料、报价结果、支付和承保四个详情区块，避免一个区块影响其他展开状态。
+
+ */
 const handleTableExpand = (type) => {
   if (type == 'quotationInfo'){
     showFlag.quotationInfo = !showFlag.quotationInfo;
@@ -3205,6 +3350,11 @@ const handleTableExpand = (type) => {
   }
 }
 
+/**
+
+ * * 将结算比例和固定金额组合为“比例%/¥金额”文本，缺失部分仍保留统一货币格式。
+
+ */
 const computePercentageAndAmountStr = (percentage, amount) => {
   let result = "";
   if(percentage != null && percentage !=undefined){
@@ -3217,6 +3367,11 @@ const computePercentageAndAmountStr = (percentage, amount) => {
   return result;
 }
 
+/**
+
+ * * 根据附件业务类型下载报价单或承保保单；其他承保附件会逐项触发下载。
+
+ */
 const handleDownload = (type) => {
   if(type=="quotation"){
     downloadByUrl(showFileUrl.quotation);
@@ -3234,6 +3389,10 @@ const handleDownload = (type) => {
   }
 }
 
+/**
+ * 按保费和比例计算结算金额；类型 1 先按 1.06 还原不含税金额，再计算百分比。
+ * 非数字输入返回短横线，正常结果固定保留两位小数。
+ */
 const percentageMulti = (percentage, amount, type) => {
   percentage = Number(percentage);
   amount = Number(amount);
@@ -3246,6 +3405,11 @@ const percentageMulti = (percentage, amount, type) => {
   return (amount * percentage / 100.0).toFixed(2);
 }
 
+/**
+ * 构建报价或核保成功阶段的更新数据。
+ * 该方法转换保险起期和保费，按每个上下游维度选择提交固定金额或百分比，按需加入非车险及报价单，
+ * 并保证编辑较早阶段资料时不会把已经推进到更后状态的工单倒退。
+ */
 const buildQuotationUpdateFrom = (status) => {
   let data = {};
   data.id = oriInfo.value.id;
@@ -3338,6 +3502,11 @@ const buildQuotationUpdateFrom = (status) => {
   return data;
 }
 
+/**
+
+ * * 构建报价失败的最小状态变更，只提交工单 ID、失败原因和状态 3，不覆盖已有报价资料。
+
+ */
 const buildQuotationFailedFrom = () => {
   let data = {};
   data.id = oriInfo.value.id;
@@ -3346,6 +3515,11 @@ const buildQuotationFailedFrom = () => {
   return data;
 }
 
+/**
+
+ * * 构建核保失败更新，将失败说明写入专属字段并把工单推进到状态 5。
+
+ */
 const buildUnderwritingFailedForm = () => { 
   let data = {};
   data.id = oriInfo.value.id;
@@ -3355,6 +3529,11 @@ const buildUnderwritingFailedForm = () => {
   return data;
 }
 
+/**
+
+ * * 构建支付确认成功数据，包含应付金额、付款人及银行资料，并将工单推进到待承保状态 8。
+
+ */
 const buildPayForm = () => {
   let data = {};
   data.id = oriInfo.value.id;
@@ -3368,6 +3547,11 @@ const buildPayForm = () => {
   return data;
 }
 
+/**
+
+ * * 构建支付失败的最小更新，只保存失败说明并标记状态 7。
+
+ */
 const buildPayFailedForm = () => { 
   let data = {};
   data.id = oriInfo.value.id;
@@ -3376,6 +3560,10 @@ const buildPayFailedForm = () => {
   return data;
 }
 
+/**
+ * 构建承保完成数据，记录当前完成时间、保单号、物流和付款资料，并关联商业险、交强险及其他附件。
+ * 其他附件逐个转换为统一的工单文件关系，最终状态固定为 10。
+ */
 const buildAcceptInsuranceFrom = () => { 
   let data = {};
   data.finishTime = convertDateToSecondTimestamp(new Date());
@@ -3415,6 +3603,11 @@ const buildAcceptInsuranceFrom = () => {
   return data;
 }
 
+/**
+
+ * * 构建承保失败更新，保留已录入资料，仅写入失败原因和状态 9。
+
+ */
 const buildAcceptInsuranceFailedForm = () => { 
   let data = {};
   data.id = oriInfo.value.id;
@@ -3423,6 +3616,11 @@ const buildAcceptInsuranceFailedForm = () => {
   return data;
 }
 
+/**
+
+ * * 持久化报价或核保成功数据；后端成功后重新加载完整详情，以真实状态和计算结果覆盖本地表单。
+
+ */
 const handleQuotationUpdate = async (data) => {
   try{
     await updateQuotation(data).then(res=>{
@@ -3438,6 +3636,11 @@ const handleQuotationUpdate = async (data) => {
   }
 }
 
+/**
+
+ * * 保存无需重建险种或文件关系的失败、支付等小范围状态更新，成功后重载详情。
+
+ */
 const handleNoCascadeUpdate = async (data) => {
   try{
     await updateNoCascade(data).then(res=>{
@@ -3453,6 +3656,11 @@ const handleNoCascadeUpdate = async (data) => {
   }
 }
 
+/**
+
+ * * 持久化承保完成资料及其附件关系，成功后刷新工单详情；调用方随后可返回工单列表。
+
+ */
 const handleAcceptInsuranceUpdate = async (data) => {
   try{
     await updateAcceptInsurance(data).then(res=>{
@@ -3468,6 +3676,11 @@ const handleAcceptInsuranceUpdate = async (data) => {
   }
 }
 
+/**
+
+ * * 打开指定阶段的编辑区域：状态 0 使用基础资料抽屉，其余状态显示流程表单并平滑滚动到编辑位置。
+
+ */
 const handleEdit = async (status) => {
   if(status == 0){
     drawer.value = true;
@@ -3483,6 +3696,11 @@ const handleEdit = async (status) => {
   });
 }
 
+/**
+
+ * * 基础资料抽屉保存后重新加载险种和工单详情，使主详情页同步最新数据。
+
+ */
 const handleRefresh = () => {
   buildPage();
 }

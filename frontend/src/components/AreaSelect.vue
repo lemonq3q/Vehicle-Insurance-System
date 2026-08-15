@@ -39,6 +39,11 @@ const innerSelectedArea = ref([...props.modelValue]);
 const options = ref([]); 
 const cascaderProps = { multiple: props.multi };
 
+/**
+
+ * * 按顺序比较地区级联编码数组，避免父子组件在内容未变化时相互触发 v-model 更新形成循环。
+
+ */
 const isArrayEqual = (arr1, arr2) => {
   const a = Array.isArray(arr1) ? arr1 : [];
   const b = Array.isArray(arr2) ? arr2 : [];
@@ -50,6 +55,11 @@ const isArrayEqual = (arr1, arr2) => {
   return true;
 };
 
+/**
+
+ * * 规范化级联选择器输出并仅在值真实变化时通知父组件，同时保持内部状态始终为数组。
+
+ */
 const handleCascaderChange = (val) => {
   const normalizedVal = Array.isArray(val) ? [...val] : [];
   // 仅当值真正变化时，才派发给父组件
@@ -61,6 +71,9 @@ const handleCascaderChange = (val) => {
 };
 
 // 仅监听父组件值变化
+/**
+ * * 监听父组件对 modelValue 的外部重置或回填；比较后再同步内部值，以兼容编辑页异步加载数据。
+ */
 watch(
   () => props.modelValue,
   (newVal) => {
@@ -73,6 +86,11 @@ watch(
   { deep: true, immediate: true }
 );
 
+/**
+
+ * * 组件挂载时读取缓存后的全国省市选项，避免每个地区选择器重复转换静态行政区数据。
+
+ */
 onMounted(() => {
   const areaOptions = getSelectOption();
   if (areaOptions && areaOptions.length) {

@@ -100,6 +100,10 @@ import { notifyWarning } from '@/utils/notification';
 
 export default {
   name: 'SubscriptionOrderDetailPage',
+  /**
+   * 保存目标套餐、企业财务概览、服务端试算结果和用户选择的订阅周期。试算结果是金额及可订阅性的唯一依据，
+   * 页面不自行复制后端的套餐变更、抵扣或超额工单计费规则。
+   */
   data() {
     return {
       loading: true,
@@ -111,29 +115,54 @@ export default {
     };
   },
   computed: {
+    /**
+     * 根据试算返回的订单类型展示首次购买、续订或改订，未知类型使用通用套餐订单文案。
+     */
     orderTypeName() {
       return { BUY: '首次订阅', RENEW: '续订套餐', CHANGE_PLAN: '改订套餐' }[this.preview?.orderType] || '套餐订单';
     },
+    /**
+     * 套餐购买和余额支出只允许企业拥有者或管理员执行，权限来源与全局企业上下文保持一致。
+     */
     canManageFinance() {
       return this.$store.getters.canManageFinance;
     },
+    /**
+     * 使用后端最终应付金额与钱包余额比较，套餐基础价、抵扣及超额工单费用均已包含在应付金额中。
+     */
     isBalanceInsufficient() {
       return Number(this.preview?.payableAmount || 0) > Number(this.overview.wallet?.balanceAmount || 0);
     },
+    /**
+     * 计算需要补充的最小余额并限制结果不小于零，供充值页预填充值金额。
+     */
     shortfallAmount() {
       return Math.max(0, Number(this.preview?.payableAmount || 0) - Number(this.overview.wallet?.balanceAmount || 0));
     }
   },
+  /**
+   * 页面创建后并行加载财务上下文与套餐数据，再请求对应周期的权威订单试算。
+   */
   async created() {
     await this.loadPage();
   },
   methods: {
+    /**
+     * 将各类订单金额统一格式化为两位小数，空值按零显示。
+     */
     money(value) {
       return Number(value || 0).toFixed(2);
     },
+    /**
+     * 将套餐计费周期枚举转换为年、月、日单位，用于价格和周期说明。
+     */
     periodName(period) {
       return period === 'YEAR' ? '年' : period === 'MONTH' ? '月' : '日';
     },
+    /**
+     * 并行读取钱包订阅概览和可售套餐，按路由 planId 选定目标套餐。自动续订默认继承当前有效订阅，
+     * 路由显式传值时则沿用用户在充值往返流程中的选择，最后加载试算并校正最低购买周期。
+     */
     async loadPage() {
       this.loading = true;
       try {
@@ -151,6 +180,10 @@ export default {
         this.loading = false;
       }
     },
+    /**
+     * 向服务端请求套餐订单试算。首次加载若用户周期低于后端给出的最低周期，则更新表单并再次试算，
+     * 确保展示的基础费用、套餐差额、超额工单费用和最终应付金额全部对应合法周期。
+     */
     async loadPreview(applyMinimum = false) {
       const response = await getSubscriptionOrderPreview({
         planId: this.plan.id,
@@ -162,15 +195,24 @@ export default {
         await this.loadPreview();
       }
     },
+    /**
+     * 将周期输入修正为不低于最低周期的整数，再重新试算，避免小数、空值或负数进入下单请求。
+     */
     async normalizePeriod() {
       const minimum = this.preview?.minimumPeriodCount || 1;
       this.form.periodCount = Math.max(minimum, Math.floor(Number(this.form.periodCount) || minimum));
       await this.loadPreview();
     },
+    /**
+     * 响应周期加减按钮，并复用统一校正逻辑处理下限和试算刷新。
+     */
     async changePeriod(delta) {
       this.form.periodCount += delta;
       await this.normalizePeriod();
     },
+    /**
+     * 将应付金额、当前余额、缺口及待购买套餐上下文带到充值页；充值成功后可据此继续原订阅订单。
+     */
     goToRecharge() {
       this.$router.push({
         name: 'finance-recharge',
@@ -184,6 +226,10 @@ export default {
         }
       });
     },
+    /**
+     * 提交前再次规范周期并检查后端试算资格。余额不足时转入充值流程；余额足够则创建套餐订单，
+     * 成功后回到套餐服务页展示订单号。并发余额变化导致的 409 同样转入充值，其余错误由请求层统一提示。
+     */
     async submitOrder() {
       if (!this.canManageFinance) return;
       await this.normalizePeriod();

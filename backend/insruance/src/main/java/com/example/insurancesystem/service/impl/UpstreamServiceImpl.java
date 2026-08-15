@@ -20,6 +20,10 @@ import java.util.List;
 
 
 @Service
+/**
+ * 管理当前企业对接的上游保险机构及其承保区域。
+ * 列表、详情和导出均以商户主体为基础，再聚合有效的区域关系。
+ */
 public class UpstreamServiceImpl implements UpstreamService {
 
     @Autowired
@@ -29,6 +33,9 @@ public class UpstreamServiceImpl implements UpstreamService {
     private MerchantAreaMapper upstreamAreaMapper;
 
     @Override
+    /**
+     * 分页查询保险机构，并批量补齐当前页机构的有效承保区域。
+     */
     public ResponseResult select(UpstreamSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
         List<UpstreamDTO> upstreams = upstreamMapper.selectByUpstreamSearchDTO(params);
@@ -55,6 +62,9 @@ public class UpstreamServiceImpl implements UpstreamService {
     }
 
     @Override
+    /**
+     * 导出符合条件的全部保险机构，在转换 Excel 模型前补充承保区域。
+     */
     public List<UpstreamExcelDTO> getExcel(UpstreamSearchDTO params) {
         List<UpstreamDTO> upstreams = upstreamMapper.selectByUpstreamSearchDTO(params);
 
@@ -76,6 +86,9 @@ public class UpstreamServiceImpl implements UpstreamService {
 
 
     @Override
+    /**
+     * 查询单个保险机构详情及其有效承保区域，不存在时返回资源缺失响应。
+     */
     public ResponseResult selectById(Long id) {
         UpstreamSearchDTO search = new UpstreamSearchDTO();
         search.setId(id);
@@ -95,6 +108,9 @@ public class UpstreamServiceImpl implements UpstreamService {
     }
 
     @Override
+    /**
+     * 按名称或编码模糊检索保险公司选项；空关键字不执行全表查询。
+     */
     public ResponseResult selectInsuranceCompanyOptions(String blurParam) {
         if (blurParam == null || blurParam.isEmpty()) {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
@@ -112,6 +128,9 @@ public class UpstreamServiceImpl implements UpstreamService {
     }
 
     @Override
+    /**
+     * 提供通用上游机构下拉选项，目前业务范围限定为保险机构类别。
+     */
     public ResponseResult selectOptions(String blurParam) {
         if (blurParam == null || blurParam.isEmpty()) {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
@@ -129,6 +148,9 @@ public class UpstreamServiceImpl implements UpstreamService {
     }
 
     @Override
+    /**
+     * 创建保险机构及其承保区域。机构编码由唯一约束重试机制生成，所有记录绑定当前企业和操作人。
+     */
     public ResponseResult insert(UpstreamDTO params) {
         Long userId = SystemCommonUtil.getNowUserId();
 
@@ -163,6 +185,10 @@ public class UpstreamServiceImpl implements UpstreamService {
      * 更新数据：params 中非 null 字段作为更新值，需保证 params 中有唯一标识（如 id）
      */
     @Override
+    /**
+     * 更新保险机构资料。提交了承保区域时，以逻辑删除旧关系、插入新关系的方式替换区域快照；
+     * 未提交区域字段时只更新机构主体，保留现有承保范围。
+     */
     public ResponseResult update(UpstreamDTO params) {
         Merchant upstream = new Merchant(params);
         upstream.setCategoryId(upstreamMapper.selectCategoryIdByCode(MerchantCategoryCode.INSURANCE_ORG));
@@ -197,6 +223,9 @@ public class UpstreamServiceImpl implements UpstreamService {
      * 根据 id 删除数据
      */
     @Override
+    /**
+     * 逻辑删除保险机构及其全部有效区域关系，保留历史工单引用所需的数据记录。
+     */
     public ResponseResult delete(long id) {
         Merchant params = new Merchant();
         params.setId(id);

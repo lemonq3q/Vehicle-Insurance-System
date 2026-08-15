@@ -28,6 +28,10 @@ import java.util.Map;
 
 @Service
 @Transactional
+/**
+ * 负责车险工单从录入、报价、缴费、承保到物流和续保提醒的完整聚合生命周期。
+ * 工单主体、险种、车辆证件、附件及拆分后的业务阶段表在事务中保持同步。
+ */
 public class WorkorderServiceImpl implements WorkorderService {
 
     private static final int RENEWAL_REMIND_DAYS = 365;
@@ -69,6 +73,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     private InsuranceService insuranceService;
 
     @Override
+    /**
+     * 分页查询工单。拥有全量权限的用户可查看企业全部工单，普通处理人只能查看分配给自己的工单。
+     */
     public ResponseResult select(WorkorderSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
 
@@ -83,6 +90,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 查询进入续保提醒窗口的工单；普通用户仅查看自己创建的业务，管理员可查看企业全量。
+     */
     public ResponseResult selectRenew(WorkorderSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
 
@@ -99,6 +109,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 统计即将续保的工单数量。管理员同时获得本人和全企业计数，出单员只获得本人计数。
+     */
     public ResponseResult selectRenewCount() {
 
         // 如果访问的管理员，同时获取管理员自己的快过期的保单数量和所有人的数量
@@ -123,6 +136,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 导出当前权限范围内的工单，并在转换 Excel 行之前计算展示金额等派生字段。
+     */
     public List<WorkorderExcelDTO> getExcel(WorkorderSearchDTO params) {
         if(!SystemCommonUtil.hasPerm("all")){
             params.setHandleUserId(SystemCommonUtil.getNowUserId());
@@ -135,6 +151,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 查询工单聚合详情并执行处理人权限校验，同时加载有效险种和带临时 OSS 地址的附件。
+     */
     public ResponseResult selectById(Long id) {
         WorkorderSearchDTO params = new WorkorderSearchDTO();
         params.setId(id);
@@ -167,6 +186,10 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 创建完整工单聚合。系统自动带出创建商户的收款资料、选择优先级最高的收款人员并自动接单，
+     * 随后写入险种、对应车辆证件和附件关系，同时把新附件标记为已关联。
+     */
     public ResponseResult insert(WorkorderDTO params) {
         Long nowUserId = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
@@ -266,6 +289,10 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 更新工单基础资料、险种和车辆证件。车辆类型切换时逻辑删除另一类型证件，
+     * 未投保的商业险或交强险会清空对应金额；基础资料附件则以新提交列表整体替换。
+     */
     public ResponseResult updateBaseInfo(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
@@ -448,11 +475,17 @@ public class WorkorderServiceImpl implements WorkorderService {
 
 
     @Override
+    /**
+     * 工单删除接口的预留实现；当前未执行任何数据删除，由调用方收到空结果。
+     */
     public ResponseResult delete(Long id) {
         return null;
     }
 
     @Override
+    /**
+     * 接受并分配工单，更新处理商户、处理人及流程状态。
+     */
     public ResponseResult acceptWorkorder(WorkorderDTO params) {
         Workorder workorder = new Workorder();
         workorder.setId(params.getId());
@@ -470,6 +503,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 保存报价和佣金数据，先计算金额派生值，再同步报价阶段聚合表并替换报价附件。
+     */
     public ResponseResult updateQuotation(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
@@ -484,6 +520,10 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 执行无需级联车辆基础资料的流程字段更新，并根据实际提交字段同步续保、报价、
+     * 缴费、承保或物流阶段表，支持不同步骤复用同一个轻量更新接口。
+     */
     public ResponseResult updateNoCascade(WorkorderDTO params) {
         Workorder workorder = new Workorder(params);
         workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
@@ -500,6 +540,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 保存承保结果，同步缴费与核保阶段聚合数据，并整体替换商业险、交强险等承保附件。
+     */
     public ResponseResult acceptInsurance(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
@@ -513,6 +556,9 @@ public class WorkorderServiceImpl implements WorkorderService {
         return new ResponseResult(200, "已更新" + x + "条数据");
     }
 
+    /**
+     * 将工单主体中的阶段字段同步到报价佣金、缴费、核保及物流聚合表；缺少企业标识时从上下文补齐。
+     */
     private void saveAggregate(Workorder workorder) {
         if (workorder.getEnterpriseId() == null) {
             workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
@@ -524,6 +570,9 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     @Override
+    /**
+     * 关闭单个工单的续保提醒。普通用户只能关闭自己创建的工单，管理员不受该限制。
+     */
     public ResponseResult disableRenewReminder(Long id) {
         LambdaUpdateWrapper<Workorder> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Workorder::getId, id)
@@ -538,6 +587,9 @@ public class WorkorderServiceImpl implements WorkorderService {
         return new ResponseResult(200, "已关闭续保提醒");
     }
 
+    /**
+     * 以更新优先、无记录则插入的方式保存报价以及上下游两侧佣金，兼容历史工单尚无拆分记录的情况。
+     */
     private void saveQuoteAndCommission(Workorder workorder) {
         saveQuote(workorder);
         if (workorderAggregateMapper.updateCommission(workorder, "UPSTREAM") == 0) {
@@ -548,22 +600,38 @@ public class WorkorderServiceImpl implements WorkorderService {
         }
     }
 
+    /**
+     * 保存报价阶段数据；旧工单不存在报价记录时自动补建。
+     */
     private void saveQuote(Workorder workorder) {
         if (workorderAggregateMapper.updateQuote(workorder) == 0) workorderAggregateMapper.insertQuote(workorder);
     }
 
+    /**
+     * 保存缴费阶段数据；旧工单不存在缴费记录时自动补建。
+     */
     private void savePayment(Workorder workorder) {
         if (workorderAggregateMapper.updatePayment(workorder) == 0) workorderAggregateMapper.insertPayment(workorder);
     }
 
+    /**
+     * 保存核保与承保阶段数据；旧工单不存在记录时自动补建。
+     */
     private void saveUnderwriting(Workorder workorder) {
         if (workorderAggregateMapper.updateUnderwriting(workorder) == 0) workorderAggregateMapper.insertUnderwriting(workorder);
     }
 
+    /**
+     * 保存保单寄送物流数据；旧工单不存在物流记录时自动补建。
+     */
     private void saveLogistics(Workorder workorder) {
         if (workorderAggregateMapper.updateLogistics(workorder) == 0) workorderAggregateMapper.insertLogistics(workorder);
     }
 
+    /**
+     * 按业务附件类型整体替换工单附件：先解除旧系统文件关联并逻辑删除旧关系，
+     * 再插入新关系、标记新文件已关联，保证临时上传文件的清理状态准确。
+     */
     private void updateFile(WorkorderDTO params, List<String> updateTypes){
         // 查询已存在的文件id并取消关联
         Long updateBy = SystemCommonUtil.getNowUserId();
