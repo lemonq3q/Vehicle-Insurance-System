@@ -2,7 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router';
 import store from '@/store';
 
 const MarketingPage = () => import('@/views/MarketingPage.vue');
+const InformationPage = () => import('@/views/InformationPage.vue');
 const AuthPage = () => import('@/views/AuthPage.vue');
+const PortalSsoCallbackPage = () => import('@/views/PortalSsoCallbackPage.vue');
 const PortalLayout = () => import('@/layout/PortalLayout.vue');
 const DashboardPage = () => import('@/views/DashboardPage.vue');
 const EnterpriseInfoPage = () => import('@/views/enterprise/EnterpriseInfoPage.vue');
@@ -25,11 +27,20 @@ const routes = [
     component: MarketingPage,
     meta: { title: 'iDatag 门户' }
   },
+  { path: '/privacy', name: 'privacy', component: InformationPage, props: { page: 'privacy' }, meta: { title: '用户隐私声明' } },
+  { path: '/terms', name: 'terms', component: InformationPage, props: { page: 'terms' }, meta: { title: '服务使用协议' } },
+  { path: '/about', name: 'about', component: InformationPage, props: { page: 'about' }, meta: { title: '关于我们' } },
   {
     path: '/login',
     name: 'login',
     component: AuthPage,
     meta: { guest: true, title: '登录' }
+  },
+  {
+    path: '/sso/callback',
+    name: 'portal-sso-callback',
+    component: PortalSsoCallbackPage,
+    meta: { title: '正在返回门户' }
   },
   {
     path: '/portal',

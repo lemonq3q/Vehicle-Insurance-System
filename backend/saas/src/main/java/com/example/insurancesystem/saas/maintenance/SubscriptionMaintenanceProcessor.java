@@ -91,6 +91,9 @@ public class SubscriptionMaintenanceProcessor {
     order.put("planId", planId);
     order.put("planSnapshotJson", json(plan));
     order.put("userLimit", userLimit);
+    order.put("workorderLimit", intValue(plan.get("workorderLimit")));
+    order.put("workorderOverageCount", 0);
+    order.put("workorderOverageAmount", BigDecimal.ZERO);
     order.put("durationDays", durationDays);
     order.put("payableAmount", price);
     order.put("priceAmount", price);
@@ -111,6 +114,7 @@ public class SubscriptionMaintenanceProcessor {
     update.put("planId", planId);
     update.put("orderId", order.get("id"));
     update.put("userLimit", userLimit);
+    update.put("workorderLimit", intValue(plan.get("workorderLimit")));
     update.put("ocrQuota", intValue(plan.get("ocrQuota")));
     update.put("requestQuota", intValue(plan.get("requestQuota")));
     update.put("startAt", subscription.get("startAt"));
@@ -170,6 +174,9 @@ public class SubscriptionMaintenanceProcessor {
     order.put("planId", planId);
     order.put("planSnapshotJson", plan == null ? null : json(plan));
     order.put("userLimit", plan == null ? subscription.get("userLimit") : plan.get("userLimit"));
+    order.put(
+        "workorderLimit",
+        plan == null ? subscription.get("workorderLimit") : intValue(plan.get("workorderLimit")));
     order.put("durationDays", plan == null ? 0 : plan.get("durationDays"));
     order.put("payableAmount", price);
     order.put("priceAmount", price);

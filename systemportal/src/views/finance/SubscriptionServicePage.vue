@@ -17,7 +17,7 @@
       <div class="portal-card stat-card">
         <div class="stat-label">当前套餐</div>
         <div class="stat-value">{{ currentPlanName }}</div>
-        <div class="stat-note">{{ overview.subscription?.userLimit || 0 }} 人上限</div>
+        <div class="stat-note">{{ overview.subscription?.userLimit || 0 }} 人 · {{ overview.subscription?.workorderLimit || 0 }} 单</div>
       </div>
       <div class="portal-card stat-card">
         <div class="stat-label">到期时间</div>
@@ -47,6 +47,7 @@
         <div class="price">¥{{ plan.price }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
         <ul>
           <li>成员上限：{{ plan.userLimit }} 人</li>
+          <li>工单额度：{{ plan.workorderLimit }} 单</li>
           <li>有效天数：{{ plan.durationDays }} 天</li>
           <li>原价：¥{{ plan.originalPrice }}</li>
         </ul>

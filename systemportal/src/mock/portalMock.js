@@ -162,6 +162,7 @@ const plans = [
     billingPeriod: 'MONTH',
     durationDays: 30,
     userLimit: 5,
+    workorderLimit: 1000,
     price: 299,
     originalPrice: 399,
     status: 1,
@@ -175,6 +176,7 @@ const plans = [
     billingPeriod: 'YEAR',
     durationDays: 365,
     userLimit: 30,
+    workorderLimit: 5000,
     price: 2999,
     originalPrice: 3999,
     status: 1,
@@ -188,6 +190,7 @@ const plans = [
     billingPeriod: 'YEAR',
     durationDays: 365,
     userLimit: 100,
+    workorderLimit: 10000,
     price: 8999,
     originalPrice: 10999,
     status: 1,
@@ -212,6 +215,7 @@ let subscription = {
   orderId: 80001,
   status: 1,
   userLimit: 30,
+  workorderLimit: 5000,
   startAt: '2026-07-01 00:00:00',
   endAt: '2027-06-30 23:59:59',
   autoRenewEnabled: true,
@@ -463,7 +467,9 @@ function calculateSubscriptionOrder(planId, periodCount) {
   const creditAmount = orderType === 'CHANGE_PLAN'
     ? roundMoney(remainingPeriodCount * currentPlan.price)
     : 0;
-  const differenceAmount = roundMoney(priceAmount - creditAmount);
+  const workorderOverageCount = 0;
+  const workorderOverageAmount = 0;
+  const differenceAmount = roundMoney(priceAmount - creditAmount + workorderOverageAmount);
   const payableAmount = Math.max(0, differenceAmount);
   const refundAmount = Math.max(0, roundMoney(-differenceAmount));
   const memberCount = members.filter(item => item.enterpriseId === currentEnterpriseId && item.status === 1).length;
@@ -486,6 +492,9 @@ function calculateSubscriptionOrder(planId, periodCount) {
     remainingPeriodCount: Number(remainingPeriodCount.toFixed(2)),
     priceAmount,
     creditAmount,
+    workorderOverageCount,
+    workorderOverageAmount,
+    workorderOverageUnitPrice: 0.2,
     payableAmount,
     refundAmount,
     balanceAmount: wallet.balanceAmount,
@@ -895,12 +904,15 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       planName: plan.name,
       planSnapshot: clone(plan),
       buyUserLimit: plan.userLimit,
+      buyWorkorderLimit: plan.workorderLimit,
       buyDurationDays: plan.durationDays * preview.periodCount,
       periodCount: preview.periodCount,
       amount: preview.payableAmount,
       priceAmount: preview.priceAmount,
       discountAmount: 0,
       creditAmount: preview.creditAmount,
+      workorderOverageCount: preview.workorderOverageCount,
+      workorderOverageAmount: preview.workorderOverageAmount,
       payableAmount: preview.payableAmount,
       refundAmount: preview.refundAmount,
       paidAmount: preview.payableAmount,
@@ -929,7 +941,9 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
         balanceAfter: wallet.balanceAmount,
         relatedOrderId: order.id,
         relatedSubscriptionId: subscription?.id || null,
-        remark: isRefund ? `改订${plan.name}退回剩余价值` : `${preview.orderType === 'CHANGE_PLAN' ? '改订' : '订阅'}${plan.name}`,
+        remark: preview.workorderOverageAmount > 0
+          ? `改订${plan.name}（含超额工单费 ¥${preview.workorderOverageAmount}，${preview.workorderOverageCount} 单）`
+          : isRefund ? `改订${plan.name}退回剩余价值` : `${preview.orderType === 'CHANGE_PLAN' ? '改订' : '订阅'}${plan.name}`,
         createdAt: formatDateTime(MOCK_NOW)
       };
       transactions.unshift(transaction);
@@ -945,6 +959,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       orderId: order.id,
       status: 1,
       userLimit: plan.userLimit,
+      workorderLimit: plan.workorderLimit,
       startAt: preview.orderType === 'RENEW' ? subscription.startAt : preview.startAt,
       endAt: preview.endAt,
       autoRenewEnabled: Boolean(data.autoRenew),

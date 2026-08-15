@@ -30,6 +30,7 @@
               <th>周期数</th>
               <th>套餐金额</th>
               <th>抵扣 / 退款</th>
+              <th>超额工单费</th>
               <th>应付金额</th>
               <th>实付金额</th>
               <th>自动续费</th>
@@ -46,6 +47,7 @@
               <td>{{ item.periodCount || 1 }}</td>
               <td>¥{{ money(item.priceAmount ?? item.payableAmount) }}</td>
               <td>{{ adjustmentText(item) }}</td>
+              <td>{{ workorderOverageText(item) }}</td>
               <td>¥{{ item.payableAmount }}</td>
               <td>¥{{ item.paidAmount }}</td>
               <td>{{ item.autoRenew ? '是' : '否' }}</td>
@@ -93,6 +95,11 @@ export default {
       if (Number(item.refundAmount || 0) > 0) return `退款 ¥${this.money(item.refundAmount)}`;
       if (Number(item.creditAmount || 0) > 0) return `抵扣 ¥${this.money(item.creditAmount)}`;
       return '-';
+    },
+    workorderOverageText(item) {
+      const count = Number(item.workorderOverageCount || 0);
+      if (count <= 0) return '-';
+      return `${count} 单 / ¥${this.money(item.workorderOverageAmount)}`;
     },
     async loadData() {
       const response = await getSubscriptionOrders({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });

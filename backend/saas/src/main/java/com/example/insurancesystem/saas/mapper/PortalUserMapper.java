@@ -13,6 +13,9 @@ public interface PortalUserMapper {
       "SELECT * FROM tenant_user WHERE deleted=0 AND (username=#{login} OR phone=#{login}) LIMIT 1")
   User findForLogin(String login);
 
+  @Select("SELECT * FROM tenant_user WHERE id=#{id} AND deleted=0 LIMIT 1")
+  User findById(Long id);
+
   @Select(
       "SELECT id,username,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at "
           + "FROM tenant_user WHERE id=#{id} AND deleted=0")

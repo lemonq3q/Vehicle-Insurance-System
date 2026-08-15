@@ -26,6 +26,7 @@ portal:
   sso:
     # 可修改为车险前端的正式域名，不要带末尾斜杠。
     insurance-frontend-url: ${INSURANCE_FRONTEND_URL:http://localhost:8888}
+    portal-frontend-url: ${PORTAL_FRONTEND_URL:http://localhost:8889}
     # 两台服务器上配置相同的高强度密钥，生产环境必须修改。
     insurance-client-secret: ${INSURANCE_SSO_CLIENT_SECRET:wsbld2wjb56gjlmy}
     code-ttl-seconds: ${INSURANCE_SSO_CODE_TTL_SECONDS:60}
@@ -33,3 +34,10 @@ portal:
 app:
   cors:
     enabled: true
+
+saas:
+  billing:
+    workorder-overage:
+      # 超额工单从录入日开始，每经过一个完整周期再次计费。
+      cycle-days: ${WORKORDER_OVERAGE_CYCLE_DAYS:365}
+      unit-price: ${WORKORDER_OVERAGE_UNIT_PRICE:0.20}

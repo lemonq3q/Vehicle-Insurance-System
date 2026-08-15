@@ -3,6 +3,10 @@
     <!-- 操作按钮 -->
     <h3 style="min-width: 160px; text-align: left;">保险工单管理系统</h3>
     <div class="header_right">
+      <el-button class="portal_return_button" type="primary" plain :loading="returningPortal" :disabled="returningPortal" @click="handleReturnPortal">
+        <el-icon><back /></el-icon>
+        <span>{{ returningPortal ? '正在返回...' : '返回门户' }}</span>
+      </el-button>
       <div class="header_notice_wrapper">
         <SystemNotice />
       </div>
@@ -60,15 +64,15 @@
 </template>
 
 <script setup>
-import { ArrowDown } from '@element-plus/icons-vue';
-import { logout } from '@/api/login';
+import { ArrowDown, Back } from '@element-plus/icons-vue';
+import { createPortalAuthorization, logout } from '@/api/login';
 import { selectRenewCount } from '@/api/workorder';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 // import { validateStr } from '@/utils/validate';
 // import { updatePassword } from '@/api/user';
-// import Message from '@/utils/message';
+import Message from '@/utils/message';
 import { jsonStrToObj } from '@/utils/convert';
 import SystemNotice from '@/components/SystemNotice.vue';
 
@@ -78,6 +82,23 @@ const username = computed(() => {
   return user.name || user.realName || user.username || '';
 });
 const router = useRouter();
+const returningPortal = ref(false);
+
+const handleReturnPortal = async () => {
+  if (returningPortal.value) return;
+  returningPortal.value = true;
+  try {
+    const response = await createPortalAuthorization();
+    const payload = response.data;
+    if (Number(payload.code) !== 200 || !payload.data?.redirectUrl) {
+      throw new Error(payload.msg || '返回门户授权失败');
+    }
+    window.location.assign(payload.data.redirectUrl);
+  } catch (error) {
+    returningPortal.value = false;
+    Message.error(error.response?.data?.msg || error.message || '返回门户授权失败');
+  }
+};
 // const dialogVisible = ref(false);
 // const passwordRef = ref();
 
@@ -203,6 +224,10 @@ const handleLogout = () => {
 .header_right {
   display: flex;
   align-items: center;
+}
+
+.portal_return_button {
+  margin-right: 20px;
 }
 
 .header_user_container {

@@ -141,7 +141,7 @@
     <section class="security-section">
       <div data-reveal="left">
         <p class="section-kicker">SECURITY BY DESIGN</p>
-        <h2>客户资料是团队最重要的资产，安全从系统底层开始</h2>
+        <h2><span>客户资料是团队最重要的资产，</span><span>安全从系统底层开始</span></h2>
       </div>
       <div class="security-points" data-reveal="right">
         <p><strong>租户数据隔离</strong><span>企业数据按租户边界隔离，避免跨企业访问。</span></p>
@@ -167,6 +167,7 @@
           <div class="price"><small>¥</small>{{ money(plan.price) }}<span>/ {{ periodLabel(plan.billingPeriod) }}</span></div>
           <ul>
             <li>最多 {{ plan.userLimit || 0 }} 名企业成员</li>
+            <li>包含 {{ plan.workorderLimit || 0 }} 个工单额度</li>
             <li>{{ plan.durationDays || 0 }} 天服务周期</li>
             <li>企业协作与财务记录</li>
           </ul>
@@ -179,13 +180,11 @@
     <section class="final-cta" data-reveal>
       <p>准备好让团队工作更轻松了吗？</p>
       <h2>把繁杂交给系统，把时间留给客户</h2>
-      <router-link class="layui-btn portal-btn cta-button" to="/login">进入 iDatag 门户</router-link>
     </section>
 
     <footer class="marketing-footer">
-      <div class="footer-brand"><img src="@/assets/brand/idatag-logo.png" alt="" /><div><strong>iDatag</strong><span>车险业务云平台</span></div></div>
-      <p>让车险团队的每一次协作都更清晰、更高效。</p>
-      <nav><a href="#capabilities" @click.prevent="scrollToSection('capabilities')">产品能力</a><a href="#plans" @click.prevent="scrollToSection('plans')">套餐价格</a><router-link to="/login">登录门户</router-link></nav>
+      <nav><router-link to="/privacy">用户隐私声明</router-link><router-link to="/terms">服务使用协议</router-link><router-link to="/about">关于我们</router-link></nav>
+      <p>香港科学园（HKSTP）Ideation 计划入选企业。</p>
       <small>© 2026 iDatag. 保留所有权利。</small>
     </footer>
   </main>
@@ -196,9 +195,9 @@ import { markRaw } from 'vue';
 import { getMarketingPlans } from '@/api/portal';
 
 const FALLBACK_PLANS = [
-  { id: 'starter', name: '轻量版', description: '适合小团队快速建立规范的车险业务工作方式。', price: 299, billingPeriod: 'MONTH', durationDays: 30, userLimit: 5 },
-  { id: 'professional', name: '专业版', description: '适合稳定经营团队，覆盖日常协作与经营管理。', price: 2999, billingPeriod: 'YEAR', durationDays: 365, userLimit: 30 },
-  { id: 'enterprise', name: '企业版', description: '适合多成员、多岗位协作的规模化车险服务机构。', price: 8999, billingPeriod: 'YEAR', durationDays: 365, userLimit: 100 }
+  { id: 'starter', name: '轻量版', description: '适合小团队快速建立规范的车险业务工作方式。', price: 299, billingPeriod: 'MONTH', durationDays: 30, userLimit: 5, workorderLimit: 1000 },
+  { id: 'professional', name: '专业版', description: '适合稳定经营团队，覆盖日常协作与经营管理。', price: 2999, billingPeriod: 'YEAR', durationDays: 365, userLimit: 30, workorderLimit: 5000 },
+  { id: 'enterprise', name: '企业版', description: '适合多成员、多岗位协作的规模化车险服务机构。', price: 8999, billingPeriod: 'YEAR', durationDays: 365, userLimit: 100, workorderLimit: 10000 }
 ];
 
 export default {
@@ -317,11 +316,11 @@ export default {
 .nav-cta { margin: 0; min-height: 38px; padding: 0 19px; line-height: 38px; border: 1px solid #f0b44d; background: #f0b44d; color: #17362c; }
 .hero { position: relative; display: flex; align-items: center; min-height: 760px; height: 92dvh; padding: 132px clamp(24px, 7vw, 110px) 90px; overflow: hidden; color: #fff; background: #0b2e26; }
 .hero-grid-lines { position: absolute; inset: 0; opacity: .08; background-size: 54px 54px; background-image: linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px); mask-image: linear-gradient(90deg, #000, transparent 76%); }
-.hero-content { position: relative; z-index: 3; width: min(650px, 56%); }
+.hero-content { position: relative; z-index: 3; width: min(1100px, 56%); }
 .eyebrow, .section-kicker, .team-label, .plan-code { letter-spacing: 0; font-size: 13px; font-weight: 700; }
 .eyebrow { display: flex; align-items: center; gap: 10px; margin: 0 0 24px; color: #bce8d8; }
 .eyebrow span { width: 32px; height: 2px; background: #f0b44d; }
-.hero h1 { max-width: 690px; margin: 0; font-size: clamp(48px, 5.6vw, 76px); line-height: 1.12; font-weight: 700; }
+.hero h1 { max-width: 1100px; margin: 0; font-size: clamp(48px, 5.6vw, 76px); line-height: 1.12; font-weight: 700; }
 .hero h1 strong { display: block; color: #f0b44d; font-weight: 700; }
 .hero-desc { max-width: 630px; margin: 28px 0 0; color: #d7e7e1; font-size: 18px; line-height: 1.8; }
 .hero-actions { display: flex; align-items: center; gap: 28px; margin-top: 34px; }
@@ -370,6 +369,7 @@ export default {
 .trust-strip span { white-space: nowrap; }
 .section { padding: 104px clamp(24px, 7vw, 110px); }
 .section-heading { max-width: 760px; margin-bottom: 52px; }
+.workflow-section .section-heading { max-width: 960px; }
 .section-heading.compact { margin-bottom: 36px; }
 .section-kicker, .team-label, .plan-code { margin: 0 0 12px; color: var(--green); }
 .section-heading h2, .operations-copy h2, .security-section h2, .final-cta h2 { margin: 0; font-size: clamp(32px, 4vw, 48px); line-height: 1.25; }
@@ -419,7 +419,10 @@ export default {
 .teams-grid article { min-height: 350px; padding: 34px; border-right: 1px solid var(--line); }
 .teams-grid article:first-child { padding-left: 0; }.teams-grid article:last-child { padding-right: 0; border: 0; }
 .teams-grid h3 { margin: 16px 0; font-size: 25px; line-height: 1.35; }.teams-grid article > p:not(.team-label) { color: #63766f; }
-.security-section { display: grid; grid-template-columns: 1fr 1fr; gap: 9vw; padding: 94px clamp(24px, 7vw, 110px); background: #e3f0ea; }
+.security-section { display: grid; grid-template-columns: 1.2fr .8fr; gap: clamp(48px, 6vw, 96px); padding: 94px clamp(24px, 7vw, 110px); background: #e3f0ea; }
+.security-section h2 { max-width: 560px; margin: 0; font-size: clamp(20px, 3vw, 40px); line-height: 1.25; }
+.security-section h2 span { display: block; white-space: nowrap; }
+.security-points { margin-left: -170px; }
 .security-points p { display: grid; grid-template-columns: 155px 1fr; gap: 28px; margin: 0; padding: 20px 0; border-bottom: 1px solid #bfd4ca; }.security-points strong { font-size: 15px; }.security-points span { color: #587068; font-size: 14px; }
 .plans-section { background: var(--paper); }
 .plans-heading { display: flex; justify-content: space-between; max-width: none; }.plans-heading > p { max-width: 430px; }
@@ -430,8 +433,8 @@ export default {
 .price { margin: 28px 0; font-size: 42px; font-weight: 700; font-variant-numeric: tabular-nums; }.price small { margin-right: 4px; font-size: 19px; }.price span { color: #71827c; font-size: 13px; font-weight: 500; }
 .plan-card ul { min-height: 110px; margin-bottom: 28px; }.plan-card .portal-btn { width: 100%; margin: 0; text-align: center; }.plan-button { border: 1px solid #9ab1a7; background: #fff; color: var(--ink); }
 .plan-skeleton { min-height: 500px; background: #edf2ef; animation: pulse 1.2s ease-in-out infinite alternate; }.plans-note { margin: 24px 0 0; color: #63766f; text-align: center; }
-.final-cta { padding: 96px 24px; color: #fff; background: #0f8f68; text-align: center; }.final-cta p { margin: 0 0 12px; color: #c8f4e4; }.final-cta h2 { margin: 0 auto 32px; }.cta-button { min-height: 48px; padding: 0 28px; line-height: 48px; border: 1px solid #fff; background: #fff; color: #0b5b44; }
-.marketing-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; padding: 54px clamp(24px, 7vw, 110px) 32px; color: #c2d3cc; background: #081c17; }.footer-brand { display: flex; align-items: center; gap: 12px; }.footer-brand > img { width: 42px; height: 42px; object-fit: contain; }.footer-brand div { display: flex; flex-direction: column; }.footer-brand span { color: #78968a; font-size: 11px; }.marketing-footer > p { justify-self: end; margin: 0; }.marketing-footer nav { display: flex; gap: 24px; font-size: 13px; }.marketing-footer small { justify-self: end; color: #78968a; }
+.final-cta { padding: 96px 24px; color: #fff; background: #0f8f68; text-align: center; }.final-cta p { margin: 0 0 12px; color: #c8f4e4; }.final-cta h2 { margin: 0 auto; }
+.marketing-footer { display: grid; grid-template-columns: 1fr auto; column-gap: 28px; row-gap: 24px; padding: 32px clamp(24px, 7vw, 110px); color: #c2d3cc; background: #081c17; }.marketing-footer > p { justify-self: end; margin: 0; white-space: nowrap; }.marketing-footer nav { display: flex; align-items: center; gap: 24px; font-size: 13px; }.marketing-footer nav a { text-decoration: none; text-underline-offset: 5px; transition: color 160ms ease, text-decoration-color 160ms ease; }.marketing-footer nav a:hover, .marketing-footer nav a:focus-visible { color: #58d2a8; text-decoration: underline; }.marketing-footer small { grid-column: 2; justify-self: end; color: #78968a; }
 
 #capabilities, #teams, #plans { scroll-margin-top: 76px; }
 [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity 520ms ease, transform 600ms cubic-bezier(.2,.75,.25,1); transition-delay: var(--reveal-delay, 0ms); }
@@ -441,7 +444,9 @@ export default {
 @media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; } }
 @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
 @media (max-width: 1100px) { .marketing-nav nav { gap: 18px; }.marketing-nav nav a:not(.nav-login):not(.nav-cta) { display: none; }.product-scene { left: 66%; opacity: .54; }.hero-content { width: 68%; }.workflow-grid { grid-template-columns: repeat(2, 1fr); }.workflow-item:nth-child(2) { border-right: 0; }.workflow-item:first-child { padding-left: 24px; }.workflow-item:nth-child(-n+2) { border-bottom: 1px solid #cad8d0; }.operations-section { gap: 54px; }.teams-grid article { padding: 28px; } }
-@media (max-width: 800px) { .brand-product, .brand-divider, .nav-login { display: none; }.marketing-nav { height: 68px; padding: 0 20px; }.hero { height: auto; min-height: 760px; padding: 112px 24px 70px; align-items: flex-start; }.hero-content { width: 100%; }.hero h1 { font-size: 48px; }.hero-desc { font-size: 16px; }.hero-facts { flex-wrap: wrap; gap: 20px; }.hero-facts div { min-width: 120px; margin: 0; padding: 0 20px 0 0; }.product-scene { top: auto; bottom: -215px; left: 26%; width: 760px; opacity: .24; transform: rotate(-2deg); }.scene-note { display: none; }.trust-strip { justify-content: flex-start; }.trust-strip p { width: 100%; }.operations-section, .security-section { grid-template-columns: 1fr; }.teams-grid, .plan-grid { grid-template-columns: 1fr; }.teams-grid article, .plan-card { min-height: auto; padding: 30px 0; border-right: 0; border-bottom: 1px solid var(--line); }.plan-grid { padding: 0 24px; }.plan-card.featured { margin: 0 -24px; padding: 38px 24px; }.plans-heading { display: block; }.marketing-footer { grid-template-columns: 1fr; }.marketing-footer > p, .marketing-footer small { justify-self: start; } }
+@media (max-width: 1280px) { .security-points { margin-left: -80px; } }
+@media (max-width: 1050px) { .security-section { grid-template-columns: 1fr; }.security-points { margin-left: 0; } }
+@media (max-width: 800px) { .brand-product, .brand-divider, .nav-login { display: none; }.marketing-nav { height: 68px; padding: 0 20px; }.hero { height: auto; min-height: 760px; padding: 112px 24px 70px; align-items: flex-start; }.hero-content { width: 100%; }.hero h1 { font-size: 48px; }.hero-desc { font-size: 16px; }.hero-facts { flex-wrap: wrap; gap: 20px; }.hero-facts div { min-width: 120px; margin: 0; padding: 0 20px 0 0; }.product-scene { top: auto; bottom: -215px; left: 26%; width: 760px; opacity: .24; transform: rotate(-2deg); }.scene-note { display: none; }.trust-strip { justify-content: flex-start; }.trust-strip p { width: 100%; }.operations-section, .security-section { grid-template-columns: 1fr; }.security-points { margin-left: 0; }.teams-grid, .plan-grid { grid-template-columns: 1fr; }.teams-grid article, .plan-card { min-height: auto; padding: 30px 0; border-right: 0; border-bottom: 1px solid var(--line); }.plan-grid { padding: 0 24px; }.plan-card.featured { margin: 0 -24px; padding: 38px 24px; }.plans-heading { display: block; }.marketing-footer { grid-template-columns: 1fr; }.marketing-footer > p { justify-self: start; white-space: normal; }.marketing-footer small { grid-column: 1; justify-self: start; } }
 @media (max-width: 560px) { .nav-cta { padding: 0 13px; }.brand { gap: 8px; }.brand-name { font-size: 17px; }.hero h1 { font-size: 40px; }.hero-actions { align-items: stretch; flex-direction: column; gap: 10px; }.hero-primary { text-align: center; }.hero-facts dd { font-size: 11px; }.section { padding: 76px 20px; }.workflow-grid { grid-template-columns: 1fr; }.workflow-item, .workflow-item:first-child { padding: 28px 0; border-right: 0; border-bottom: 1px solid #cad8d0; }.workflow-item .step-number, .workflow-item:first-child .step-number { left: 0; }.workflow-item > p { min-height: auto; }.operations-section { padding: 76px 20px; }.operation-list p { flex-direction: column; }.operation-list small { margin-top: 4px; }.ledger-panel { padding: 22px; box-shadow: 10px 10px 0 #1b4035; }.ledger-total strong { font-size: 30px; }.security-section { padding: 70px 20px; }.security-points p { grid-template-columns: 1fr; gap: 6px; }.marketing-footer nav { flex-wrap: wrap; }.marketing-footer > p { font-size: 13px; } }
 @media (prefers-reduced-motion: reduce) { .plan-skeleton { animation: none; } }
 </style>

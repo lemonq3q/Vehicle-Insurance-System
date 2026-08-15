@@ -612,6 +612,9 @@ Response data：
 | remainingPeriodCount | number | 当前套餐剩余周期数，可包含小数 |
 | priceAmount | number | 目标套餐单价乘以周期数 |
 | creditAmount | number | 原套餐剩余价值抵扣，仅改订时存在 |
+| workorderOverageCount | number | 降低工单额度时需要立即计费的超额工单数 |
+| workorderOverageAmount | number | 超额工单数乘以全局单周期单价后的费用 |
+| workorderOverageUnitPrice | number | 当前全局单个工单单周期费用 |
 | payableAmount | number | 最终需要从企业余额扣除的金额，不小于 0 |
 | refundAmount | number | 差额为负时应退回企业余额的金额，不小于 0 |
 | balanceAmount | number | 计算时企业可用余额 |
@@ -627,8 +630,9 @@ Response data：
 1. 改订最小周期数 = `ceil(当前订阅剩余天数 / 新套餐单周期天数)`。
 2. 原套餐剩余价值 = `(当前订阅剩余天数 / 原套餐单周期天数) * 原套餐单周期价格`。
 3. 新套餐金额 = `新套餐单周期价格 * periodCount`。
-4. 差额 = `新套餐金额 - 原套餐剩余价值`；差额为正计入 `payableAmount`，差额为负的绝对值计入 `refundAmount`。
-5. 改订立即生效，新到期时间按目标套餐周期数重新计算，且所选周期必须覆盖原订阅有效期。
+4. 变更后工单额度低于当前套餐时，按录入时间和 ID 排序，剔除新额度内最早的工单；剩余工单只有在最近扣费日至变更日期已达到完整计费周期，或从未扣费时，才按全局单价计算超额费。
+5. 差额 = `新套餐金额 - 原套餐剩余价值 + 超额工单费`；差额为正计入 `payableAmount`，差额为负的绝对值计入 `refundAmount`。
+6. 改订立即生效，新到期时间按目标套餐周期数重新计算，且所选周期必须覆盖原订阅有效期；支付成功后同步写入相关工单的扣费日。超额工单费记录在本次套餐订单中，并合并进套餐变更资金流水，不创建独立流水。
 
 常见错误：套餐不存在时返回 `404`。
 
@@ -646,6 +650,9 @@ Mock response：
     "remainingPeriodCount": 0.96,
     "priceAmount": 3588,
     "creditAmount": 2888.08,
+    "workorderOverageCount": 50,
+    "workorderOverageAmount": 10.00,
+    "workorderOverageUnitPrice": 0.20,
     "payableAmount": 699.92,
     "refundAmount": 0,
     "balanceAmount": 12680.5,
@@ -752,7 +759,7 @@ Query：
 | startTime | string | 否 | 交易时间起点，格式 `yyyy-MM-dd HH:mm:ss` |
 | endTime | string | 否 | 交易时间终点，格式 `yyyy-MM-dd HH:mm:ss` |
 | direction | string | 否 | IN、OUT |
-| transactionType | string | 否 | RECHARGE、BUY_PLAN、RENEW_PLAN、AUTO_RENEW、CHANGE_PLAN、REFUND、ADJUST |
+| transactionType | string | 否 | RECHARGE、BUY_PLAN、RENEW_PLAN、AUTO_RENEW、CHANGE_PLAN、WORKORDER_OVERAGE、REFUND、ADJUST |
 
 Response data：分页 `SaasWalletTransaction`
 
@@ -832,6 +839,7 @@ Response data：`TenantUser`
 | billingPeriod | string | MONTH、YEAR、DAY |
 | durationDays | number | 有效天数 |
 | userLimit | number | 最大成员数 |
+| workorderLimit | number | 套餐包含的工单数量额度 |
 | price | number | 售价 |
 | originalPrice | number | 原价 |
 | status | number | 1 上架，0 下架 |
@@ -846,6 +854,7 @@ Response data：`TenantUser`
 | orderId | number \| null | 最近一次生效订单 ID |
 | status | number | 0 未订阅，1 生效中，2 已过期，3 已暂停，4 已取消 |
 | userLimit | number | 当前可启用成员上限，未订阅或到期时为 0 |
+| workorderLimit | number | 当前订阅的工单数量额度，未订阅或到期时为 0 |
 | ocrQuota | number | 当前周期 OCR 额度 |
 | requestQuota | number | 当前周期请求额度 |
 | startAt | string \| null | 当前订阅生效时间 |
@@ -866,7 +875,10 @@ Response data：`TenantUser`
 | planSnapshot | SaasPlan | 下单时完整套餐快照 |
 | periodCount | number | 连续订阅周期数 |
 | buyUserLimit | number | 下单时成员上限 |
+| buyWorkorderLimit | number | 下单时套餐工单额度 |
 | buyDurationDays | number | 单周期天数乘以周期数 |
+| workorderOverageCount | number | 套餐变更时立即计费的超额工单数 |
+| workorderOverageAmount | number | 套餐变更时立即计收的超额工单费用 |
 | priceAmount | number | 新套餐原始金额 |
 | discountAmount | number | 优惠金额 |
 | creditAmount | number | 原套餐剩余价值抵扣 |

@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS `saas_plan` (
   `billing_period` varchar(20) DEFAULT NULL COMMENT 'MONTH YEAR DAY',
   `duration_days` int DEFAULT NULL COMMENT '有效天数',
   `user_limit` int DEFAULT NULL COMMENT '最大成员数',
+  `workorder_limit` int NOT NULL DEFAULT 1000 COMMENT '套餐包含的工单数量额度',
   `ocr_quota` int DEFAULT NULL COMMENT 'OCR次数额度',
   `request_quota` int DEFAULT NULL COMMENT '请求次数额度',
   `price` decimal(12,2) DEFAULT NULL COMMENT '售价',
@@ -160,7 +161,10 @@ CREATE TABLE IF NOT EXISTS `saas_order` (
   `plan_id` bigint DEFAULT NULL COMMENT '套餐ID',
   `plan_snapshot_json` json DEFAULT NULL COMMENT '下单时套餐快照',
   `buy_user_limit` int DEFAULT NULL COMMENT '购买人数',
+  `buy_workorder_limit` int DEFAULT NULL COMMENT '下单时套餐工单额度',
   `buy_duration_days` int DEFAULT NULL COMMENT '购买时长',
+  `workorder_overage_count` int NOT NULL DEFAULT 0 COMMENT '套餐变更时立即计费的超额工单数',
+  `workorder_overage_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '套餐变更时立即计收的超额工单费用',
   `amount` decimal(12,2) DEFAULT NULL COMMENT '应付金额',
   `paid_amount` decimal(12,2) DEFAULT NULL COMMENT '实付金额',
   `pay_channel` varchar(32) DEFAULT NULL COMMENT '支付渠道',
@@ -191,6 +195,7 @@ CREATE TABLE IF NOT EXISTS `saas_subscription` (
   `order_id` bigint DEFAULT NULL COMMENT '来源订单',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '0未订阅 1生效中 2已过期 3已暂停 4已取消',
   `user_limit` int NOT NULL DEFAULT 0 COMMENT '当前可启用成员上限',
+  `workorder_limit` int NOT NULL DEFAULT 0 COMMENT '当前订阅包含的工单数量额度',
   `ocr_quota` int NOT NULL DEFAULT 0 COMMENT '当前周期OCR额度',
   `request_quota` int NOT NULL DEFAULT 0 COMMENT '当前周期请求额度',
   `start_at` datetime DEFAULT NULL COMMENT '生效时间',
@@ -546,10 +551,12 @@ CREATE TABLE IF NOT EXISTS `biz_workorder` (
   `handle_by` bigint DEFAULT NULL COMMENT '处理用户',
   `updated_by` bigint DEFAULT NULL COMMENT '更新用户',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
+  `last_overage_billing_date` date DEFAULT NULL COMMENT '最近一次超额周期费用的业务扣费日',
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
   PRIMARY KEY (`id`),
-  KEY `idx_workorder_source_staff` (`enterprise_id`,`source_staff_id`,`created_at`)
+  KEY `idx_workorder_source_staff` (`enterprise_id`,`source_staff_id`,`created_at`),
+  KEY `idx_workorder_overage_billing` (`enterprise_id`,`deleted`,`created_at`,`last_overage_billing_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工单主表';
 
 CREATE TABLE IF NOT EXISTS `biz_workorder_archive` LIKE `biz_workorder`;

@@ -16,7 +16,7 @@ public interface SubscriptionMaintenanceMapper {
   Long findOwnerUserId(Long enterpriseId);
 
   @Update(
-      "UPDATE saas_subscription SET status=2,user_limit=0,ocr_quota=0,request_quota=0,auto_renew_enabled=0,auto_renew_plan_id=NULL,next_renew_at=NULL,cancel_auto_renew_at=NOW(),updated_at=NOW() WHERE id=#{id} AND status=1")
+      "UPDATE saas_subscription SET status=2,user_limit=0,workorder_limit=0,ocr_quota=0,request_quota=0,auto_renew_enabled=0,auto_renew_plan_id=NULL,next_renew_at=NULL,cancel_auto_renew_at=NOW(),updated_at=NOW() WHERE id=#{id} AND status=1")
   int expireSubscription(Long id);
 
   @Update(

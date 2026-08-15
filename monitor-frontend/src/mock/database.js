@@ -9,10 +9,10 @@ export const enterprises = [
 ];
 
 export const plans = [
-  { id: 1, code: 'BASIC', name: '基础版', description: '适合小型车商和初创团队', billingCycle: 'YEAR', durationDays: 365, price: 3600, listPrice: 4200, memberLimit: 10, sortOrder: 10, status: 1, updatedAt: '2026-07-16 10:20' },
-  { id: 2, code: 'PRO', name: '专业版', description: '适合稳定增长的保险服务团队', billingCycle: 'YEAR', durationDays: 365, price: 12800, listPrice: 14800, memberLimit: 30, sortOrder: 20, status: 1, updatedAt: '2026-07-16 10:30' },
-  { id: 3, code: 'ENTERPRISE', name: '企业版', description: '适合多门店与大型运营团队', billingCycle: 'YEAR', durationDays: 365, price: 28800, listPrice: 32800, memberLimit: 50, sortOrder: 30, status: 1, updatedAt: '2026-07-16 10:40' },
-  { id: 4, code: 'TRIAL', name: '体验版', description: '用于售前演示和短期试用', billingCycle: 'DAY', durationDays: 30, price: 0, listPrice: 0, memberLimit: 5, sortOrder: 40, status: 0, updatedAt: '2026-07-15 09:00' }
+  { id: 1, code: 'BASIC', name: '基础版', description: '适合小型车商和初创团队', billingCycle: 'YEAR', durationDays: 365, price: 3600, listPrice: 4200, memberLimit: 10, workorderLimit: 1000, sortOrder: 10, status: 1, updatedAt: '2026-07-16 10:20' },
+  { id: 2, code: 'PRO', name: '专业版', description: '适合稳定增长的保险服务团队', billingCycle: 'YEAR', durationDays: 365, price: 12800, listPrice: 14800, memberLimit: 30, workorderLimit: 5000, sortOrder: 20, status: 1, updatedAt: '2026-07-16 10:30' },
+  { id: 3, code: 'ENTERPRISE', name: '企业版', description: '适合多门店与大型运营团队', billingCycle: 'YEAR', durationDays: 365, price: 28800, listPrice: 32800, memberLimit: 50, workorderLimit: 10000, sortOrder: 30, status: 1, updatedAt: '2026-07-16 10:40' },
+  { id: 4, code: 'TRIAL', name: '体验版', description: '用于售前演示和短期试用', billingCycle: 'DAY', durationDays: 30, price: 0, listPrice: 0, memberLimit: 5, workorderLimit: 1000, sortOrder: 40, status: 0, updatedAt: '2026-07-15 09:00' }
 ];
 
 export const platformUsers = [

@@ -11,6 +11,7 @@ const PUBLIC_REQUESTS = [
   '/portal/auth/register',
   '/portal/auth/sms-code',
   '/portal/auth/forget-password',
+  '/portal/sso/exchange',
   '/portal/finance/plans'
 ];
 

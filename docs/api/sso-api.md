@@ -115,3 +115,93 @@ http://localhost:8888/sso/callback?code=mock-insurance-sso-code
 ```
 
 mock 模式只验证 SaaS 前端的按钮与跳转。完整的跨后端兑换需启动 SaaS 后端、车险后端和两个 Redis。
+
+## 车险系统返回 SaaS 门户
+
+返回流程与进入车险系统相反，并使用独立的一次性授权码：
+
+1. 已登录的车险前端请求 `POST /auth/sso/portal-authorize`。
+2. 车险后端根据当前登录会话取得 `userId + enterpriseId`，通过共享密钥调用 SaaS 内部授权接口。
+3. 浏览器跳转到 SaaS 前端 `/sso/callback?code=...`。
+4. SaaS 前端调用 `POST /portal/sso/exchange` 兑换授权码。
+5. SaaS 后端重新校验账号、企业和成员状态，并在自己的 Redis 命名空间创建门户会话。
+
+### `POST /auth/sso/portal-authorize`
+
+- 场景：车险系统 Header 中点击“返回门户”。
+- 权限：需要有效的车险登录 Token。
+- Header：`Authorization: Bearer <insuranceToken>` 或 `token: <insuranceToken>`。
+- Body：空 JSON 对象 `{}`。
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "msg": "授权成功",
+  "data": {
+    "redirectUrl": "http://localhost:8889/sso/callback?code=64位随机授权码",
+    "expiresIn": 60
+  }
+}
+```
+
+### `POST /internal/sso/portal-authorize`
+
+- 调用方：仅车险后端。
+- Header：`X-Insurance-Client-Secret: <server-secret>`。
+- Body：
+
+```json
+{
+  "userId": 10001,
+  "enterpriseId": 20001
+}
+```
+
+- SaaS 后端会重新校验用户的企业成员关系及企业状态，然后签发仅可用于门户的短效一次性授权码。
+
+### `POST /portal/sso/exchange`
+
+- 场景：SaaS 门户回调页自动登录。
+- 权限：公开接口，但授权码仅可使用一次并在 60 秒后过期。
+- Body：
+
+```json
+{
+  "code": "64位随机授权码"
+}
+```
+
+成功响应与 `/portal/auth/login` 的数据结构一致：
+
+```json
+{
+  "code": 200,
+  "msg": "自动登录成功",
+  "data": {
+    "token": "portal-jwt",
+    "user": { "id": 10001, "username": "13800138000", "realName": "张三" },
+    "enterprises": [{ "id": 20001, "name": "示例企业" }],
+    "currentEnterpriseId": 20001,
+    "currentEnterprise": { "id": 20001, "name": "示例企业" },
+    "currentMember": { "enterpriseId": 20001, "userId": 10001, "roleCode": "OWNER", "status": 1 }
+  }
+}
+```
+
+常见错误：
+
+| code | 说明 |
+| --- | --- |
+| 400 | 授权码或用户/企业标识缺失 |
+| 401 | 车险或门户授权码无效、已使用或已过期 |
+| 403 | 用户、企业成员或企业不可用，或内部共享密钥不正确 |
+| 502 | 车险后端无法连接 SaaS 认证服务 |
+
+新增环境变量：
+
+| 应用 | 环境变量 | 默认值/作用 |
+| --- | --- | --- |
+| SaaS 后端 | `PORTAL_FRONTEND_URL` | `http://localhost:8889`，门户前端根地址 |
+| 车险后端 | `SAAS_PORTAL_AUTHORIZE_URL` | `http://localhost:8081/internal/sso/portal-authorize` |

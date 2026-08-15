@@ -1,6 +1,7 @@
 package com.example.insurancesystem.saas.service.impl;
 
 import com.example.insurancesystem.domain.authenticate.LoginUser;
+import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.saas.integration.sms.SmsVerificationService;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
@@ -10,6 +11,7 @@ import com.example.insurancesystem.saas.support.PortalMaps;
 import com.example.insurancesystem.security.SingleLoginSessionManager;
 import com.example.insurancesystem.utils.JwtUtil;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,13 +62,40 @@ public class PortalAuthServiceImpl implements PortalAuthService {
       throw new BusinessException(400, "用户名或密码错误");
     }
     LoginUser loginUser = (LoginUser) authentication.getPrincipal();
+    return createSession(loginUser, null);
+  }
+
+  @Override
+  public Map<String, Object> ssoLogin(Long userId, Long enterpriseId) {
+    User user = userMapper.findById(userId);
+    if (user == null || !Integer.valueOf(1).equals(user.getStatus())) {
+      throw new BusinessException(403, "用户账号不可用");
+    }
+    Map<String, Object> member = PortalMaps.camel(enterpriseMapper.findMemberByUser(enterpriseId, userId));
+    if (member == null || ((Number) member.get("status")).intValue() != 1) {
+      throw new BusinessException(403, "用户不属于当前企业或成员状态不可用");
+    }
+    Map<String, Object> enterprise = PortalMaps.camel(enterpriseMapper.findEnterprise(enterpriseId));
+    if (enterprise == null || ((Number) enterprise.get("status")).intValue() != 1) {
+      throw new BusinessException(403, "当前企业不可用");
+    }
+    user.setEnterpriseId(enterpriseId);
+    user.setMemberStatus(((Number) member.get("status")).intValue());
+    LoginUser loginUser = new LoginUser(user, Collections.singletonList("portal:access"));
+    return createSession(loginUser, enterpriseId);
+  }
+
+  private Map<String, Object> createSession(LoginUser loginUser, Long preferredEnterpriseId) {
     Long userId = loginUser.getUser().getId();
     String sessionId = JwtUtil.getUUID();
     String token = JwtUtil.createJWT(userId.toString(), JwtUtil.LOGIN_JWT_TTL, sessionId);
     sessionManager.save(userId, sessionId, loginUser);
     userMapper.updateLastLogin(userId, LocalDateTime.now());
     List<Map<String, Object>> enterprises = PortalMaps.camel(userMapper.findEnterprises(userId));
-    Map<String, Object> currentMember = PortalMaps.camel(enterpriseMapper.findCurrentMember(userId));
+    Map<String, Object> currentMember = PortalMaps.camel(
+        preferredEnterpriseId == null
+            ? enterpriseMapper.findCurrentMember(userId)
+            : enterpriseMapper.findMemberByUser(preferredEnterpriseId, userId));
     Long currentEnterpriseId =
         currentMember == null ? null : ((Number) currentMember.get("enterpriseId")).longValue();
     Map<String, Object> result = new LinkedHashMap<>();

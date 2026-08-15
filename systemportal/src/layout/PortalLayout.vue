@@ -128,6 +128,12 @@ export default {
       await this.$store.dispatch('loadContext');
     }
   },
+  mounted() {
+    window.addEventListener('pageshow', this.resetEnteringSystem);
+  },
+  beforeUnmount() {
+    window.removeEventListener('pageshow', this.resetEnteringSystem);
+  },
   methods: {
     async enterInsuranceSystem() {
       if (this.enteringSystem) return;
@@ -142,6 +148,9 @@ export default {
     },
     toggleSidebar() {
       this.$store.commit('setSidebarCollapsed', !this.collapsed);
+    },
+    resetEnteringSystem() {
+      this.enteringSystem = false;
     },
     switchTestRole() {
       // const roles = ['OWNER', 'ADMIN', 'ISSUER'];

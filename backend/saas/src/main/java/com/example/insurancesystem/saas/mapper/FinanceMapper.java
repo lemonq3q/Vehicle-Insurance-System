@@ -65,14 +65,14 @@ public interface FinanceMapper {
   int updateWallet(Map<String, Object> values);
 
   @Insert(
-      "INSERT INTO saas_order(order_no,order_type,enterprise_id,buyer_user_id,plan_id,plan_snapshot_json,buy_user_limit,buy_duration_days,pay_type,amount,price_amount,discount_amount,credit_amount,payable_amount,refund_amount,paid_amount,original_subscription_id,old_plan_id,new_plan_id,auto_renew,status,paid_at,created_at,updated_at,deleted) "
-          + "VALUES(#{orderNo},#{orderType},#{enterpriseId},#{userId},#{planId},#{planSnapshotJson},#{userLimit},#{durationDays},'BALANCE',#{payableAmount},#{priceAmount},0,#{creditAmount},#{payableAmount},#{refundAmount},#{payableAmount},#{subscriptionId},#{oldPlanId},#{planId},#{autoRenew},2,NOW(),NOW(),NOW(),0)")
+      "INSERT INTO saas_order(order_no,order_type,enterprise_id,buyer_user_id,plan_id,plan_snapshot_json,buy_user_limit,buy_workorder_limit,buy_duration_days,workorder_overage_count,workorder_overage_amount,pay_type,amount,price_amount,discount_amount,credit_amount,payable_amount,refund_amount,paid_amount,original_subscription_id,old_plan_id,new_plan_id,auto_renew,status,paid_at,created_at,updated_at,deleted) "
+          + "VALUES(#{orderNo},#{orderType},#{enterpriseId},#{userId},#{planId},#{planSnapshotJson},#{userLimit},#{workorderLimit},#{durationDays},#{workorderOverageCount},#{workorderOverageAmount},'BALANCE',#{payableAmount},#{priceAmount},0,#{creditAmount},#{payableAmount},#{refundAmount},#{payableAmount},#{subscriptionId},#{oldPlanId},#{planId},#{autoRenew},2,NOW(),NOW(),NOW(),0)")
   @Options(useGeneratedKeys = true, keyProperty = "id")
   int insertOrder(Map<String, Object> order);
 
   @Insert(
-      "INSERT INTO saas_order(order_no,order_type,enterprise_id,buyer_user_id,plan_id,plan_snapshot_json,buy_user_limit,buy_duration_days,pay_type,amount,price_amount,discount_amount,credit_amount,payable_amount,refund_amount,paid_amount,original_subscription_id,old_plan_id,new_plan_id,auto_renew,status,failure_reason,created_at,updated_at,deleted) "
-          + "VALUES(#{orderNo},'AUTO_RENEW',#{enterpriseId},#{userId},#{planId},#{planSnapshotJson},#{userLimit},#{durationDays},'BALANCE',#{payableAmount},#{priceAmount},0,0,#{payableAmount},0,0,#{subscriptionId},#{oldPlanId},#{planId},1,6,#{failureReason},NOW(),NOW(),0)")
+      "INSERT INTO saas_order(order_no,order_type,enterprise_id,buyer_user_id,plan_id,plan_snapshot_json,buy_user_limit,buy_workorder_limit,buy_duration_days,workorder_overage_count,workorder_overage_amount,pay_type,amount,price_amount,discount_amount,credit_amount,payable_amount,refund_amount,paid_amount,original_subscription_id,old_plan_id,new_plan_id,auto_renew,status,failure_reason,created_at,updated_at,deleted) "
+          + "VALUES(#{orderNo},'AUTO_RENEW',#{enterpriseId},#{userId},#{planId},#{planSnapshotJson},#{userLimit},#{workorderLimit},#{durationDays},0,0,'BALANCE',#{payableAmount},#{priceAmount},0,0,#{payableAmount},0,0,#{subscriptionId},#{oldPlanId},#{planId},1,6,#{failureReason},NOW(),NOW(),0)")
   @Options(useGeneratedKeys = true, keyProperty = "id")
   int insertAutoRenewFailureOrder(Map<String, Object> order);
 
@@ -87,7 +87,7 @@ public interface FinanceMapper {
       @Param("orderId") Long orderId, @Param("transactionId") Long transactionId);
 
   @Update(
-      "UPDATE saas_subscription SET plan_id=#{planId},order_id=#{orderId},status=1,user_limit=#{userLimit},ocr_quota=#{ocrQuota},request_quota=#{requestQuota},start_at=#{startAt},end_at=#{endAt},auto_renew_enabled=#{autoRenew},auto_renew_plan_id=CASE WHEN #{autoRenew}=1 THEN #{planId} ELSE NULL END,next_renew_at=#{nextRenewAt},last_renew_order_id=#{orderId},cancel_auto_renew_at=CASE WHEN #{autoRenew}=0 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE enterprise_id=#{enterpriseId}")
+      "UPDATE saas_subscription SET plan_id=#{planId},order_id=#{orderId},status=1,user_limit=#{userLimit},workorder_limit=#{workorderLimit},ocr_quota=#{ocrQuota},request_quota=#{requestQuota},start_at=#{startAt},end_at=#{endAt},auto_renew_enabled=#{autoRenew},auto_renew_plan_id=CASE WHEN #{autoRenew}=1 THEN #{planId} ELSE NULL END,next_renew_at=#{nextRenewAt},last_renew_order_id=#{orderId},cancel_auto_renew_at=CASE WHEN #{autoRenew}=0 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE enterprise_id=#{enterpriseId}")
   int updateSubscription(Map<String, Object> subscription);
 
   @Update(

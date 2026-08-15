@@ -28,3 +28,7 @@ export function getSmsCode(email){
 export function exchangeSsoCode(code) {
   return axios.post(`${rootUrl}/sso/exchange`, { code });
 }
+
+export function createPortalAuthorization() {
+  return axios.post(`${rootUrl}/sso/portal-authorize`, {});
+}

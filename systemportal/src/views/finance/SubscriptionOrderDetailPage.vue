@@ -22,8 +22,8 @@
 
         <div class="plan-facts">
           <div><span>成员上限</span><strong>{{ plan.userLimit }} 人</strong></div>
+          <div><span>工单额度</span><strong>{{ plan.workorderLimit }} 单</strong></div>
           <div><span>单周期时长</span><strong>{{ plan.durationDays }} 天</strong></div>
-          <div><span>预计生效</span><strong>{{ preview.startAt }}</strong></div>
           <div><span>预计到期</span><strong>{{ preview.endAt }}</strong></div>
         </div>
 
@@ -68,6 +68,10 @@
         <dl>
           <div><dt>套餐金额</dt><dd>¥{{ money(preview.priceAmount) }}</dd></div>
           <div v-if="preview.orderType === 'CHANGE_PLAN'"><dt>原套餐剩余价值抵扣</dt><dd class="credit">-¥{{ money(preview.creditAmount) }}</dd></div>
+          <div v-if="preview.workorderOverageCount > 0">
+            <dt>超额工单费（{{ preview.workorderOverageCount }} 单）</dt>
+            <dd>¥{{ money(preview.workorderOverageAmount) }}</dd>
+          </div>
           <div class="divider"><dt>企业余额</dt><dd>¥{{ money(overview.wallet.balanceAmount) }}</dd></div>
           <div v-if="preview.refundAmount > 0"><dt>退回企业余额</dt><dd class="refund">+¥{{ money(preview.refundAmount) }}</dd></div>
         </dl>

@@ -24,4 +24,16 @@ public class SsoController {
       @RequestBody Map<String, Object> body) {
     return new ResponseResult<>(200, "授权码兑换成功", ssoService.exchange(clientSecret, body));
   }
+
+  @PostMapping("/internal/sso/portal-authorize")
+  public ResponseResult<?> authorizePortal(
+      @RequestHeader(value = "X-Insurance-Client-Secret", required = false) String clientSecret,
+      @RequestBody Map<String, Object> body) {
+    return new ResponseResult<>(200, "授权成功", ssoService.authorizePortal(clientSecret, body));
+  }
+
+  @PostMapping("/portal/sso/exchange")
+  public ResponseResult<?> exchangePortal(@RequestBody Map<String, Object> body) {
+    return new ResponseResult<>(200, "自动登录成功", ssoService.exchangePortal(body));
+  }
 }

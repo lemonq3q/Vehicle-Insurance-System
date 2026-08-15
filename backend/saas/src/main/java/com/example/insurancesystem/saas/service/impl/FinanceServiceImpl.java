@@ -3,8 +3,10 @@ package com.example.insurancesystem.saas.service.impl;
 import com.example.insurancesystem.domain.encapsulate.TableData;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.saas.integration.payment.PaymentGateway;
+import com.example.insurancesystem.saas.config.WorkorderOverageBillingProperties;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
 import com.example.insurancesystem.saas.mapper.FinanceMapper;
+import com.example.insurancesystem.saas.mapper.WorkorderOverageBillingMapper;
 import com.example.insurancesystem.saas.service.FinanceService;
 import com.example.insurancesystem.saas.service.MemberSeatService;
 import com.example.insurancesystem.saas.support.*;
@@ -27,6 +29,9 @@ public class FinanceServiceImpl implements FinanceService {
   private final PaymentGateway payments;
   private final ObjectMapper objectMapper;
   private final MemberSeatService seats;
+  private final WorkorderOverageBillingMapper workorderBillingMapper;
+  private final WorkorderOverageBillingProperties workorderBillingProperties;
+  private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
 
   public FinanceServiceImpl(
       FinanceMapper mapper,
@@ -35,7 +40,9 @@ public class FinanceServiceImpl implements FinanceService {
       BusinessCodeGenerator codes,
       PaymentGateway payments,
       ObjectMapper objectMapper,
-      MemberSeatService seats) {
+      MemberSeatService seats,
+      WorkorderOverageBillingMapper workorderBillingMapper,
+      WorkorderOverageBillingProperties workorderBillingProperties) {
     this.mapper = mapper;
     this.enterprises = enterprises;
     this.context = context;
@@ -43,6 +50,8 @@ public class FinanceServiceImpl implements FinanceService {
     this.payments = payments;
     this.objectMapper = objectMapper;
     this.seats = seats;
+    this.workorderBillingMapper = workorderBillingMapper;
+    this.workorderBillingProperties = workorderBillingProperties;
   }
 
   public Map<String, Object> overview() {
@@ -176,8 +185,10 @@ public class FinanceServiceImpl implements FinanceService {
 
   public Map<String, Object> preview(Map<String, Object> body) {
     context.requireRoles("OWNER", "ADMIN");
-    return calculate(
-        context.enterpriseId(), number(body, "planId"), integer(body, "periodCount"), null);
+    Map<String, Object> preview =
+        calculate(context.enterpriseId(), number(body, "planId"), integer(body, "periodCount"), null);
+    preview.remove("workorderOverageIds");
+    return preview;
   }
 
   @Transactional
@@ -216,6 +227,7 @@ public class FinanceServiceImpl implements FinanceService {
     order.put("userId", context.userId());
     order.put("planId", planId);
     order.put("userLimit", plan.get("userLimit"));
+    order.put("workorderLimit", intValue(plan.get("workorderLimit")));
     order.put("durationDays", ((Number) plan.get("durationDays")).intValue() * periods);
     order.put("subscriptionId", currentState.get("id"));
     order.put("oldPlanId", activeSubscription == null ? null : activeSubscription.get("planId"));
@@ -231,6 +243,7 @@ public class FinanceServiceImpl implements FinanceService {
     subscription.put("planId", planId);
     subscription.put("orderId", order.get("id"));
     subscription.put("userLimit", plan.get("userLimit"));
+    subscription.put("workorderLimit", intValue(plan.get("workorderLimit")));
     subscription.put("ocrQuota", intValue(plan.get("ocrQuota")));
     subscription.put("requestQuota", intValue(plan.get("requestQuota")));
     subscription.put(
@@ -243,6 +256,21 @@ public class FinanceServiceImpl implements FinanceService {
     subscription.put("nextRenewAt", autoRenew ? preview.get("endAt") : null);
     if (mapper.updateSubscription(subscription) == 0)
       throw new BusinessException(409, "企业订阅状态已变化，请重试");
+
+    // 套餐降额产生的超额费用已经包含在本次订单中，同一事务写入业务扣费日，避免次日维护再次收费。
+    @SuppressWarnings("unchecked")
+    List<Long> overageIds = (List<Long>) preview.getOrDefault("workorderOverageIds", List.of());
+    if (!overageIds.isEmpty()) {
+      LocalDate billingDate = LocalDate.now(BUSINESS_ZONE);
+      int marked =
+          workorderBillingMapper.markBilled(
+              enterpriseId,
+              overageIds,
+              billingDate,
+              workorderBillingProperties.getCycleDays());
+      if (marked != overageIds.size())
+        throw new BusinessException(409, "工单计费状态已变化，请重新确认套餐变更金额");
+    }
     seats.synchronize(enterpriseId, ((Number) plan.get("userLimit")).intValue());
     Long subscriptionId = ((Number) currentState.get("id")).longValue();
     BigDecimal change = refund.signum() > 0 ? refund : payable;
@@ -257,7 +285,19 @@ public class FinanceServiceImpl implements FinanceService {
     tx.put("balanceAfter", after);
     tx.put("orderId", order.get("id"));
     tx.put("subscriptionId", subscriptionId);
-    tx.put("remark", "套餐订单 " + order.get("orderNo"));
+    BigDecimal workorderOverageAmount = money(preview.get("workorderOverageAmount"));
+    int workorderOverageCount = intValue(preview.get("workorderOverageCount"));
+    tx.put(
+        "remark",
+        workorderOverageAmount.signum() > 0
+            ? "套餐订单 "
+                + order.get("orderNo")
+                + "（含超额工单费 ¥"
+                + workorderOverageAmount
+                + "，"
+                + workorderOverageCount
+                + " 单）"
+            : "套餐订单 " + order.get("orderNo"));
     UniqueCodeRetryUtil.insertWithGeneratedCode(
         SaasCodeConstraints.WALLET_TRANSACTION_NO,
         codes::transactionNo,
@@ -268,6 +308,7 @@ public class FinanceServiceImpl implements FinanceService {
     order.put("paidAmount", payable);
     order.put("payType", "BALANCE");
     order.put("status", 2);
+    order.remove("workorderOverageIds");
     return order;
   }
 
@@ -362,9 +403,28 @@ public class FinanceServiceImpl implements FinanceService {
         }
       }
     }
+    // 只有套餐变更到更低工单额度时才立即计费；最近一次扣费仍覆盖当前周期的工单会被排除，避免周期内重复收费。
+    int oldWorkorderLimit = sub == null ? 0 : intValue(sub.get("workorderLimit"));
+    int newWorkorderLimit = Math.max(0, intValue(plan.get("workorderLimit")));
+    LocalDate billingDate = LocalDate.now(BUSINESS_ZONE);
+    List<Long> overageIds =
+        "CHANGE_PLAN".equals(type) && newWorkorderLimit < oldWorkorderLimit
+            ? workorderBillingMapper.findCurrentExcessWorkorderIds(
+                enterpriseId,
+                newWorkorderLimit,
+                billingDate,
+                workorderBillingProperties.getCycleDays())
+            : List.of();
+    BigDecimal workorderOverageAmount =
+        workorderBillingProperties
+            .getUnitPrice()
+            .multiply(BigDecimal.valueOf(overageIds.size()))
+            .setScale(2, RoundingMode.HALF_UP);
+
+    // 套餐价减去旧套餐剩余价值后，再加上降额产生的工单费，最终净额决定扣款或退款方向。
     BigDecimal
         priceAmount = price.multiply(BigDecimal.valueOf(periods)).setScale(2, RoundingMode.HALF_UP),
-        diff = priceAmount.subtract(credit),
+        diff = priceAmount.subtract(credit).add(workorderOverageAmount),
         payable = diff.max(BigDecimal.ZERO),
         refund = diff.min(BigDecimal.ZERO).abs();
     Map<String, Object> wallet = PortalMaps.camel(mapper.findWallet(enterpriseId));
@@ -383,6 +443,10 @@ public class FinanceServiceImpl implements FinanceService {
     result.put("remainingPeriodCount", round(remainingPeriods));
     result.put("priceAmount", priceAmount);
     result.put("creditAmount", credit);
+    result.put("workorderOverageCount", overageIds.size());
+    result.put("workorderOverageAmount", workorderOverageAmount);
+    result.put("workorderOverageUnitPrice", workorderBillingProperties.getUnitPrice());
+    result.put("workorderOverageIds", overageIds);
     result.put("payableAmount", payable);
     result.put("refundAmount", refund);
     result.put("balanceAmount", balance);

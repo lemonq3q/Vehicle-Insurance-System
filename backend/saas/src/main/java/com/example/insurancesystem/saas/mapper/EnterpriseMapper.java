@@ -54,8 +54,8 @@ public interface EnterpriseMapper {
   int insertWallet(@Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
 
   @Insert(
-      "INSERT INTO saas_subscription(enterprise_id,status,user_limit,ocr_quota,request_quota,auto_renew_enabled,created_at,updated_at) "
-          + "VALUES(#{enterpriseId},0,0,0,0,0,NOW(),NOW())")
+      "INSERT INTO saas_subscription(enterprise_id,status,user_limit,workorder_limit,ocr_quota,request_quota,auto_renew_enabled,created_at,updated_at) "
+          + "VALUES(#{enterpriseId},0,0,0,0,0,0,NOW(),NOW())")
   int insertDefaultSubscription(Long enterpriseId);
 
   @Update(

@@ -6,6 +6,7 @@ spring:
 portal:
   sso:
     insurance-frontend-url: ${INSURANCE_FRONTEND_URL:https://www.idatag.com/insurance}
+    portal-frontend-url: ${PORTAL_FRONTEND_URL:https://www.idatag.com/saas}
 
 app:
   cors:

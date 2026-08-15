@@ -50,7 +50,7 @@ export default {
     fail(message) {
       this.failed = true;
       this.message = message;
-      window.history.replaceState({}, document.title, '/sso/callback');
+      window.history.replaceState({}, document.title, this.$router.resolve('/sso/callback').href);
     }
   }
 };

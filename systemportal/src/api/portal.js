@@ -11,6 +11,7 @@ export const register = data => post('/portal/auth/register', data);
 export const forgetPassword = data => post('/portal/auth/forget-password', data);
 export const getAccountContext = () => get('/portal/account/context');
 export const createInsuranceAuthorization = () => post('/portal/sso/authorize', {});
+export const exchangePortalSsoCode = code => post('/portal/sso/exchange', { code });
 
 export const getEnterpriseCurrent = () => get('/portal/enterprise/current');
 export const createEnterprise = data => post('/portal/enterprise', data);
