@@ -9,6 +9,8 @@ import com.example.insurancesystem.saas.mapper.FinanceMapper;
 import com.example.insurancesystem.saas.mapper.WorkorderOverageBillingMapper;
 import com.example.insurancesystem.saas.service.FinanceService;
 import com.example.insurancesystem.saas.service.MemberSeatService;
+import com.example.insurancesystem.saas.service.WalletBalanceService;
+import com.example.insurancesystem.saas.service.WalletBalanceService.BalanceChangeResult;
 import com.example.insurancesystem.saas.support.*;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,6 +33,7 @@ public class FinanceServiceImpl implements FinanceService {
   private final MemberSeatService seats;
   private final WorkorderOverageBillingMapper workorderBillingMapper;
   private final WorkorderOverageBillingProperties workorderBillingProperties;
+  private final WalletBalanceService balances;
   private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
 
   public FinanceServiceImpl(
@@ -42,7 +45,8 @@ public class FinanceServiceImpl implements FinanceService {
       ObjectMapper objectMapper,
       MemberSeatService seats,
       WorkorderOverageBillingMapper workorderBillingMapper,
-      WorkorderOverageBillingProperties workorderBillingProperties) {
+      WorkorderOverageBillingProperties workorderBillingProperties,
+      WalletBalanceService balances) {
     this.mapper = mapper;
     this.enterprises = enterprises;
     this.context = context;
@@ -52,6 +56,7 @@ public class FinanceServiceImpl implements FinanceService {
     this.seats = seats;
     this.workorderBillingMapper = workorderBillingMapper;
     this.workorderBillingProperties = workorderBillingProperties;
+    this.balances = balances;
   }
 
   public Map<String, Object> overview() {
@@ -114,30 +119,22 @@ public class FinanceServiceImpl implements FinanceService {
     if (status == 2) return order;
     if (status != 1) throw new BusinessException(409, "当前充值订单状态不可支付");
 
-    Map<String, Object> wallet = ensureWallet(enterpriseId);
+    ensureWallet(enterpriseId);
     BigDecimal amount = money(order.get("amount"));
-    BigDecimal balanceBefore = money(wallet.get("balanceAmount"));
-    BigDecimal balanceAfter = balanceBefore.add(amount).setScale(2, RoundingMode.HALF_UP);
-
-    Map<String, Object> walletUpdate = new LinkedHashMap<>();
-    walletUpdate.put("walletId", wallet.get("id"));
-    walletUpdate.put("balanceBefore", balanceBefore);
-    walletUpdate.put("balanceAfter", balanceAfter);
-    walletUpdate.put("userId", context.userId());
-    if (mapper.updateWallet(walletUpdate) == 0)
-      throw new BusinessException(409, "企业余额已变化，请重试");
+    BalanceChangeResult balanceChange =
+        balances.changeBalance(enterpriseId, amount, context.userId(), false);
     if (mapper.completeRechargeOrder(orderId, enterpriseId) == 0)
       throw new BusinessException(409, "充值订单状态已变化，请刷新后重试");
 
     Map<String, Object> transaction = new LinkedHashMap<>();
     transaction.put("enterpriseId", enterpriseId);
-    transaction.put("walletId", wallet.get("id"));
+    transaction.put("walletId", balanceChange.walletId());
     transaction.put("userId", context.userId());
     transaction.put("direction", "IN");
     transaction.put("transactionType", "RECHARGE");
     transaction.put("amount", amount);
-    transaction.put("balanceBefore", balanceBefore);
-    transaction.put("balanceAfter", balanceAfter);
+    transaction.put("balanceBefore", balanceChange.balanceBefore());
+    transaction.put("balanceAfter", balanceChange.balanceAfter());
     transaction.put("rechargeOrderId", orderId);
     transaction.put("remark", "余额充值 " + order.get("rechargeNo"));
     UniqueCodeRetryUtil.insertWithGeneratedCode(
@@ -148,7 +145,7 @@ public class FinanceServiceImpl implements FinanceService {
 
     order.put("status", 2);
     order.put("paidAt", LocalDateTime.now());
-    order.put("balanceAmount", balanceAfter);
+    order.put("balanceAmount", balanceChange.balanceAfter());
     order.put("transactionNo", transaction.get("transactionNo"));
     return order;
   }
@@ -200,25 +197,17 @@ public class FinanceServiceImpl implements FinanceService {
     boolean autoRenew = Boolean.parseBoolean(String.valueOf(body.getOrDefault("autoRenew", false)));
     Map<String, Object> currentState = PortalMaps.camel(mapper.lockSubscription(enterpriseId));
     if (currentState == null) throw new BusinessException(500, "企业订阅状态不存在");
-    Map<String, Object> wallet = PortalMaps.camel(mapper.lockWallet(enterpriseId));
-    if (wallet == null) throw new BusinessException(404, "企业钱包不存在");
+    if (intValue(currentState.get("status")) == 3
+        && !"ARREARS".equals(currentState.get("suspendReason")))
+      throw new BusinessException(409, "当前套餐不是欠费暂停状态，请联系平台处理后再变更套餐");
     Map<String, Object> preview = calculate(enterpriseId, planId, periods, currentState);
     if (!(Boolean) preview.get("eligible")) {
       String message = String.valueOf(preview.get("validationMessage"));
       int code = message.contains("周期") ? 422 : 422;
       throw new BusinessException(code, message, preview);
     }
-    BigDecimal balance = money(wallet.get("balanceAmount")),
-        payable = money(preview.get("payableAmount")),
-        refund = money(preview.get("refundAmount"));
-    if (balance.compareTo(payable) < 0) throw new BusinessException(409, "企业余额不足，请先充值", preview);
-    BigDecimal after = balance.subtract(payable).add(refund).setScale(2, RoundingMode.HALF_UP);
-    Map<String, Object> update = new LinkedHashMap<>();
-    update.put("walletId", wallet.get("id"));
-    update.put("balanceBefore", balance);
-    update.put("balanceAfter", after);
-    update.put("userId", context.userId());
-    if (mapper.updateWallet(update) == 0) throw new BusinessException(409, "企业余额已变化，请重试");
+    BigDecimal payable = money(preview.get("payableAmount"));
+    BigDecimal refund = money(preview.get("refundAmount"));
     Map<String, Object> plan = (Map<String, Object>) preview.get("plan"),
         activeSubscription = activeSubscription(currentState);
     Map<String, Object> order = new LinkedHashMap<>();
@@ -257,6 +246,18 @@ public class FinanceServiceImpl implements FinanceService {
     if (mapper.updateSubscription(subscription) == 0)
       throw new BusinessException(409, "企业订阅状态已变化，请重试");
 
+    // 套餐订单完成订阅快照更新后再通过统一余额入口结算，使恢复或暂停判断基于新套餐有效期执行。
+    BalanceChangeResult balanceChange;
+    try {
+      balanceChange =
+          balances.changeBalance(
+              enterpriseId, refund.subtract(payable), context.userId(), false);
+    } catch (IllegalStateException exception) {
+      if ("企业余额不足".equals(exception.getMessage()))
+        throw new BusinessException(409, "企业余额不足，请先充值", preview);
+      throw exception;
+    }
+
     // 套餐降额产生的超额费用已经包含在本次订单中，同一事务写入业务扣费日，避免次日维护再次收费。
     @SuppressWarnings("unchecked")
     List<Long> overageIds = (List<Long>) preview.getOrDefault("workorderOverageIds", List.of());
@@ -276,13 +277,13 @@ public class FinanceServiceImpl implements FinanceService {
     BigDecimal change = refund.signum() > 0 ? refund : payable;
     Map<String, Object> tx = new LinkedHashMap<>();
     tx.put("enterpriseId", enterpriseId);
-    tx.put("walletId", wallet.get("id"));
+    tx.put("walletId", balanceChange.walletId());
     tx.put("userId", context.userId());
     tx.put("direction", refund.signum() > 0 ? "IN" : "OUT");
     tx.put("transactionType", transactionType(String.valueOf(preview.get("orderType")), refund));
     tx.put("amount", change);
-    tx.put("balanceBefore", balance);
-    tx.put("balanceAfter", after);
+    tx.put("balanceBefore", balanceChange.balanceBefore());
+    tx.put("balanceAfter", balanceChange.balanceAfter());
     tx.put("orderId", order.get("id"));
     tx.put("subscriptionId", subscriptionId);
     BigDecimal workorderOverageAmount = money(preview.get("workorderOverageAmount"));
@@ -467,7 +468,9 @@ public class FinanceServiceImpl implements FinanceService {
   }
 
   private Map<String, Object> activeSubscription(Map<String, Object> subscription) {
-    if (subscription == null || intValue(subscription.get("status")) != 1) return null;
+    int status = subscription == null ? 0 : intValue(subscription.get("status"));
+    if (status != 1 && status != 3) return null;
+    if (status == 3 && !"ARREARS".equals(subscription.get("suspendReason"))) return null;
     Object endAt = subscription.get("endAt");
     return endAt instanceof LocalDateTime && ((LocalDateTime) endAt).isAfter(LocalDateTime.now())
         ? subscription

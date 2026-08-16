@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface SubscriptionMaintenanceMapper {
-  @Select("SELECT id FROM saas_subscription WHERE status=1 AND end_at<=NOW() ORDER BY end_at,id")
+  @Select("SELECT id FROM saas_subscription WHERE status IN (1,3) AND end_at<=NOW() ORDER BY end_at,id")
   List<Long> findDueSubscriptionIds();
 
   @Select("SELECT * FROM saas_subscription WHERE id=#{id} FOR UPDATE")
@@ -16,7 +16,7 @@ public interface SubscriptionMaintenanceMapper {
   Long findOwnerUserId(Long enterpriseId);
 
   @Update(
-      "UPDATE saas_subscription SET status=2,user_limit=0,workorder_limit=0,ocr_quota=0,request_quota=0,auto_renew_enabled=0,auto_renew_plan_id=NULL,next_renew_at=NULL,cancel_auto_renew_at=NOW(),updated_at=NOW() WHERE id=#{id} AND status=1")
+      "UPDATE saas_subscription SET status=2,suspend_reason=NULL,user_limit=0,workorder_limit=0,ocr_quota=0,request_quota=0,auto_renew_enabled=0,auto_renew_plan_id=NULL,next_renew_at=NULL,cancel_auto_renew_at=NOW(),updated_at=NOW() WHERE id=#{id} AND status IN (1,3)")
   int expireSubscription(Long id);
 
   @Update(

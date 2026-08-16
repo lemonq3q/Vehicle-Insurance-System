@@ -30,6 +30,7 @@ insurance:login:{userId}
 ### `POST /portal/sso/authorize`
 
 - 场景：SaaS 门户中已登录用户点击“进入车险系统”。
+- 授权前置条件：用户账号、当前企业成员、企业状态均已启用，并且当前套餐 `status=1`、已关联套餐且尚未到期。任一条件不满足时返回 `403`，前端停留在门户并展示具体原因，不签发一次性 code。
 - 权限：需要 SaaS 登录 Token，并且账号、企业、企业成员状态均可用。
 - Header：`Authorization: Bearer <portalToken>` 或 `token: <portalToken>`。
 - Body：空 JSON 对象 `{}`。
@@ -112,6 +113,25 @@ SaaS 前端 mock 已支持 `/portal/sso/authorize`，默认跳转到：
 
 ```text
 http://localhost:8888/sso/callback?code=mock-insurance-sso-code
+
+## SaaS 主动失效车险会话
+
+以下接口仅供 SaaS 后端调用，均使用 `X-Insurance-Client-Secret` 共享密钥，不接受终端用户 JWT 代替内部鉴权。
+
+### `POST /internal/session/logout-enterprise`
+
+- 场景：有效企业套餐从正常状态切换为欠费暂停后，立即清除该企业全部成员的车险 Redis 会话。
+- 请求：`{"enterpriseId": 1}`。
+- 成功响应：`data` 为参与处理的企业成员数量。
+- 幂等性：重复调用安全，未登录用户不产生额外影响。
+
+### `POST /internal/session/logout-user`
+
+- 场景：成员主动退出企业、被管理员移除或被停用后，立即清除该用户当前车险 Redis 会话。
+- 请求：`{"userId": 10001}`。
+- 成功响应：`data=1` 表示请求已处理。
+
+SaaS 在本地数据库事务提交后调用上述接口，避免远程网络请求占用或回滚余额、订阅和成员关系事务。调用失败会写入包含范围和目标 ID 的错误日志。
 ```
 
 mock 模式只验证 SaaS 前端的按钮与跳转。完整的跨后端兑换需启动 SaaS 后端、车险后端和两个 Redis。

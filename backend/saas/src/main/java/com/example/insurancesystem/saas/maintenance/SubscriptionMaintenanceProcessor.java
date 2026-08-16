@@ -1,8 +1,11 @@
 package com.example.insurancesystem.saas.maintenance;
 
 import com.example.insurancesystem.saas.mapper.FinanceMapper;
+import com.example.insurancesystem.saas.integration.InsuranceSessionInvalidationEvent;
 import com.example.insurancesystem.saas.mapper.SubscriptionMaintenanceMapper;
 import com.example.insurancesystem.saas.service.MemberSeatService;
+import com.example.insurancesystem.saas.service.WalletBalanceService;
+import com.example.insurancesystem.saas.service.WalletBalanceService.BalanceChangeResult;
 import com.example.insurancesystem.saas.support.*;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -12,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,18 +26,24 @@ public class SubscriptionMaintenanceProcessor {
   private final MemberSeatService seats;
   private final BusinessCodeGenerator codes;
   private final ObjectMapper objectMapper;
+  private final WalletBalanceService balances;
+  private final ApplicationEventPublisher events;
 
   public SubscriptionMaintenanceProcessor(
       SubscriptionMaintenanceMapper maintenanceMapper,
       FinanceMapper financeMapper,
       MemberSeatService seats,
       BusinessCodeGenerator codes,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      WalletBalanceService balances,
+      ApplicationEventPublisher events) {
     this.maintenanceMapper = maintenanceMapper;
     this.financeMapper = financeMapper;
     this.seats = seats;
     this.codes = codes;
     this.objectMapper = objectMapper;
+    this.balances = balances;
+    this.events = events;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -69,16 +79,6 @@ public class SubscriptionMaintenanceProcessor {
     }
 
     Long ownerUserId = maintenanceMapper.findOwnerUserId(enterpriseId);
-    BigDecimal balanceAfter = balance.subtract(price);
-    Map<String, Object> walletUpdate = new LinkedHashMap<>();
-    walletUpdate.put("walletId", wallet.get("id"));
-    walletUpdate.put("balanceBefore", balance);
-    walletUpdate.put("balanceAfter", balanceAfter);
-    walletUpdate.put("userId", ownerUserId);
-    if (financeMapper.updateWallet(walletUpdate) == 0) {
-      throw new IllegalStateException("Wallet balance changed while auto renewing");
-    }
-
     int durationDays = ((Number) plan.get("durationDays")).intValue();
     int userLimit = ((Number) plan.get("userLimit")).intValue();
     LocalDateTime oldEnd = (LocalDateTime) subscription.get("endAt");
@@ -123,15 +123,19 @@ public class SubscriptionMaintenanceProcessor {
     update.put("nextRenewAt", newEnd);
     financeMapper.updateSubscription(update);
 
+    // 自动续费套餐先延长有效期，再经统一余额入口付款，使状态校准基于续费后的有效套餐执行。
+    BalanceChangeResult balanceChange =
+        balances.changeBalance(enterpriseId, price.negate(), ownerUserId, false);
+
     Map<String, Object> transaction = new LinkedHashMap<>();
     transaction.put("enterpriseId", enterpriseId);
-    transaction.put("walletId", wallet.get("id"));
+    transaction.put("walletId", balanceChange.walletId());
     transaction.put("userId", ownerUserId);
     transaction.put("direction", "OUT");
     transaction.put("transactionType", "AUTO_RENEW");
     transaction.put("amount", price);
-    transaction.put("balanceBefore", balance);
-    transaction.put("balanceAfter", balanceAfter);
+    transaction.put("balanceBefore", balanceChange.balanceBefore());
+    transaction.put("balanceAfter", balanceChange.balanceAfter());
     transaction.put("orderId", order.get("id"));
     transaction.put("subscriptionId", subscriptionId);
     transaction.put("remark", "套餐自动续费 " + order.get("orderNo"));
@@ -195,12 +199,15 @@ public class SubscriptionMaintenanceProcessor {
   }
 
   private void expire(Long subscriptionId, Long enterpriseId) {
-    maintenanceMapper.expireSubscription(subscriptionId);
+    if (maintenanceMapper.expireSubscription(subscriptionId) > 0)
+      events.publishEvent(InsuranceSessionInvalidationEvent.enterprise(enterpriseId));
     seats.disableAll(enterpriseId);
   }
 
   private boolean isDue(Map<String, Object> subscription) {
-    if (subscription == null || ((Number) subscription.get("status")).intValue() != 1) return false;
+    if (subscription == null) return false;
+    int status = ((Number) subscription.get("status")).intValue();
+    if (status != 1 && status != 3) return false;
     LocalDateTime endAt = (LocalDateTime) subscription.get("endAt");
     return endAt != null && !endAt.isAfter(LocalDateTime.now());
   }

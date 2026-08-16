@@ -13,6 +13,9 @@ public interface FinanceMapper {
       "SELECT * FROM saas_wallet WHERE enterprise_id=#{enterpriseId} AND deleted=0 LIMIT 1 FOR UPDATE")
   Map<String, Object> lockWallet(Long enterpriseId);
 
+  @Select("SELECT enterprise_id FROM saas_wallet WHERE deleted=0 ORDER BY enterprise_id")
+  List<Long> findWalletEnterpriseIds();
+
   @Select("SELECT * FROM saas_plan WHERE id=#{id} AND status=1 AND deleted=0")
   Map<String, Object> findPlan(Long id);
 
@@ -64,6 +67,14 @@ public interface FinanceMapper {
       "UPDATE saas_wallet SET balance_amount=#{balanceAfter},updated_at=NOW(),updated_by=#{userId} WHERE id=#{walletId} AND balance_amount=#{balanceBefore} AND deleted=0")
   int updateWallet(Map<String, Object> values);
 
+  @Update(
+      "UPDATE saas_subscription SET status=3,suspend_reason=#{reason},suspended_at=NOW(),resumed_at=NULL,updated_at=NOW() WHERE id=#{id} AND status=1 AND plan_id IS NOT NULL AND end_at>NOW()")
+  int suspendSubscriptionForArrears(@Param("id") Long id, @Param("reason") String reason);
+
+  @Update(
+      "UPDATE saas_subscription SET status=1,suspend_reason=NULL,resumed_at=NOW(),updated_at=NOW() WHERE id=#{id} AND status=3 AND suspend_reason=#{reason} AND plan_id IS NOT NULL AND end_at>NOW()")
+  int restoreArrearsSubscription(@Param("id") Long id, @Param("reason") String reason);
+
   @Insert(
       "INSERT INTO saas_order(order_no,order_type,enterprise_id,buyer_user_id,plan_id,plan_snapshot_json,buy_user_limit,buy_workorder_limit,buy_duration_days,workorder_overage_count,workorder_overage_amount,pay_type,amount,price_amount,discount_amount,credit_amount,payable_amount,refund_amount,paid_amount,original_subscription_id,old_plan_id,new_plan_id,auto_renew,status,paid_at,created_at,updated_at,deleted) "
           + "VALUES(#{orderNo},#{orderType},#{enterpriseId},#{userId},#{planId},#{planSnapshotJson},#{userLimit},#{workorderLimit},#{durationDays},#{workorderOverageCount},#{workorderOverageAmount},'BALANCE',#{payableAmount},#{priceAmount},0,#{creditAmount},#{payableAmount},#{refundAmount},#{payableAmount},#{subscriptionId},#{oldPlanId},#{planId},#{autoRenew},2,NOW(),NOW(),NOW(),0)")
@@ -87,7 +98,7 @@ public interface FinanceMapper {
       @Param("orderId") Long orderId, @Param("transactionId") Long transactionId);
 
   @Update(
-      "UPDATE saas_subscription SET plan_id=#{planId},order_id=#{orderId},status=1,user_limit=#{userLimit},workorder_limit=#{workorderLimit},ocr_quota=#{ocrQuota},request_quota=#{requestQuota},start_at=#{startAt},end_at=#{endAt},auto_renew_enabled=#{autoRenew},auto_renew_plan_id=CASE WHEN #{autoRenew}=1 THEN #{planId} ELSE NULL END,next_renew_at=#{nextRenewAt},last_renew_order_id=#{orderId},cancel_auto_renew_at=CASE WHEN #{autoRenew}=0 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE enterprise_id=#{enterpriseId}")
+      "UPDATE saas_subscription SET plan_id=#{planId},order_id=#{orderId},resumed_at=CASE WHEN status=3 AND suspend_reason='ARREARS' THEN NOW() ELSE resumed_at END,status=1,suspend_reason=NULL,user_limit=#{userLimit},workorder_limit=#{workorderLimit},ocr_quota=#{ocrQuota},request_quota=#{requestQuota},start_at=#{startAt},end_at=#{endAt},auto_renew_enabled=#{autoRenew},auto_renew_plan_id=CASE WHEN #{autoRenew}=1 THEN #{planId} ELSE NULL END,next_renew_at=#{nextRenewAt},last_renew_order_id=#{orderId},cancel_auto_renew_at=CASE WHEN #{autoRenew}=0 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE enterprise_id=#{enterpriseId}")
   int updateSubscription(Map<String, Object> subscription);
 
   @Update(

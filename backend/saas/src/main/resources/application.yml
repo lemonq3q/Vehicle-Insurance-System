@@ -30,6 +30,9 @@ portal:
     # 两台服务器上配置相同的高强度密钥，生产环境必须修改。
     insurance-client-secret: ${INSURANCE_SSO_CLIENT_SECRET:wsbld2wjb56gjlmy}
     code-ttl-seconds: ${INSURANCE_SSO_CODE_TTL_SECONDS:60}
+  insurance-session:
+    logout-enterprise-url: ${INSURANCE_LOGOUT_ENTERPRISE_URL:http://localhost:8080/internal/session/logout-enterprise}
+    logout-user-url: ${INSURANCE_LOGOUT_USER_URL:http://localhost:8080/internal/session/logout-user}
 
 app:
   cors:
@@ -41,3 +44,8 @@ saas:
       # 超额工单从录入日开始，每经过一个完整周期再次计费。
       cycle-days: ${WORKORDER_OVERAGE_CYCLE_DAYS:365}
       unit-price: ${WORKORDER_OVERAGE_UNIT_PRICE:0.20}
+    balance-access:
+      # 有效套餐余额严格低于该值时暂停车险业务访问；超额工单扣费允许穿透到负数。
+      suspend-threshold: ${BALANCE_SUSPEND_THRESHOLD:-100.00}
+      # 欠费暂停企业余额严格高于该值时恢复；与停止阈值之间保留缓冲区避免反复切换。
+      restore-threshold: ${BALANCE_RESTORE_THRESHOLD:0.00}

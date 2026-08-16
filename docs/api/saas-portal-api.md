@@ -472,6 +472,8 @@ Response data：分页 `TenantMemberChangeLog`，包含操作人和目标成员�
 
 权限：ADMIN、ISSUER。OWNER 不可退出企业。
 
+退出事务成功提交后，SaaS 会调用车险内部用户登出接口，使该成员此前保存的车险 token 因 Redis 会话被删除而立即失效。管理员停用或移除成员时执行相同处理。
+
 Response data：`true`
 
 ### 4.10 踢出企业成员
@@ -894,3 +896,15 @@ Response data：`TenantUser`
 | failureReason | string | 自动续费失败原因，仅失败订单有值 |
 
 `SaasWallet`、`SaasSubscription` 与 `SaasOrder` 直接对应 `other/saas数据库设计.md` 中的同名表，前端字段采用小驼峰命名，例如 `balance_amount` 对应 `balanceAmount`，`auto_renew_enabled` 对应 `autoRenewEnabled`。
+# 订阅欠费状态扩展
+
+财务概览及包含订阅快照的接口在 `subscription` 中增加以下字段：
+
+| 字段 | 类型 | 必填 | 说明 | 示例 |
+| --- | --- | --- | --- | --- |
+| `status` | number | 是 | `0` 未订阅、`1` 正常、`2` 已过期、`3` 已暂停 | `3` |
+| `suspendReason` | string/null | 否 | `ARREARS` 欠费、`MANUAL` 人工、`RISK_CONTROL` 风控 | `ARREARS` |
+| `suspendedAt` | string/null | 否 | 最近一次暂停时间，格式 `yyyy-MM-dd HH:mm:ss` | `2026-08-16 04:00:00` |
+| `resumedAt` | string/null | 否 | 最近一次欠费恢复时间 | `2026-08-16 09:30:00` |
+
+只有尚未到期且已经订阅套餐的企业参与余额联动。充值成功后如果余额严格大于恢复阈值，欠费暂停会在充值事务内即时恢复；前端无需调用额外恢复接口。

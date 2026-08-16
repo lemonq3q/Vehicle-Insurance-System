@@ -46,6 +46,12 @@ public class User implements Serializable {
     @TableField(exist = false)
     private Long enterpriseId;
 
+    @TableField(exist = false)
+    private Integer subscriptionStatus;
+
+    @TableField(exist = false)
+    private String subscriptionSuspendReason;
+
     private Long avatarFileId;
 
     private LocalDateTime lastLoginTime;

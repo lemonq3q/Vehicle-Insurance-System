@@ -18,6 +18,19 @@
 4. 按 `工单数 × unit-price` 从企业钱包自动扣减，资金流水类型为 `WORKORDER_OVERAGE`，并在同一事务写入工单扣费日。
 5. 单个企业使用独立事务；失败时余额、流水和扣费日全部回滚，不阻断其他企业，可针对原业务日期补偿重跑。
 
+超额工单扣费允许企业余额小于零，不执行“余额不足”拦截。充值、套餐购买/改订和自动续费仍不得把余额扣为负数。
+
+## 欠费暂停与恢复
+
+余额变化统一通过后端 `WalletBalanceService` 完成。该服务在余额写入后即时处理尚未到期的当前套餐：
+
+- 正常套餐余额严格小于 `saas.billing.balance-access.suspend-threshold` 时，订阅改为 `status=3`、`suspend_reason=ARREARS`。
+- 欠费暂停套餐余额严格大于 `saas.billing.balance-access.restore-threshold` 时，订阅恢复为 `status=1` 并清除暂停原因。
+- 未订阅、已到期、人工暂停和风控暂停不参与自动暂停或恢复。
+- 默认停止阈值为 `-100.00` 元，默认恢复阈值为 `0.00` 元，可分别通过 `BALANCE_SUSPEND_THRESHOLD`、`BALANCE_RESTORE_THRESHOLD` 配置。
+
+每天 04:00 的任务在超额工单扣费后遍历全部企业钱包，执行相同规则作为状态一致性兜底；正常业务不依赖该扫描。欠费暂停只限制车险后台登录，不停用企业成员，确保拥有者和管理员仍可进入 SaaS 门户充值。
+
 计费周期和单价由 `saas.billing.workorder-overage.cycle-days`、`saas.billing.workorder-overage.unit-price` 全局配置控制，默认分别为 365 天和 0.20 元，业务代码不直接使用这两个数值。
 
 套餐降额产生超额工单时也使用同一周期判断：只计算当前计费周期尚未付费的工单。该费用加入套餐变更订单的 `workorder_overage_count`、`workorder_overage_amount` 和最终净应付金额，并合并到套餐变更自身的资金流水，不额外创建工单费用流水。

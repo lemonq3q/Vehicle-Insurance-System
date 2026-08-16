@@ -77,6 +77,7 @@ public class LoginServiceImpl implements LoginService {
         if (loginUser.getEnterpriseId() == null) {
             throw new BusinessException(403, "尚未加入企业，请先前往 SaaS 门户创建或加入企业");
         }
+        validateSubscriptionAccess(loginUser.getUser());
         return createSession(loginUser);
     }
 
@@ -101,7 +102,24 @@ public class LoginServiceImpl implements LoginService {
         if (!loginUser.isEnabled()) {
             throw new BusinessException(403, "账号或企业成员未启用");
         }
+        validateSubscriptionAccess(ssoUser);
         return createSession(loginUser);
+    }
+
+    /**
+     * 在两种车险登录方式建立会话前统一校验套餐访问状态。
+     * 欠费暂停提供可执行的充值提示；未订阅、到期及其他暂停状态统一拒绝进入车险后台，但不影响用户
+     * 登录 SaaS 门户完成充值、续订或联系平台处理。
+     *
+     * @param user 登录查询聚合出的用户、企业成员及当前订阅状态
+     */
+    private void validateSubscriptionAccess(User user) {
+        if (Integer.valueOf(1).equals(user.getSubscriptionStatus())) return;
+        if (Integer.valueOf(3).equals(user.getSubscriptionStatus())
+                && "ARREARS".equals(user.getSubscriptionSuspendReason())) {
+            throw new BusinessException(403, "企业套餐因余额欠费已暂停，请前往 SaaS 门户充值");
+        }
+        throw new BusinessException(403, "企业当前没有可用的有效套餐，请前往 SaaS 门户查看订阅状态");
     }
 
     /**

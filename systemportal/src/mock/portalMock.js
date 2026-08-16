@@ -218,6 +218,9 @@ let subscription = {
   planId: 50002,
   orderId: 80001,
   status: 1,
+  suspendReason: null,
+  suspendedAt: null,
+  resumedAt: null,
   userLimit: 30,
   workorderLimit: 5000,
   startAt: '2026-07-01 00:00:00',
@@ -227,6 +230,27 @@ let subscription = {
   nextRenewAt: '2027-06-25 09:00:00',
   plan: plans[1]
 };
+
+/**
+ * 模拟统一余额服务对有效套餐执行的欠费状态联动。
+ * Mock 使用与后端默认配置相同的停止阈值 -100 元和恢复阈值 0 元，并采用严格小于/大于判断；
+ * 未订阅或已到期套餐以及非欠费暂停都不会被余额变化改写。
+ */
+function reconcileMockSubscriptionAccess() {
+  if (!subscription?.planId || parseDateTime(subscription.endAt) <= MOCK_NOW) return;
+  if (subscription.status === 1 && Number(wallet.balanceAmount) < -100) {
+    subscription.status = 3;
+    subscription.suspendReason = 'ARREARS';
+    subscription.suspendedAt = formatDateTime(MOCK_NOW);
+    subscription.resumedAt = null;
+  } else if (subscription.status === 3
+      && subscription.suspendReason === 'ARREARS'
+      && Number(wallet.balanceAmount) > 0) {
+    subscription.status = 1;
+    subscription.suspendReason = null;
+    subscription.resumedAt = formatDateTime(MOCK_NOW);
+  }
+}
 
 let rechargeOrders = [
   {
@@ -607,6 +631,17 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     return ok(context());
   }
   if (url === '/portal/sso/authorize' && method === 'POST') {
+    const member = getCurrentMember();
+    const enterprise = getCurrentEnterprise();
+    if (Number(currentUser.status) !== 1) return fail('当前用户账号未启用', 403);
+    if (!member || Number(member.status) !== 1) return fail('当前企业成员状态不可用', 403);
+    if (!enterprise || Number(enterprise.status) !== 1) return fail('当前企业不可用', 403);
+    if (!subscription?.planId || Number(subscription.status) !== 1 || parseDateTime(subscription.endAt) <= MOCK_NOW) {
+      const message = subscription?.status === 3 && subscription?.suspendReason === 'ARREARS'
+        ? '企业套餐因余额欠费已暂停，请先充值后再进入车险系统'
+        : '企业当前没有正常生效的套餐，暂时无法进入车险系统';
+      return fail(message, 403);
+    }
     return ok({
       redirectUrl: `${process.env.VUE_APP_INSURANCE_FRONTEND_URL || 'http://localhost:8888'}/sso/callback?code=mock-insurance-sso-code`,
       expiresIn: 60
@@ -890,6 +925,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     if (order.status !== 2) {
       const balanceBefore = Number(wallet.balanceAmount || 0);
       wallet.balanceAmount = roundMoney(balanceBefore + Number(order.amount || 0));
+      reconcileMockSubscriptionAccess();
       order.status = 2;
       order.paidAt = formatDateTime(MOCK_NOW);
       transactions.unshift({
@@ -1012,6 +1048,9 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       planId: plan.id,
       orderId: order.id,
       status: 1,
+      suspendReason: null,
+      suspendedAt: null,
+      resumedAt: subscription?.resumedAt || null,
       userLimit: plan.userLimit,
       workorderLimit: plan.workorderLimit,
       startAt: preview.orderType === 'RENEW' ? subscription.startAt : preview.startAt,

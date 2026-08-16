@@ -26,6 +26,11 @@ public interface UserMapper extends BatchBaseMapper<User> {
     User selectSsoUser(@Param("userId") Long userId, @Param("enterpriseId") Long enterpriseId);
 
     /**
+     * 查询企业内全部未删除成员的用户主键，供套餐暂停时批量失效车险 Redis 会话。
+     */
+    List<Long> selectUserIdsByEnterprise(Long enterpriseId);
+
+    /**
      * 按人员筛选条件查询兼容旧页面的商户用户聚合模型。
      */
     List<MerchantUserDTO> selectByMerchantUserSearchDTO(MerchantUserSearchDTO merchantUserSearchDTO);

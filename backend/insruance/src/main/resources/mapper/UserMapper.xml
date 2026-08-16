@@ -4,22 +4,31 @@
     <select id="selectLoginUser" resultType="com.example.insurancesystem.domain.user.User">
         SELECT u.id, u.username, u.phone, u.email, u.password, u.real_name, u.id_num,
                u.status, tm.status AS member_status, tm.enterprise_id,
+               ss.status AS subscription_status, ss.suspend_reason AS subscription_suspend_reason,
                u.updated_by, u.deleted AS is_delete
         FROM tenant_user u
         LEFT JOIN tenant_member tm ON tm.user_id = u.id AND tm.deleted = 0
+        LEFT JOIN saas_subscription ss ON ss.enterprise_id = tm.enterprise_id
         WHERE u.username = #{username} AND u.deleted = 0
         ORDER BY tm.status DESC, tm.id
         LIMIT 1
     </select>
+    <select id="selectUserIdsByEnterprise" resultType="java.lang.Long">
+        SELECT DISTINCT user_id
+        FROM tenant_member
+        WHERE enterprise_id = #{enterpriseId} AND deleted = 0
+    </select>
     <select id="selectSsoUser" resultType="com.example.insurancesystem.domain.user.User">
         SELECT u.id, u.username, u.phone, u.email, u.password, u.real_name, u.id_num,
                u.status, tm.status AS member_status, tm.enterprise_id,
+               ss.status AS subscription_status, ss.suspend_reason AS subscription_suspend_reason,
                u.updated_by, u.deleted AS is_delete
         FROM tenant_user u
         JOIN tenant_member tm ON tm.user_id = u.id
             AND tm.enterprise_id = #{enterpriseId} AND tm.deleted = 0
         JOIN tenant_enterprise te ON te.id = tm.enterprise_id
             AND te.status = 1 AND te.deleted = 0
+        LEFT JOIN saas_subscription ss ON ss.enterprise_id = tm.enterprise_id
         WHERE u.id = #{userId} AND u.deleted = 0
         LIMIT 1
     </select>

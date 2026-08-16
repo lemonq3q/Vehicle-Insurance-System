@@ -7,13 +7,13 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface EnterpriseMapper {
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name "
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name,u.status AS user_status "
           + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 "
           + "WHERE m.user_id=#{userId} AND m.deleted=0 AND m.status IN (0,1,2) ORDER BY m.joined_at DESC LIMIT 1")
   Map<String, Object> findCurrentMember(Long userId);
 
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name "
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name,u.status AS user_status "
           + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 "
           + "WHERE m.enterprise_id=#{enterpriseId} AND m.user_id=#{userId} AND m.deleted=0 LIMIT 1")
   Map<String, Object> findMemberByUser(

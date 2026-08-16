@@ -4,6 +4,7 @@ import com.example.insurancesystem.domain.encapsulate.TableData;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
 import com.example.insurancesystem.saas.mapper.FinanceMapper;
+import com.example.insurancesystem.saas.integration.InsuranceSessionInvalidationEvent;
 import com.example.insurancesystem.saas.service.EnterpriseService;
 import com.example.insurancesystem.saas.support.BusinessCodeGenerator;
 import com.example.insurancesystem.saas.support.PortalContextService;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -23,16 +25,19 @@ public class EnterpriseServiceImpl implements EnterpriseService {
   private final FinanceMapper financeMapper;
   private final PortalContextService context;
   private final BusinessCodeGenerator codes;
+  private final ApplicationEventPublisher events;
 
   public EnterpriseServiceImpl(
       EnterpriseMapper mapper,
       FinanceMapper financeMapper,
       PortalContextService context,
-      BusinessCodeGenerator codes) {
+      BusinessCodeGenerator codes,
+      ApplicationEventPublisher events) {
     this.mapper = mapper;
     this.financeMapper = financeMapper;
     this.context = context;
     this.codes = codes;
+    this.events = events;
   }
 
   public Map<String, Object> current() {
@@ -275,6 +280,10 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     update.put("status", status);
     update.put("userId", context.userId());
     mapper.updateMemberStatus(update);
+    // 成员被停用后，其旧 JWT 不能继续依赖 Redis 会话访问车险系统；恢复启用不创建任何会话。
+    if (status == 0 && ((Number) target.get("status")).intValue() != 0)
+      events.publishEvent(
+          InsuranceSessionInvalidationEvent.user(((Number) target.get("userId")).longValue()));
     return PortalMaps.camel(mapper.findMember(id, enterpriseId));
   }
 
@@ -306,6 +315,8 @@ public class EnterpriseServiceImpl implements EnterpriseService {
         null,
         null,
         "移出企业成员");
+    events.publishEvent(
+        InsuranceSessionInvalidationEvent.user(((Number) target.get("userId")).longValue()));
     return true;
   }
 
@@ -378,6 +389,7 @@ public class EnterpriseServiceImpl implements EnterpriseService {
         null,
         null,
         "成员主动退出企业");
+    events.publishEvent(InsuranceSessionInvalidationEvent.user(context.userId()));
     return true;
   }
 

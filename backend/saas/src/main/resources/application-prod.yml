@@ -7,6 +7,9 @@ portal:
   sso:
     insurance-frontend-url: ${INSURANCE_FRONTEND_URL:https://www.idatag.com/insurance}
     portal-frontend-url: ${PORTAL_FRONTEND_URL:https://www.idatag.com/saas}
+  insurance-session:
+    logout-enterprise-url: ${INSURANCE_LOGOUT_ENTERPRISE_URL:https://www.idatag.com/insuranceback/internal/session/logout-enterprise}
+    logout-user-url: ${INSURANCE_LOGOUT_USER_URL:https://www.idatag.com/insuranceback/internal/session/logout-user}
 
 app:
   cors:

@@ -2,6 +2,7 @@ package com.example.insurancesystem.saas.service.impl;
 
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
+import com.example.insurancesystem.saas.mapper.FinanceMapper;
 import com.example.insurancesystem.saas.service.SsoService;
 import com.example.insurancesystem.saas.service.PortalAuthService;
 import com.example.insurancesystem.saas.support.PortalContextService;
@@ -24,6 +25,7 @@ public class SsoServiceImpl implements SsoService {
 
   private final PortalContextService context;
   private final EnterpriseMapper enterpriseMapper;
+  private final FinanceMapper financeMapper;
   private final RedisCache redisCache;
   private final PortalAuthService portalAuthService;
   private final String insuranceFrontendUrl;
@@ -34,6 +36,7 @@ public class SsoServiceImpl implements SsoService {
   public SsoServiceImpl(
       PortalContextService context,
       EnterpriseMapper enterpriseMapper,
+      FinanceMapper financeMapper,
       RedisCache redisCache,
       PortalAuthService portalAuthService,
       @Value("${portal.sso.insurance-frontend-url:http://localhost:8888}") String insuranceFrontendUrl,
@@ -42,6 +45,7 @@ public class SsoServiceImpl implements SsoService {
       @Value("${portal.sso.code-ttl-seconds:60}") int codeTtlSeconds) {
     this.context = context;
     this.enterpriseMapper = enterpriseMapper;
+    this.financeMapper = financeMapper;
     this.redisCache = redisCache;
     this.portalAuthService = portalAuthService;
     this.insuranceFrontendUrl = trimTrailingSlash(insuranceFrontendUrl);
@@ -55,6 +59,8 @@ public class SsoServiceImpl implements SsoService {
     Long userId = context.userId();
     Map<String, Object> member = PortalMaps.camel(enterpriseMapper.findCurrentMember(userId));
     if (member == null) throw new BusinessException(403, "请先创建或加入企业");
+    if (((Number) member.get("userStatus")).intValue() != 1)
+      throw new BusinessException(403, "当前用户账号未启用");
     if (((Number) member.get("status")).intValue() != 1)
       throw new BusinessException(403, "当前企业成员状态不可用");
 
@@ -62,6 +68,14 @@ public class SsoServiceImpl implements SsoService {
     Map<String, Object> enterprise = PortalMaps.camel(enterpriseMapper.findEnterprise(enterpriseId));
     if (enterprise == null || ((Number) enterprise.get("status")).intValue() != 1)
       throw new BusinessException(403, "当前企业不可用");
+    Map<String, Object> subscription = PortalMaps.camel(financeMapper.findSubscription(enterpriseId));
+    if (!hasActiveSubscription(subscription)) {
+      if (subscription != null
+          && ((Number) subscription.get("status")).intValue() == 3
+          && "ARREARS".equals(subscription.get("suspendReason")))
+        throw new BusinessException(403, "企业套餐因余额欠费已暂停，请先充值后再进入车险系统");
+      throw new BusinessException(403, "企业当前没有正常生效的套餐，暂时无法进入车险系统");
+    }
 
     String code = java.util.UUID.randomUUID().toString().replace("-", "")
         + java.util.UUID.randomUUID().toString().replace("-", "");
@@ -168,6 +182,16 @@ public class SsoServiceImpl implements SsoService {
     if (supplied == null) return false;
     return MessageDigest.isEqual(
         expected.getBytes(StandardCharsets.UTF_8), supplied.getBytes(StandardCharsets.UTF_8));
+  }
+
+  /** 只有状态正常、已关联套餐且结束时间晚于当前时刻的订阅可以签发车险 SSO 授权码。 */
+  private boolean hasActiveSubscription(Map<String, Object> subscription) {
+    if (subscription == null
+        || subscription.get("planId") == null
+        || ((Number) subscription.get("status")).intValue() != 1) return false;
+    Object endAt = subscription.get("endAt");
+    return endAt instanceof java.time.LocalDateTime
+        && ((java.time.LocalDateTime) endAt).isAfter(java.time.LocalDateTime.now());
   }
 
   private String trimTrailingSlash(String value) {

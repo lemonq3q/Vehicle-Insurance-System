@@ -66,6 +66,17 @@ public class SingleLoginSessionManager {
     }
 
     /**
+     * 无条件删除指定用户的当前会话，供通过共享密钥保护的内部强制登出接口使用。
+     * 与用户主动退出不同，该入口不比较 sessionId，因为套餐暂停或成员关系失效时必须让所有已签发 JWT
+     * 立即失去 Redis 会话依据；方法幂等，用户本来未登录时不会产生副作用。
+     *
+     * @param userId 需要强制退出的车险用户主键
+     */
+    public void removeAll(Long userId) {
+        if (userId != null) redisCache.deleteObject(key(userId));
+    }
+
+    /**
      * 组合规范化前缀和用户 ID，形成每个用户唯一的 Redis 登录键。
      */
     private String key(Long userId) {

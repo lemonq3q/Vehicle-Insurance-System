@@ -4,6 +4,8 @@ import com.example.insurancesystem.saas.config.WorkorderOverageBillingProperties
 import com.example.insurancesystem.saas.mapper.FinanceMapper;
 import com.example.insurancesystem.saas.mapper.SubscriptionMaintenanceMapper;
 import com.example.insurancesystem.saas.mapper.WorkorderOverageBillingMapper;
+import com.example.insurancesystem.saas.service.WalletBalanceService;
+import com.example.insurancesystem.saas.service.WalletBalanceService.BalanceChangeResult;
 import com.example.insurancesystem.saas.support.BusinessCodeGenerator;
 import com.example.insurancesystem.saas.support.PortalMaps;
 import com.example.insurancesystem.saas.support.SaasCodeConstraints;
@@ -25,18 +27,21 @@ public class WorkorderOverageBillingProcessor {
   private final SubscriptionMaintenanceMapper subscriptionMapper;
   private final BusinessCodeGenerator codes;
   private final WorkorderOverageBillingProperties properties;
+  private final WalletBalanceService balances;
 
   public WorkorderOverageBillingProcessor(
       WorkorderOverageBillingMapper billingMapper,
       FinanceMapper financeMapper,
       SubscriptionMaintenanceMapper subscriptionMapper,
       BusinessCodeGenerator codes,
-      WorkorderOverageBillingProperties properties) {
+      WorkorderOverageBillingProperties properties,
+      WalletBalanceService balances) {
     this.billingMapper = billingMapper;
     this.financeMapper = financeMapper;
     this.subscriptionMapper = subscriptionMapper;
     this.codes = codes;
     this.properties = properties;
+    this.balances = balances;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -53,34 +58,24 @@ public class WorkorderOverageBillingProcessor {
             enterpriseId, workorderLimit, billingDate, properties.getCycleDays());
     if (workorderIds.isEmpty()) return 0;
 
-    // 每个企业独立锁定钱包并完成余额、资金流水和工单扣费日更新；任一步失败都会整体回滚，保证可安全重试。
-    Map<String, Object> wallet = PortalMaps.camel(financeMapper.lockWallet(enterpriseId));
-    if (wallet == null) throw new IllegalStateException("企业 " + enterpriseId + " 不存在可扣费钱包");
+    // 每个企业通过统一余额入口扣费；超额工单是唯一允许穿透零余额的场景，并会即时触发欠费状态校准。
     BigDecimal amount =
         properties
             .getUnitPrice()
             .multiply(BigDecimal.valueOf(workorderIds.size()))
             .setScale(2, RoundingMode.HALF_UP);
-    BigDecimal balanceBefore = money(wallet.get("balanceAmount"));
-    BigDecimal balanceAfter = balanceBefore.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-
-    Map<String, Object> walletUpdate = new LinkedHashMap<>();
-    walletUpdate.put("walletId", wallet.get("id"));
-    walletUpdate.put("balanceBefore", balanceBefore);
-    walletUpdate.put("balanceAfter", balanceAfter);
-    walletUpdate.put("userId", null);
-    if (financeMapper.updateWallet(walletUpdate) == 0)
-      throw new IllegalStateException("企业 " + enterpriseId + " 钱包余额并发变化");
+    BalanceChangeResult balanceChange =
+        balances.changeBalance(enterpriseId, amount.negate(), null, true);
 
     Map<String, Object> transaction = new LinkedHashMap<>();
     transaction.put("enterpriseId", enterpriseId);
-    transaction.put("walletId", wallet.get("id"));
+    transaction.put("walletId", balanceChange.walletId());
     transaction.put("userId", subscriptionMapper.findOwnerUserId(enterpriseId));
     transaction.put("direction", "OUT");
     transaction.put("transactionType", "WORKORDER_OVERAGE");
     transaction.put("amount", amount);
-    transaction.put("balanceBefore", balanceBefore);
-    transaction.put("balanceAfter", balanceAfter);
+    transaction.put("balanceBefore", balanceChange.balanceBefore());
+    transaction.put("balanceAfter", balanceChange.balanceAfter());
     transaction.put("subscriptionId", subscriptionId);
     transaction.put(
         "remark",
@@ -107,7 +102,4 @@ public class WorkorderOverageBillingProcessor {
     return ((Number) value).longValue();
   }
 
-  private BigDecimal money(Object value) {
-    return value == null ? BigDecimal.ZERO : new BigDecimal(value.toString());
-  }
 }
