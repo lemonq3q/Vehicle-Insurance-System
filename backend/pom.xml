@@ -23,6 +23,7 @@
         <module>common</module>
         <module>insruance</module>
         <module>saas</module>
+        <module>coordinator</module>
     </modules>
 
     <properties>

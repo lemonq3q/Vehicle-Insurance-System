@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 @Component
@@ -35,8 +36,9 @@ public class MaintenanceFilter implements Filter {
                          FilterChain chain) throws IOException, ServletException {
 
         HttpServletResponse res = (HttpServletResponse) response;
+        HttpServletRequest req = (HttpServletRequest) request;
 
-        if (maintenanceManager.isMaintenance()) {
+        if (maintenanceManager.isMaintenance() && !isMaintenanceEndpoint(req.getRequestURI())) {
             /*
              * 响应在此终止，不进入认证、请求计数或控制器；因此维护任务开启后不会再增加活跃请求数。
              */
@@ -52,5 +54,10 @@ public class MaintenanceFilter implements Filter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    /** 仅精确放行分布式协调所需接口，避免维护期间开放其他内部业务接口。 */
+    private boolean isMaintenanceEndpoint(String path) {
+        return path != null && path.startsWith("/internal/maintenance/");
     }
 }

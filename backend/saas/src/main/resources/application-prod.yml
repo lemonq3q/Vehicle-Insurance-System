@@ -14,3 +14,12 @@ portal:
 app:
   cors:
     enabled: false
+
+maintenance:
+  participant:
+    internal-secret: ${MAINTENANCE_INTERNAL_SECRET}
+    drain-timeout-seconds: ${MAINTENANCE_DRAIN_TIMEOUT_SECONDS:900}
+    lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:900}
+    lease-check-interval-ms: ${MAINTENANCE_LEASE_CHECK_INTERVAL_MS:10000}
+    standalone-exit-delay-seconds: ${MAINTENANCE_STANDALONE_EXIT_DELAY_SECONDS:900}
+    fallback-cron: ${MAINTENANCE_FALLBACK_CRON:0 15 4 * * ?}

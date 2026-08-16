@@ -75,6 +75,7 @@ public class SecurityConfig {
                         "/portal/auth/forget-password", "/internal/sso/exchange",
                         "/internal/sso/portal-authorize", "/portal/sso/exchange",
                         "/internal/session/logout-enterprise", "/internal/session/logout-user",
+                        "/internal/maintenance/**",
                         "/auth/sso/exchange", "/portal/finance/plans"
                 ).permitAll()
                 .anyRequest().authenticated();

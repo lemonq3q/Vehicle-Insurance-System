@@ -40,3 +40,15 @@ insurance:
 app:
   cors:
     enabled: true
+
+maintenance:
+  participant:
+    enabled: ${MAINTENANCE_PARTICIPANT_ENABLED:true}
+    service-id: insurance-backend
+    internal-secret: ${MAINTENANCE_INTERNAL_SECRET:dev-maintenance-secret}
+    drain-timeout-seconds: ${MAINTENANCE_DRAIN_TIMEOUT_SECONDS:120}
+    lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:300}
+    lease-check-interval-ms: ${MAINTENANCE_LEASE_CHECK_INTERVAL_MS:5000}
+    standalone-exit-delay-seconds: ${MAINTENANCE_STANDALONE_EXIT_DELAY_SECONDS:60}
+    fallback-cron: ${MAINTENANCE_FALLBACK_CRON:0 5 4 * * ?}
+    zone: Asia/Shanghai

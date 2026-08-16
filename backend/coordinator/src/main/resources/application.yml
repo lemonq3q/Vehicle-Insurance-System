@@ -1,0 +1,76 @@
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  application:
+    name: MaintenanceCoordinator
+
+server:
+  port: ${MAINTENANCE_COORDINATOR_PORT:8082}
+
+maintenance:
+  coordinator:
+    enabled: ${MAINTENANCE_COORDINATOR_ENABLED:true}
+    cron: ${MAINTENANCE_COORDINATOR_CRON:0 0 4 * * ?}
+    zone: Asia/Shanghai
+    internal-secret: ${MAINTENANCE_INTERNAL_SECRET:dev-maintenance-secret}
+    prepare-timeout-seconds: ${MAINTENANCE_PREPARE_TIMEOUT_SECONDS:120}
+    lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:300}
+    heartbeat-interval-ms: ${MAINTENANCE_HEARTBEAT_INTERVAL_MS:30000}
+    finish-timeout-seconds: ${MAINTENANCE_FINISH_TIMEOUT_SECONDS:60}
+    services:
+      - service-id: saas-backend
+        base-url: ${SAAS_MAINTENANCE_BASE_URL:http://localhost:8081}
+      - service-id: insurance-backend
+        base-url: ${INSURANCE_MAINTENANCE_BASE_URL:http://localhost:8080}
+    stages:
+      - stage: 1
+        groups:
+          - group: base-maintenance
+            tasks:
+              - task-id: saas-workorder-overage
+                target-service: saas-backend
+                depends-on: []
+                required-services: [saas-backend]
+                timeout-seconds: 600
+              - task-id: insurance-renewal-status
+                target-service: insurance-backend
+                depends-on: []
+                required-services: [insurance-backend]
+                timeout-seconds: 300
+      - stage: 2
+        groups:
+          - group: post-billing
+            tasks:
+              - task-id: saas-balance-access
+                target-service: saas-backend
+                depends-on: [saas-workorder-overage]
+                required-services: [saas-backend]
+                timeout-seconds: 600
+              - task-id: insurance-archive
+                target-service: insurance-backend
+                depends-on: [insurance-renewal-status]
+                required-services: [insurance-backend]
+                timeout-seconds: 1200
+      - stage: 3
+        groups:
+          - group: subscription
+            tasks:
+              - task-id: saas-subscriptions
+                target-service: saas-backend
+                depends-on: [saas-balance-access]
+                required-services: [saas-backend]
+                timeout-seconds: 1200
+          - group: cleanup
+            tasks:
+              - task-id: saas-invite-cleanup
+                target-service: saas-backend
+                depends-on: [saas-subscriptions]
+                required-services: [saas-backend]
+                timeout-seconds: 300
+          - group: archive
+            tasks:
+              - task-id: saas-archive
+                target-service: saas-backend
+                depends-on: [saas-invite-cleanup]
+                required-services: [saas-backend]
+                timeout-seconds: 1200

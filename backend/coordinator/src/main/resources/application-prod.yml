@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+maintenance:
+  coordinator:
+    enabled: ${MAINTENANCE_COORDINATOR_ENABLED:true}
+    cron: ${MAINTENANCE_COORDINATOR_CRON:0 0 4 * * ?}
+    internal-secret: ${MAINTENANCE_INTERNAL_SECRET}
+    prepare-timeout-seconds: ${MAINTENANCE_PREPARE_TIMEOUT_SECONDS:900}
+    lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:900}
+    heartbeat-interval-ms: ${MAINTENANCE_HEARTBEAT_INTERVAL_MS:60000}
+    finish-timeout-seconds: ${MAINTENANCE_FINISH_TIMEOUT_SECONDS:900}
+    services:
+      - service-id: saas-backend
+        base-url: ${SAAS_MAINTENANCE_BASE_URL:https://www.idatag.com/saasback}
+      - service-id: insurance-backend
+        base-url: ${INSURANCE_MAINTENANCE_BASE_URL:https://www.idatag.com/insuranceback}

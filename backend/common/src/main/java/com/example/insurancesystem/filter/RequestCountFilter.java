@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 @Component
@@ -25,6 +26,10 @@ public class RequestCountFilter implements Filter {
     public void doFilter(ServletRequest request,
                          ServletResponse response,
                          FilterChain chain) throws IOException, ServletException {
+        if (((HttpServletRequest) request).getRequestURI().startsWith("/internal/maintenance/")) {
+            chain.doFilter(request, response);
+            return;
+        }
         try {
             maintenanceManager.incrementRequest();
             chain.doFilter(request, response);
