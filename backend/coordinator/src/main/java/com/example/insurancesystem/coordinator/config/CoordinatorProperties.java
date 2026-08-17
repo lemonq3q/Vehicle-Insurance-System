@@ -1,4 +1,4 @@
-package com.example.insurancesystem.coordinator;
+package com.example.insurancesystem.coordinator.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -20,6 +20,12 @@ public class CoordinatorProperties {
     private long leaseTimeoutSeconds = 900;
     private long heartbeatIntervalMs = 60000;
     private long finishTimeoutSeconds = 900;
+    private int requestMaxAttempts = 3;
+    private long requestRetryDelayMs = 1000;
+    private double requestRetryBackoffMultiplier = 2.0;
+    private long requestRetryMaxDelayMs = 5000;
+    private long requestConnectTimeoutSeconds = 5;
+    private long requestReadTimeoutSeconds = 1800;
     private List<ServiceEndpoint> services = new ArrayList<>();
     private List<Stage> stages = new ArrayList<>();
 
@@ -39,6 +45,18 @@ public class CoordinatorProperties {
     public void setHeartbeatIntervalMs(long value) { this.heartbeatIntervalMs = value; }
     public long getFinishTimeoutSeconds() { return finishTimeoutSeconds; }
     public void setFinishTimeoutSeconds(long value) { this.finishTimeoutSeconds = value; }
+    public int getRequestMaxAttempts() { return requestMaxAttempts; }
+    public void setRequestMaxAttempts(int value) { this.requestMaxAttempts = value; }
+    public long getRequestRetryDelayMs() { return requestRetryDelayMs; }
+    public void setRequestRetryDelayMs(long value) { this.requestRetryDelayMs = value; }
+    public double getRequestRetryBackoffMultiplier() { return requestRetryBackoffMultiplier; }
+    public void setRequestRetryBackoffMultiplier(double value) { this.requestRetryBackoffMultiplier = value; }
+    public long getRequestRetryMaxDelayMs() { return requestRetryMaxDelayMs; }
+    public void setRequestRetryMaxDelayMs(long value) { this.requestRetryMaxDelayMs = value; }
+    public long getRequestConnectTimeoutSeconds() { return requestConnectTimeoutSeconds; }
+    public void setRequestConnectTimeoutSeconds(long value) { this.requestConnectTimeoutSeconds = value; }
+    public long getRequestReadTimeoutSeconds() { return requestReadTimeoutSeconds; }
+    public void setRequestReadTimeoutSeconds(long value) { this.requestReadTimeoutSeconds = value; }
     public List<ServiceEndpoint> getServices() { return services; }
     public void setServices(List<ServiceEndpoint> services) { this.services = services; }
     public List<Stage> getStages() { return stages; }

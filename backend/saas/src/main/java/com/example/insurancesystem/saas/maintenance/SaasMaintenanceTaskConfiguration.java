@@ -29,6 +29,16 @@ public class SaasMaintenanceTaskConfiguration {
                 context -> coordinator.processExpiredSubscriptions());
     }
 
+    /**
+     * 跨服务清除超过保留期的企业车险业务资料。任务实现需要调用车险后端，因此禁止在 SaaS 单机维护模式
+     * 执行；联机模式下 C 还会通过 required-services 确认 SaaS 与车险服务均已 READY。
+     */
+    @Bean
+    public MaintenanceTask enterpriseDataRetentionTask(EnterpriseDataRetentionCoordinator coordinator) {
+        return new SimpleMaintenanceTask("saas-enterprise-data-retention", 350, false,
+                context -> coordinator.purgeExpiredEnterpriseData());
+    }
+
     @Bean
     public MaintenanceTask inviteCleanupTask(InviteCleanupService service) {
         return new SimpleMaintenanceTask("saas-invite-cleanup", 400, true,

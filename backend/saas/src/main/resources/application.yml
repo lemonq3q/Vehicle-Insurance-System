@@ -51,6 +51,12 @@ maintenance:
     zone: Asia/Shanghai
 
 saas:
+  data-retention:
+    # 最近一次套餐结束超过该天数后，清除企业在车险域内的业务资料；成员、钱包和订阅不受影响。
+    retention-days: ${ENTERPRISE_DATA_RETENTION_DAYS:90}
+    insurance-purge-url: ${INSURANCE_ENTERPRISE_PURGE_URL:http://localhost:8080/internal/maintenance/enterprise-data/purge}
+    connect-timeout-seconds: ${INSURANCE_ENTERPRISE_PURGE_CONNECT_TIMEOUT_SECONDS:5}
+    read-timeout-seconds: ${INSURANCE_ENTERPRISE_PURGE_READ_TIMEOUT_SECONDS:1200}
   billing:
     workorder-overage:
       # 超额工单从录入日开始，每经过一个完整周期再次计费。

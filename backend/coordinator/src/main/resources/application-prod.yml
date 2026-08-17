@@ -12,6 +12,12 @@ maintenance:
     lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:900}
     heartbeat-interval-ms: ${MAINTENANCE_HEARTBEAT_INTERVAL_MS:60000}
     finish-timeout-seconds: ${MAINTENANCE_FINISH_TIMEOUT_SECONDS:900}
+    request-max-attempts: ${MAINTENANCE_REQUEST_MAX_ATTEMPTS:4}
+    request-retry-delay-ms: ${MAINTENANCE_REQUEST_RETRY_DELAY_MS:1000}
+    request-retry-backoff-multiplier: ${MAINTENANCE_REQUEST_RETRY_BACKOFF_MULTIPLIER:2.0}
+    request-retry-max-delay-ms: ${MAINTENANCE_REQUEST_RETRY_MAX_DELAY_MS:5000}
+    request-connect-timeout-seconds: ${MAINTENANCE_REQUEST_CONNECT_TIMEOUT_SECONDS:5}
+    request-read-timeout-seconds: ${MAINTENANCE_REQUEST_READ_TIMEOUT_SECONDS:1800}
     services:
       - service-id: saas-backend
         base-url: ${SAAS_MAINTENANCE_BASE_URL:https://www.idatag.com/saasback}

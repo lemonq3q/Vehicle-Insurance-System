@@ -1,4 +1,4 @@
-package com.example.insurancesystem.integration;
+package com.example.insurancesystem.integration.client;
 
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.handler.exception.BusinessException;

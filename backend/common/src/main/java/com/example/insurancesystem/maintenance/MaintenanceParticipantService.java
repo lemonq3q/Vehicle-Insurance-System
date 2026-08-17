@@ -25,11 +25,13 @@ public class MaintenanceParticipantService {
     private final MaintenanceParticipantProperties properties;
     private final Map<String, MaintenanceTaskResult> history = new ConcurrentHashMap<>();
     private final Map<String, AtomicBoolean> activeCancellations = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<MaintenanceTaskResult>> activeResults = new ConcurrentHashMap<>();
     private final ExecutorService standaloneExecutor = Executors.newSingleThreadExecutor();
     private final AtomicBoolean standaloneRunning = new AtomicBoolean(false);
     private volatile Instant leaseDeadline = Instant.EPOCH;
     private volatile LocalDate businessDate;
     private volatile LocalDate lastMaintenanceDate;
+    private volatile String lastFinishedRunId;
 
     public MaintenanceParticipantService(MaintenanceManager manager, MaintenanceTaskRegistry registry,
                                          MaintenanceParticipantProperties properties) {
@@ -86,10 +88,11 @@ public class MaintenanceParticipantService {
         if (previous != null) return taskResponse(true, "duplicate task", previous);
         MaintenanceTask task = registry.find(request.taskId).orElse(null);
         if (task == null) return taskResponse(false, "unknown task: " + request.taskId, MaintenanceTaskResult.FAILED);
+        CompletableFuture<MaintenanceTaskResult> resultFuture = new CompletableFuture<>();
+        CompletableFuture<MaintenanceTaskResult> existingFuture = activeResults.putIfAbsent(key, resultFuture);
+        if (existingFuture != null) return awaitExistingTask(request, existingFuture);
         AtomicBoolean cancellation = new AtomicBoolean(false);
-        if (activeCancellations.putIfAbsent(key, cancellation) != null) {
-            return response(false, "task is already executing");
-        }
+        activeCancellations.put(key, cancellation);
         renewLease(properties.getLeaseTimeoutSeconds());
         try {
             MaintenanceTaskContext context = new MaintenanceTaskContext(
@@ -100,36 +103,71 @@ public class MaintenanceParticipantService {
             task.execute(context);
             context.checkActive();
             history.put(key, MaintenanceTaskResult.SUCCEEDED);
+            resultFuture.complete(MaintenanceTaskResult.SUCCEEDED);
             return taskResponse(true, "task succeeded", MaintenanceTaskResult.SUCCEEDED);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             history.put(key, MaintenanceTaskResult.CANCELLED);
+            resultFuture.complete(MaintenanceTaskResult.CANCELLED);
             return taskResponse(false, exception.getMessage(), MaintenanceTaskResult.CANCELLED);
         } catch (Exception exception) {
             log.error("Maintenance task {} failed for run {}", request.taskId, request.runId, exception);
             history.put(key, MaintenanceTaskResult.FAILED);
+            resultFuture.complete(MaintenanceTaskResult.FAILED);
             return taskResponse(false, exception.getMessage(), MaintenanceTaskResult.FAILED);
         } finally {
             activeCancellations.remove(key);
+            activeResults.remove(key, resultFuture);
+        }
+    }
+
+    /**
+     * 重试请求到达时若首次请求仍在执行，则等待同一个执行结果，而不是再次运行任务或返回失败。
+     * 这样可以覆盖服务已收到并开始处理、但 C 因网络超时重新发送相同 runId+taskId 的场景。
+     */
+    private MaintenanceProtocol.Response awaitExistingTask(
+            MaintenanceProtocol.ExecuteRequest request,
+            CompletableFuture<MaintenanceTaskResult> existingFuture) {
+        long remainingMs = Math.max(1, request.deadlineEpochMillis - System.currentTimeMillis());
+        try {
+            MaintenanceTaskResult result = existingFuture.get(remainingMs, TimeUnit.MILLISECONDS);
+            return taskResponse(result == MaintenanceTaskResult.SUCCEEDED,
+                    "duplicate task returned existing result", result);
+        } catch (TimeoutException exception) {
+            return response(false, "existing task is still executing at deadline");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return response(false, "interrupted while waiting for existing task");
+        } catch (ExecutionException exception) {
+            return taskResponse(false, "existing task failed", MaintenanceTaskResult.FAILED);
         }
     }
 
     /** 超时取消是协作式信号，只影响指定任务，不会强制终止线程或同组任务。 */
     public MaintenanceProtocol.Response requestCancel(MaintenanceProtocol.CancelRequest request) {
         if (request == null || !isCurrentRun(request.runId)) return response(false, "run mismatch");
-        AtomicBoolean cancellation = activeCancellations.get(key(request.runId, request.taskId));
-        if (cancellation == null) return response(false, "task is not active");
+        String taskKey = key(request.runId, request.taskId);
+        AtomicBoolean cancellation = activeCancellations.get(taskKey);
+        if (cancellation == null) {
+            MaintenanceTaskResult completed = history.get(taskKey);
+            if (completed != null) return taskResponse(true, "task already reached terminal state", completed);
+            return response(false, "task is not active");
+        }
         cancellation.set(true);
         return response(true, "cancellation requested");
     }
 
     /** 只有仍处于联机 READY 的服务响应结束通知；STANDALONE 按自己的节奏完成全部本地流程。 */
     public synchronized MaintenanceProtocol.Response finish(String runId) {
+        if (runId != null && runId.equals(lastFinishedRunId)) {
+            return response(true, "run already released");
+        }
         if (!isCurrentRun(runId) || manager.getState() != MaintenanceState.READY) {
             return response(false, "finish ignored outside online ready state");
         }
         if (!activeCancellations.isEmpty()) return response(false, "maintenance tasks are still active");
         manager.markReleasing();
+        lastFinishedRunId = runId;
         manager.stopMaintenance();
         return response(true, "released");
     }

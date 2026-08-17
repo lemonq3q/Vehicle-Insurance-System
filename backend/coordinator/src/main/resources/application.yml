@@ -17,6 +17,12 @@ maintenance:
     lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:300}
     heartbeat-interval-ms: ${MAINTENANCE_HEARTBEAT_INTERVAL_MS:30000}
     finish-timeout-seconds: ${MAINTENANCE_FINISH_TIMEOUT_SECONDS:60}
+    request-max-attempts: ${MAINTENANCE_REQUEST_MAX_ATTEMPTS:3}
+    request-retry-delay-ms: ${MAINTENANCE_REQUEST_RETRY_DELAY_MS:200}
+    request-retry-backoff-multiplier: ${MAINTENANCE_REQUEST_RETRY_BACKOFF_MULTIPLIER:2.0}
+    request-retry-max-delay-ms: ${MAINTENANCE_REQUEST_RETRY_MAX_DELAY_MS:1000}
+    request-connect-timeout-seconds: ${MAINTENANCE_REQUEST_CONNECT_TIMEOUT_SECONDS:3}
+    request-read-timeout-seconds: ${MAINTENANCE_REQUEST_READ_TIMEOUT_SECONDS:1800}
     services:
       - service-id: saas-backend
         base-url: ${SAAS_MAINTENANCE_BASE_URL:http://localhost:8081}
@@ -61,6 +67,13 @@ maintenance:
                 required-services: [saas-backend]
                 timeout-seconds: 1200
           - group: cleanup
+            tasks:
+              - task-id: saas-enterprise-data-retention
+                target-service: saas-backend
+                depends-on: [saas-subscriptions]
+                required-services: [saas-backend, insurance-backend]
+                timeout-seconds: 1800
+          - group: local-cleanup
             tasks:
               - task-id: saas-invite-cleanup
                 target-service: saas-backend

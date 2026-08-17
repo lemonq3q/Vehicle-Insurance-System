@@ -7,6 +7,8 @@
 - 内容类型：`application/json`。
 - 所有周期命令都携带 `runId`；旧周期和处于单机模式后的迟到请求会被拒绝。
 - 维护接口不计入业务请求排空计数，但仍进行独立鉴权和任务幂等校验。
+- C 对连接失败、读取超时、HTTP 5xx 和空响应执行有界退避重试；HTTP 4xx 表示接收端明确拒绝，不进行重试。
+- 重试会重复发送相同的 `runId` 和 `taskId`，参与端必须保持接口幂等。
 
 统一参与端响应：
 
@@ -160,6 +162,12 @@
 | `MAINTENANCE_LEASE_TIMEOUT_SECONDS` | C 失联判定期限 |
 | `MAINTENANCE_HEARTBEAT_INTERVAL_MS` | C 心跳周期 |
 | `MAINTENANCE_FINISH_TIMEOUT_SECONDS` | C 重试 FINISH 并等待服务安全释放的期限 |
+| `MAINTENANCE_REQUEST_MAX_ATTEMPTS` | 单个内部请求允许的总尝试次数，包含首次请求 |
+| `MAINTENANCE_REQUEST_RETRY_DELAY_MS` | 第一次重试前的等待时间 |
+| `MAINTENANCE_REQUEST_RETRY_BACKOFF_MULTIPLIER` | 后续重试等待时间的增长倍数 |
+| `MAINTENANCE_REQUEST_RETRY_MAX_DELAY_MS` | 单次重试等待时间上限 |
+| `MAINTENANCE_REQUEST_CONNECT_TIMEOUT_SECONDS` | 建立内部 HTTP 连接的超时时间 |
+| `MAINTENANCE_REQUEST_READ_TIMEOUT_SECONDS` | 等待维护接口响应的读取超时时间 |
 | `MAINTENANCE_DRAIN_TIMEOUT_SECONDS` | 参与端排空业务请求的期限 |
 | `MAINTENANCE_STANDALONE_EXIT_DELAY_SECONDS` | 单机任务结束后的固定等待时间 |
 | `MAINTENANCE_FALLBACK_CRON` | 参与端未收到 START 时的单机兜底时间 |

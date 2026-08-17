@@ -1,4 +1,4 @@
-package com.example.insurancesystem.saas.integration;
+package com.example.insurancesystem.saas.integration.client;
 
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import java.time.Duration;

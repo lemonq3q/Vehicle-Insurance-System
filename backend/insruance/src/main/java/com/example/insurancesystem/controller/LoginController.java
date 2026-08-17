@@ -4,7 +4,7 @@ import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.service.LoginService;
 import com.example.insurancesystem.service.UserService;
-import com.example.insurancesystem.integration.SaasSsoClient;
+import com.example.insurancesystem.integration.client.SaasSsoClient;
 import com.example.insurancesystem.domain.authenticate.LoginUser;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;

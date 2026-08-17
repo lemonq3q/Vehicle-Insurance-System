@@ -23,3 +23,10 @@ maintenance:
     lease-check-interval-ms: ${MAINTENANCE_LEASE_CHECK_INTERVAL_MS:10000}
     standalone-exit-delay-seconds: ${MAINTENANCE_STANDALONE_EXIT_DELAY_SECONDS:900}
     fallback-cron: ${MAINTENANCE_FALLBACK_CRON:0 15 4 * * ?}
+
+saas:
+  data-retention:
+    retention-days: ${ENTERPRISE_DATA_RETENTION_DAYS:90}
+    insurance-purge-url: ${INSURANCE_ENTERPRISE_PURGE_URL:https://www.idatag.com/insuranceback/internal/maintenance/enterprise-data/purge}
+    connect-timeout-seconds: ${INSURANCE_ENTERPRISE_PURGE_CONNECT_TIMEOUT_SECONDS:5}
+    read-timeout-seconds: ${INSURANCE_ENTERPRISE_PURGE_READ_TIMEOUT_SECONDS:1800}

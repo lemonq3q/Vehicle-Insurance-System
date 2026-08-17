@@ -1,5 +1,8 @@
-package com.example.insurancesystem.coordinator;
+package com.example.insurancesystem.coordinator.service;
 
+import com.example.insurancesystem.coordinator.client.ParticipantClient;
+import com.example.insurancesystem.coordinator.config.CoordinatorProperties;
+import com.example.insurancesystem.coordinator.domain.CoordinatorTaskStatus;
 import com.example.insurancesystem.maintenance.MaintenanceProtocol;
 import com.example.insurancesystem.maintenance.MaintenanceTaskResult;
 import com.example.insurancesystem.system.MaintenanceState;

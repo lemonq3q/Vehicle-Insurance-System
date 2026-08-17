@@ -818,6 +818,10 @@ CREATE TABLE IF NOT EXISTS `biz_ocr_record` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='OCR识别记录表';
 
+CREATE TABLE IF NOT EXISTS `biz_ocr_record_archive` LIKE `biz_ocr_record`;
+ALTER TABLE `biz_ocr_record_archive`
+  ADD KEY `idx_biz_ocr_record_archive_enterprise_time` (`enterprise_id`,`created_at`);
+
 CREATE TABLE IF NOT EXISTS `biz_insurance_product` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID，null表示平台公共',

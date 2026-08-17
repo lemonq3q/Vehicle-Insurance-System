@@ -6,7 +6,7 @@ import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.domain.authenticate.UserDTO;
 import com.example.insurancesystem.service.LoginService;
 import com.example.insurancesystem.service.UserService;
-import com.example.insurancesystem.integration.SaasSsoClient;
+import com.example.insurancesystem.integration.client.SaasSsoClient;
 import com.example.insurancesystem.mapper.MenuMapper;
 import com.example.insurancesystem.mapper.UserMapper;
 import com.example.insurancesystem.security.SingleLoginSessionManager;

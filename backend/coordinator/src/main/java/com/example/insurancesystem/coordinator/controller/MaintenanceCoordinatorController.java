@@ -1,5 +1,7 @@
-package com.example.insurancesystem.coordinator;
+package com.example.insurancesystem.coordinator.controller;
 
+import com.example.insurancesystem.coordinator.config.CoordinatorProperties;
+import com.example.insurancesystem.coordinator.service.MaintenanceCoordinatorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;

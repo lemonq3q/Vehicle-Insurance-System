@@ -1,5 +1,7 @@
 package com.example.insurancesystem.saas.integration;
 
+import com.example.insurancesystem.saas.integration.client.InsuranceSessionClient;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
