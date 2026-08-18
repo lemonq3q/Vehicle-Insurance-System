@@ -3,7 +3,7 @@
     <div class="section-title">
       <div>
         <h1>仪表盘</h1>
-        <p>展示个人账号、当前企业和近期经营状态，当前为静态样板数据。</p>
+        <p>展示个人账号、当前企业和最近一个月内的经营提醒。</p>
       </div>
       <span class="portal-tag blue">今日 2026-07-07</span>
     </div>
@@ -35,12 +35,17 @@
 
       <article class="portal-card panel">
         <h2>近期提醒</h2>
-        <div class="timeline">
-          <div v-for="item in notices" :key="item.title" class="timeline-item">
+        <div v-if="loadingReminders" class="timeline-empty">正在加载近期提醒...</div>
+        <div v-else-if="!notices.length" class="timeline-empty">最近一个月暂无提醒</div>
+        <div v-else class="timeline">
+          <div v-for="item in notices" :key="item.id" class="timeline-item" :class="`severity-${item.severity.toLowerCase()}`">
             <span></span>
             <div>
-              <strong>{{ item.title }}</strong>
-              <p>{{ item.text }}</p>
+              <div class="reminder-heading">
+                <strong>{{ item.title }}</strong>
+                <time>{{ item.occurredAt }}</time>
+              </div>
+              <p>{{ item.content }}</p>
             </div>
           </div>
         </div>
@@ -51,6 +56,7 @@
 
 <script>
 import { getRoleName } from '@/utils/portalLabels';
+import { getRecentReminders } from '@/api/portal';
 
 export default {
   name: 'DashboardPage',
@@ -65,12 +71,26 @@ export default {
         { label: '企业成员', value: '4', note: '专业版上限 30 人' },
         { label: '企业余额', value: '¥12,680.50', note: '自动续费已开启' }
       ],
-      notices: [
-        { title: '套餐续费充足', text: '下一次自动续费时间为 2027-06-25。' },
-        { title: '邀请码仍可使用', text: 'XMEB-7K29Q 剩余 3 次可用名额。' },
-        { title: '资金流水正常', text: '最近一次充值订单已于 2026-07-05 支付成功。' }
-      ]
+      notices: [],
+      loadingReminders: false
     };
+  },
+  created() {
+    this.loadRecentReminders();
+  },
+  methods: {
+    /**
+     * 从门户提醒接口读取已经完成时间范围和优先级排序的数据。请求失败时保留空列表，
+     * 全局请求拦截器负责展示错误，仪表盘本身仍允许用户查看其他账号信息。
+     */
+    async loadRecentReminders() {
+      this.loadingReminders = true;
+      try {
+        this.notices = await getRecentReminders() || [];
+      } finally {
+        this.loadingReminders = false;
+      }
+    }
   },
   computed: {
     /**
@@ -180,6 +200,33 @@ export default {
   margin-top: 8px;
   border-radius: 999px;
   background: var(--portal-accent);
+}
+
+.timeline-item.severity-critical > span {
+  background: #dc2626;
+}
+
+.timeline-item.severity-warning > span {
+  background: #d97706;
+}
+
+.reminder-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.reminder-heading time {
+  flex: none;
+  color: var(--portal-muted);
+  font-size: 12px;
+}
+
+.timeline-empty {
+  padding: 28px 0;
+  color: var(--portal-muted);
+  text-align: center;
 }
 
 @media (max-width: 980px) {

@@ -84,9 +84,9 @@
             :prefix-icon="Phone"
           />
         </el-form-item>
-        <el-form-item prop="name">
+        <el-form-item prop="realName">
           <el-input
-            v-model="registerForm.name"
+            v-model="registerForm.realName"
             class="auth-input"
             placeholder="请输入用户名"
             size="large"
@@ -190,7 +190,7 @@ const loginRules = reactive({
 const registerRef = ref();
 const registerForm = reactive({
   username: '',
-  name: '',
+  realName: '',
   // idNum: '',
   password: '',
   confirmPassword: '',
@@ -203,7 +203,7 @@ const registerRules = reactive({
     { required: true, message: '请输入手机号码', trigger: 'blur' },
     { validator: validatePhoneNumber, trigger: 'blur' }
   ],
-  name: [
+  realName: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 1, max: 50, message: '输入内容过长', trigger: 'blur' }
   ],

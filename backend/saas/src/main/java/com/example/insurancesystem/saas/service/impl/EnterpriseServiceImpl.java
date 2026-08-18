@@ -89,6 +89,14 @@ public class EnterpriseServiceImpl implements EnterpriseService {
     mapper.insertMember(member);
     mapper.insertWallet(enterpriseId, context.userId());
     mapper.insertDefaultSubscription(enterpriseId);
+    /*
+     * 企业创建完成后立即建立其独立险种目录，保证首次进入车险系统即可正常录单。初始化与企业、
+     * 成员、钱包和订阅共用事务，任何一步失败都会整体回滚，避免留下不能录单的半成品企业。
+     */
+    int initializedInsuranceCount =
+        mapper.insertDefaultInsuranceProducts(enterpriseId, context.userId());
+    if (initializedInsuranceCount == 0)
+      throw new BusinessException(500, "标准险种目录尚未配置，企业创建失败，请联系系统管理员");
     insertMemberChange(
         enterpriseId, "JOIN", context.userId(), context.userId(), null, "OWNER", null, "创建企业并加入");
     return PortalMaps.camel(mapper.findEnterprise(enterpriseId));

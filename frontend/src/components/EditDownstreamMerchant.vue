@@ -88,9 +88,9 @@
           placeholder="请输入手机号码"
           />
         </el-form-item>
-        <el-form-item label="用户名称" prop="name">
+        <el-form-item label="用户名称" prop="realName">
           <el-input
-          v-model="userInfo.name"
+          v-model="userInfo.realName"
           class="responsive-input"
           placeholder="请输入用户名称"
           />
@@ -176,7 +176,7 @@ const userRules = reactive({
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { validator: validatePhoneNumber, trigger: 'blur' }
   ],
-  name: [
+  realName: [
     { required: true, message: '请输入用户名称', trigger: 'blur' },
     { min: 1, max: 100, message: '输入内容过长', trigger: 'blur' },
     { validator: validateText, trigger: 'blur' }
@@ -199,7 +199,7 @@ const downstreamInfo = reactive({
 
 const userInfo = reactive({
   username: '',
-  name: '',
+  realName: '',
   idNum: ''
 });
 

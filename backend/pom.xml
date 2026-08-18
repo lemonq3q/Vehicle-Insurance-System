@@ -24,6 +24,7 @@
         <module>insruance</module>
         <module>saas</module>
         <module>coordinator</module>
+        <module>monitor</module>
     </modules>
 
     <properties>

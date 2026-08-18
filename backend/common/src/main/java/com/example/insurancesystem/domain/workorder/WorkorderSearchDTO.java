@@ -37,7 +37,15 @@ public class WorkorderSearchDTO {
 
     private Integer remindStatus;
 
-    private Integer renewalRemindDays;
+    /**
+     * 续保周期天数，由服务端设置，当前固定为 365 天；不接受前端覆盖。
+     */
+    private Integer renewalCycleDays;
+
+    /**
+     * 每个续保周期结束前的提醒天数，由服务端设置，当前固定为 30 天；不接受前端覆盖。
+     */
+    private Integer renewalAdvanceDays;
 
     private Integer pageSize;
 

@@ -143,12 +143,24 @@
         </association>
     </resultMap>
 
-    <sql id="nextRenewalDate">
-        CASE
-            WHEN TIMESTAMPADD(YEAR, GREATEST(YEAR(CURDATE()) - YEAR(DATE(w.created_at)), 1), DATE(w.created_at)) &gt;= CURDATE()
-                THEN TIMESTAMPADD(YEAR, GREATEST(YEAR(CURDATE()) - YEAR(DATE(w.created_at)), 1), DATE(w.created_at))
-            ELSE TIMESTAMPADD(YEAR, GREATEST(YEAR(CURDATE()) - YEAR(DATE(w.created_at)), 1) + 1, DATE(w.created_at))
-        END
+    <!--
+      续保以创建日为起点按固定天数循环。当前周期截止天数为：
+      max(ceil(已过天数 / 周期天数), 1) * 周期天数。
+      截止天数减已过天数得到本周期剩余天数，仅当剩余 0—提前提醒天数时进入提醒窗口。
+      该算法使第一个 365 天周期在第 335 天进入 30 天提醒窗口；创建当天剩余 365 天，不会误提醒。
+    -->
+    <sql id="renewalCycleDueCondition">
+        #{renewalCycleDays} &gt; 0
+        AND #{renewalAdvanceDays} &gt;= 0
+        AND #{renewalAdvanceDays} &lt; #{renewalCycleDays}
+        AND DATEDIFF(CURDATE(), DATE(w.created_at)) &gt;= 0
+        AND (
+            GREATEST(
+                CEIL(DATEDIFF(CURDATE(), DATE(w.created_at)) / #{renewalCycleDays}),
+                1
+            ) * #{renewalCycleDays}
+            - DATEDIFF(CURDATE(), DATE(w.created_at))
+        ) BETWEEN 0 AND #{renewalAdvanceDays}
     </sql>
 
     <sql id="normalizedWorkorderColumns">
@@ -299,8 +311,7 @@
         FROM biz_workorder w
         WHERE w.deleted = 0
           AND w.renewal_reminder_disabled = 0
-          AND CURDATE() BETWEEN DATE_SUB(<include refid="nextRenewalDate"/>, INTERVAL #{renewalRemindDays} DAY)
-                            AND <include refid="nextRenewalDate"/>
+          AND <include refid="renewalCycleDueCondition"/>
         <if test="createBy != null">AND w.created_by = #{createBy}</if>
     </select>
 
@@ -334,11 +345,16 @@
         <where>
             w.deleted = 0
             AND w.renewal_reminder_disabled = 0
-            AND CURDATE() BETWEEN DATE_SUB(<include refid="nextRenewalDate"/>, INTERVAL #{renewalRemindDays} DAY)
-                              AND <include refid="nextRenewalDate"/>
+            AND <include refid="renewalCycleDueCondition"/>
             <include refid="commonSearchConditions"/>
         </where>
-        ORDER BY <include refid="nextRenewalDate"/> ASC, w.created_at ASC
+        ORDER BY (
+            GREATEST(
+                CEIL(DATEDIFF(CURDATE(), DATE(w.created_at)) / #{renewalCycleDays}),
+                1
+            ) * #{renewalCycleDays}
+            - DATEDIFF(CURDATE(), DATE(w.created_at))
+        ) ASC, w.created_at ASC
     </select>
 
     <update id="updateRenewalStatusCycle">

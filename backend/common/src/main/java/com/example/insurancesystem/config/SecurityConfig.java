@@ -77,6 +77,7 @@ public class SecurityConfig {
                         "/internal/session/logout-enterprise", "/internal/session/logout-user",
                         "/internal/maintenance/enterprise-data/purge",
                         "/internal/maintenance/**",
+                        "/internal/reminders/**",
                         "/auth/sso/exchange", "/portal/finance/plans"
                 ).permitAll()
                 .anyRequest().authenticated();

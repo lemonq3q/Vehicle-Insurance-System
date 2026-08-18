@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: InsuranceSystemMonitor
+  datasource:
+    druid:
+      url: ${MONITOR_DB_URL:jdbc:mysql://localhost:3306/insurance_saas?characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+      username: ${MONITOR_DB_USERNAME:root}
+      password: ${MONITOR_DB_PASSWORD:20040619Lmy}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+server:
+  port: ${MONITOR_BACKEND_PORT:8083}
+maintenance:
+  participant:
+    enabled: true
+    service-id: monitor-backend
+    internal-secret: ${MAINTENANCE_INTERNAL_SECRET:dev-maintenance-secret}
+    drain-timeout-seconds: ${MAINTENANCE_DRAIN_TIMEOUT_SECONDS:120}
+    lease-timeout-seconds: ${MAINTENANCE_LEASE_TIMEOUT_SECONDS:300}
+    lease-check-interval-ms: ${MAINTENANCE_LEASE_CHECK_INTERVAL_MS:5000}
+    standalone-exit-delay-seconds: ${MAINTENANCE_STANDALONE_EXIT_DELAY_SECONDS:60}
+    fallback-cron: ${MAINTENANCE_FALLBACK_CRON:0 5 4 * * ?}
+    zone: Asia/Shanghai

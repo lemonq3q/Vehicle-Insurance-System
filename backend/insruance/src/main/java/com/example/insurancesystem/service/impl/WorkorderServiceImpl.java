@@ -9,6 +9,7 @@ import com.example.insurancesystem.domain.encapsulate.TableData;
 import com.example.insurancesystem.domain.merchant.Merchant;
 import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.domain.workorder.*;
+import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.mapper.*;
 import com.example.insurancesystem.service.InsuranceService;
 import com.example.insurancesystem.service.WorkorderService;
@@ -34,7 +35,15 @@ import java.util.Map;
  */
 public class WorkorderServiceImpl implements WorkorderService {
 
-    private static final int RENEWAL_REMIND_DAYS = 365;
+    /**
+     * 工单续保的固定业务周期。每个周期从工单创建日期起按自然天累计，当前为 365 天。
+     */
+    private static final int RENEWAL_CYCLE_DAYS = 365;
+
+    /**
+     * 每个续保周期结束前的提醒窗口。当前从剩余 30 天开始提醒，并持续到周期结束当天。
+     */
+    private static final int RENEWAL_ADVANCE_DAYS = 30;
 
     @Autowired
     private WorkorderMapper workorderMapper;
@@ -91,12 +100,13 @@ public class WorkorderServiceImpl implements WorkorderService {
 
     @Override
     /**
-     * 查询进入续保提醒窗口的工单；普通用户仅查看自己创建的业务，管理员可查看企业全量。
+     * 查询到达续保周期边界的工单；普通用户仅查看自己创建的业务，管理员可查看企业全量。
      */
     public ResponseResult selectRenew(WorkorderSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
 
-        params.setRenewalRemindDays(RENEWAL_REMIND_DAYS);
+        params.setRenewalCycleDays(RENEWAL_CYCLE_DAYS);
+        params.setRenewalAdvanceDays(RENEWAL_ADVANCE_DAYS);
 
         if(!SystemCommonUtil.hasPerm("all")){
             params.setCreateBy(SystemCommonUtil.getNowUserId());
@@ -110,7 +120,7 @@ public class WorkorderServiceImpl implements WorkorderService {
 
     @Override
     /**
-     * 统计即将续保的工单数量。管理员同时获得本人和全企业计数，出单员只获得本人计数。
+     * 统计到达续保周期的工单数量。管理员同时获得本人和全企业计数，出单员只获得本人计数。
      */
     public ResponseResult selectRenewCount() {
 
@@ -120,15 +130,18 @@ public class WorkorderServiceImpl implements WorkorderService {
 
         Long nowUserId = SystemCommonUtil.getNowUserId();
         if(SystemCommonUtil.hasPerm("all")){
-            Integer selfCount = workorderMapper.selectRenewCount(RENEWAL_REMIND_DAYS, nowUserId);
-            Integer allCount = workorderMapper.selectRenewCount(RENEWAL_REMIND_DAYS, null);
+            Integer selfCount = workorderMapper.selectRenewCount(
+                    RENEWAL_CYCLE_DAYS, RENEWAL_ADVANCE_DAYS, nowUserId);
+            Integer allCount = workorderMapper.selectRenewCount(
+                    RENEWAL_CYCLE_DAYS, RENEWAL_ADVANCE_DAYS, null);
 
             countMap.put("selfCount", selfCount);
             countMap.put("allCount", allCount);
             return new ResponseResult(200, countMap);
         }
         else{
-            Integer selfCount = workorderMapper.selectRenewCount(RENEWAL_REMIND_DAYS, nowUserId);
+            Integer selfCount = workorderMapper.selectRenewCount(
+                    RENEWAL_CYCLE_DAYS, RENEWAL_ADVANCE_DAYS, nowUserId);
 
             countMap.put("selfCount", selfCount);
             return new ResponseResult(200, countMap);
@@ -191,6 +204,14 @@ public class WorkorderServiceImpl implements WorkorderService {
      * 随后写入险种、对应车辆证件和附件关系，同时把新附件标记为已关联。
      */
     public ResponseResult insert(WorkorderDTO params) {
+        /**
+         * 每张工单都必须保存创建当时的险种选择快照。空集合无法生成合法的批量插入 SQL，且通常
+         * 表示当前企业没有初始化险种配置，因此在写入工单主体前返回明确的业务错误并保持事务无变更。
+         */
+        List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();
+        if (workorderInsuranceList == null || workorderInsuranceList.isEmpty()) {
+            throw new BusinessException(400, "当前企业尚未配置险种，无法创建工单，请先完成险种配置");
+        }
         Long nowUserId = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
         workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
@@ -235,7 +256,6 @@ public class WorkorderServiceImpl implements WorkorderService {
                 () -> workorderMapper.insert(workorder));
         saveAggregate(workorder);
 
-        List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();
         workorderInsuranceList.forEach(item -> {
             item.setWorkorderId(workorder.getId());
             item.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());

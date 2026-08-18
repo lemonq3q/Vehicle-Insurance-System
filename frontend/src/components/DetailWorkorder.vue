@@ -99,21 +99,29 @@
           <div class="img_detail_show_left">
             <div class="left_img_item">
               <div>证件照头像面</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.idCardBack" fit="contain" />
+              <el-image v-if="showFileUrl.idCardBack" class="document-preview" :src="showFileUrl.idCardBack" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="证件照头像面未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
             <div class="left_img_item">
               <div>证件照国徽面</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.idCardFront" fit="contain" />
+              <el-image v-if="showFileUrl.idCardFront" class="document-preview" :src="showFileUrl.idCardFront" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="证件照国徽面未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
           </div>
           <div class="img_detail_show_right form_margin">
             <div>
               <span class="form_text workorder_detail_form_title">姓名:</span>
-              <span class="form_gap">{{ oriInfo.ownerName }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.ownerName) }">{{ displayDetailValue(oriInfo.ownerName) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">证件号码:</span>
-              <span class="form_gap">{{ oriInfo.ownerIdNum }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.ownerIdNum) }">{{ displayDetailValue(oriInfo.ownerIdNum) }}</span>
             </div>
           </div>
         </div>
@@ -122,17 +130,21 @@
           <div class="img_detail_show_left">
             <div class="left_img_item">
               <div>营业执照</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.businessLicense" fit="contain" />
+              <el-image v-if="showFileUrl.businessLicense" class="document-preview" :src="showFileUrl.businessLicense" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="营业执照未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
           </div>
           <div class="img_detail_show_right form_margin">
             <div>
               <span class="form_text workorder_detail_form_title">单位名称:</span>
-              <span class="form_gap">{{ oriInfo.organizationName }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.organizationName) }">{{ displayDetailValue(oriInfo.organizationName) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">社会信用代码:</span>
-              <span class="form_gap">{{ oriInfo.socialCreditCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.socialCreditCode) }">{{ displayDetailValue(oriInfo.socialCreditCode) }}</span>
             </div>
           </div>
         </div>
@@ -141,69 +153,77 @@
           <div class="img_detail_show_left">
             <div class="left_img_item">
               <div>行驶证副页</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.licenseBack" fit="contain" />
+              <el-image v-if="showFileUrl.licenseBack" class="document-preview" :src="showFileUrl.licenseBack" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="行驶证副页未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
             <div class="left_img_item">
               <div>行驶证正页</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.licenseFront" fit="contain" />
+              <el-image v-if="showFileUrl.licenseFront" class="document-preview" :src="showFileUrl.licenseFront" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="行驶证正页未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
           </div>
           <div class="img_detail_show_right form_margin">
             <div>
               <span class="form_text workorder_detail_form_title">车牌号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.licensePlate }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.licensePlate) }">{{ displayDetailValue(oriInfo.vehicleLicense.licensePlate) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">车辆类型:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.vehicleType }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.vehicleType) }">{{ displayDetailValue(oriInfo.vehicleLicense.vehicleType) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">所有人:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.ownerName }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.ownerName) }">{{ displayDetailValue(oriInfo.vehicleLicense.ownerName) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">使用性质:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.usageNature }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.usageNature) }">{{ displayDetailValue(oriInfo.vehicleLicense.usageNature) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">厂牌型号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.brandModel }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.brandModel) }">{{ displayDetailValue(oriInfo.vehicleLicense.brandModel) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">车架号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.vehicleCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.vehicleCode) }">{{ displayDetailValue(oriInfo.vehicleLicense.vehicleCode) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">发动机号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.engineCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.engineCode) }">{{ displayDetailValue(oriInfo.vehicleLicense.engineCode) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">注册日期:</span>
-              <span class="form_gap">{{ formatSecondTimestamp(oriInfo.vehicleLicense.registrationDate) }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleLicense.registrationDate) }">{{ displayDateValue(oriInfo.vehicleLicense.registrationDate) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">发证日期:</span>
-              <span class="form_gap">{{ formatSecondTimestamp(oriInfo.vehicleLicense.issueDate) }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleLicense.issueDate) }">{{ displayDateValue(oriInfo.vehicleLicense.issueDate) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">核定载客:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.seats }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleLicense.seats) }">{{ displayMetricValue(oriInfo.vehicleLicense.seats) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">核定载质量:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.approvedLoadCapacity }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleLicense.approvedLoadCapacity) }">{{ displayMetricValue(oriInfo.vehicleLicense.approvedLoadCapacity) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">整备质量:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.curbWeight }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleLicense.curbWeight) }">{{ displayMetricValue(oriInfo.vehicleLicense.curbWeight) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">是否过户:</span>
-              <span class="form_gap">{{ oriInfo.vehicleLicense.isTransfer==1?"过户":"非过户" }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleLicense.isTransfer) }">{{ displayTransferValue(oriInfo.vehicleLicense.isTransfer) }}</span>
             </div>
             <div v-if="oriInfo.vehicleLicense.isTransfer==1">
               <span class="form_text workorder_detail_form_title">过户日期:</span>
-              <span class="form_gap">{{ formatSecondTimestamp(oriInfo.vehicleLicense.transferDate) }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleLicense.transferDate) }">{{ displayDateValue(oriInfo.vehicleLicense.transferDate) }}</span>
             </div>
           </div>
         </div>
@@ -212,41 +232,45 @@
           <div class="img_detail_show_left">
             <div class="left_img_item">
               <div>合格证</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.certificate" fit="contain" />
+              <el-image v-if="showFileUrl.certificate" class="document-preview" :src="showFileUrl.certificate" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="合格证未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
           </div>
           <div class="img_detail_show_right form_margin">
             <div>
               <span class="form_text workorder_detail_form_title">厂牌型号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.brandModel }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleCertificate.brandModel) }">{{ displayDetailValue(oriInfo.vehicleCertificate.brandModel) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">车辆类型:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.vehicleType }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleCertificate.vehicleType) }">{{ displayDetailValue(oriInfo.vehicleCertificate.vehicleType) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">车架号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.vehicleCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleCertificate.vehicleCode) }">{{ displayDetailValue(oriInfo.vehicleCertificate.vehicleCode) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">发动机号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.engineCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleCertificate.engineCode) }">{{ displayDetailValue(oriInfo.vehicleCertificate.engineCode) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">整备质量:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.curbWeight }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleCertificate.curbWeight) }">{{ displayMetricValue(oriInfo.vehicleCertificate.curbWeight) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">核定载客:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.seats }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleCertificate.seats) }">{{ displayMetricValue(oriInfo.vehicleCertificate.seats) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">排量:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.displacement }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleCertificate.displacement) }">{{ displayMetricValue(oriInfo.vehicleCertificate.displacement) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">核定载质量:</span>
-              <span class="form_gap">{{ oriInfo.vehicleCertificate.approvedLoadCapacity }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleCertificate.approvedLoadCapacity) }">{{ displayMetricValue(oriInfo.vehicleCertificate.approvedLoadCapacity) }}</span>
             </div>
           </div>
         </div>
@@ -255,51 +279,55 @@
           <div class="img_detail_show_left">
             <div class="left_img_item">
               <div>购车发票</div>
-              <el-image style="width: 100px; height: 100px" :src="showFileUrl.invoice" fit="contain" />
+              <el-image v-if="showFileUrl.invoice" class="document-preview" :src="showFileUrl.invoice" fit="contain" />
+              <div v-else class="document-empty" role="status" aria-label="购车发票未上传">
+                <el-icon class="document-empty__icon"><Document /></el-icon>
+                <span>暂无文件</span>
+              </div>
             </div>
           </div>
           <div class="img_detail_show_right form_margin">
             <div>
               <span class="form_text workorder_detail_form_title">发票金额:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.invoiceAmount }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleInvoice.invoiceAmount) }">{{ displayMetricValue(oriInfo.vehicleInvoice.invoiceAmount) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">购方名称:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.buyerName }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleInvoice.buyerName) }">{{ displayDetailValue(oriInfo.vehicleInvoice.buyerName) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">购方身份证:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.buyerIdNum }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleInvoice.buyerIdNum) }">{{ displayDetailValue(oriInfo.vehicleInvoice.buyerIdNum) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">车辆类型:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.vehicleType }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleInvoice.vehicleType) }">{{ displayDetailValue(oriInfo.vehicleInvoice.vehicleType) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">厂牌型号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.brandModel }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleInvoice.brandModel) }">{{ displayDetailValue(oriInfo.vehicleInvoice.brandModel) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">车架号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.vehicleCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleInvoice.vehicleCode) }">{{ displayDetailValue(oriInfo.vehicleInvoice.vehicleCode) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">发动机号:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.engineCode }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.vehicleInvoice.engineCode) }">{{ displayDetailValue(oriInfo.vehicleInvoice.engineCode) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">核定载客:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.seats }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleInvoice.seats) }">{{ displayMetricValue(oriInfo.vehicleInvoice.seats) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">核定载质量:</span>
-              <span class="form_gap">{{ oriInfo.vehicleInvoice.approvedLoadCapacity }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleInvoice.approvedLoadCapacity) }">{{ displayMetricValue(oriInfo.vehicleInvoice.approvedLoadCapacity) }}</span>
             </div>
           </div>
         </div>
         <div style="text-align: left; padding: 0 5px;">
           <span class="form_text workorder_detail_form_title">车主电话:</span>
-          <span>{{ oriInfo.ownerPhone }}</span>
+          <span class="detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.ownerPhone) }">{{ displayDetailValue(oriInfo.ownerPhone) }}</span>
         </div>
         <div class="divider"></div>
         <!-- 投保险种 -->
@@ -2081,12 +2109,67 @@ import { downloadByUrl, uploadToOss } from '@/api/file';
 import { validateAmount, validFileSize } from '@/utils/validate';
 import { updateQuotation, updateNoCascade, updateAcceptInsurance } from '@/api/workorder';
 import Message from '@/utils/message';
-import { UploadFilled } from '@element-plus/icons-vue';
+import { Document, UploadFilled } from '@element-plus/icons-vue';
 import EditBaseWorkorder from './EditBaseWorkorder.vue';
 import Loading from '@/utils/loading';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+
+/**
+ * 判断详情文本是否缺失。接口中的 null、undefined 和只包含空白的字符串都代表未录入；
+ * 数值 0 对普通文本仍是有效值，避免影响状态、比例等允许为零的业务字段。
+ *
+ * @param {*} value 后端详情接口返回的原始字段值
+ * @returns {boolean} 是否应按暂无信息展示
+ */
+const isEmptyDetailValue = (value) => (
+  value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
+);
+
+/**
+ * 将缺失文本统一转换为短横线占位，使字段标签保持稳定对齐，同时避免大片“暂无信息”文案造成噪声。
+ *
+ * @param {*} value 后端详情接口返回的原始字段值
+ * @returns {*} 原值或用于空状态的短横线
+ */
+const displayDetailValue = (value) => isEmptyDetailValue(value) ? '—' : value;
+
+/**
+ * 判断车辆重量、排量、座位及金额等正数指标是否未填写。这些字段的默认值 0 不具备实际业务含义，
+ * 因而与 null 和空字符串一起按缺失处理；真实的正数值保持原样展示。
+ *
+ * @param {*} value 车辆证件或发票中的数值字段
+ * @returns {boolean} 是否属于无意义的空指标
+ */
+const isEmptyMetricValue = (value) => isEmptyDetailValue(value) || Number(value) === 0;
+
+/**
+ * 格式化车辆正数指标的详情展示。
+ *
+ * @param {*} value 车辆证件或发票中的数值字段
+ * @returns {*} 有效指标值或空状态短横线
+ */
+const displayMetricValue = (value) => isEmptyMetricValue(value) ? '—' : value;
+
+/**
+ * 日期字段仅在存在有效秒级时间戳时执行格式化，避免空值被转换成 1970 年或无效日期。
+ *
+ * @param {*} value 后端返回的秒级时间戳
+ * @returns {string} 格式化日期或空状态短横线
+ */
+const displayDateValue = (value) => isEmptyMetricValue(value) ? '—' : formatSecondTimestamp(value);
+
+/**
+ * 过户状态只有明确返回 0 或 1 时才展示业务结论，未录入时不擅自解释为“非过户”。
+ *
+ * @param {*} value 后端返回的过户状态
+ * @returns {string} 过户状态文案或空状态短横线
+ */
+const displayTransferValue = (value) => {
+  if (isEmptyDetailValue(value)) return '—';
+  return Number(value) === 1 ? '过户' : '非过户';
+};
 
 const stepStatus = computed(() => {
   let data = {
@@ -2679,8 +2762,8 @@ const buildPage = async () => {
 
 /**
  * 将工单聚合详情恢复为流程表单与展示状态。
- * 该过程回填报价、上下游计算方式、支付和承保资料，重建各类附件预览及文件 ID，依据历史比例字段
- * 决定页面使用固定金额还是百分比输入，并把有效历史险种重新归入三类展示区域。
+ * 该过程回填报价、上下游计算方式、支付和承保资料，重建各类附件预览及文件 ID；费用输入模式优先
+ * 尊重历史比例，只有明确存在固定金额且比例缺失时才使用金额，两者都缺失时统一回退为比例。
  */
 const buildInfo = () => {
   console.log(oriInfo.value);
@@ -2816,34 +2899,45 @@ const buildInfo = () => {
     type3: []
   };
 
-  if (oriInfo.value.upstreamCommercialPercentage == null){
-    showFlag.upstream_commercial = true;
-  }
-  if (oriInfo.value.upstreamCompulsoryPercentage == null){
-    showFlag.upstream_compulsory = true;
-  }
-  if (oriInfo.value.upstreamTaxPercentage == null){
-    showFlag.upstream_tax = true;
-  }
-
-  if (oriInfo.value.downstreamCommercialPercentage == null){
-    showFlag.downstream_commercial = true;
-  }
-  if (oriInfo.value.downstreamCompulsoryPercentage == null){
-    showFlag.downstream_compulsory = true;
-  }
-  if (oriInfo.value.downstreamTaxPercentage == null){
-    showFlag.downstream_tax = true;
-  }
+  /*
+   * 每次回填都完整重算八个费用维度，避免同一组件刷新其他工单后沿用上一次的切换状态。
+   * 后端比例字段是统一首选契约；只有历史数据明确保存了金额而未保存比例时才进入金额模式。
+   */
+  showFlag.upstream_commercial = shouldUseAmountMode(
+    oriInfo.value.upstreamCommercialAmount,
+    oriInfo.value.upstreamCommercialPercentage
+  );
+  showFlag.upstream_compulsory = shouldUseAmountMode(
+    oriInfo.value.upstreamCompulsoryAmount,
+    oriInfo.value.upstreamCompulsoryPercentage
+  );
+  showFlag.upstream_tax = shouldUseAmountMode(
+    oriInfo.value.upstreamVehicleAndVesselTaxAmount,
+    oriInfo.value.upstreamVehicleAndVesselTaxPercentage
+  );
+  showFlag.downstream_commercial = shouldUseAmountMode(
+    oriInfo.value.downstreamCommercialAmount,
+    oriInfo.value.downstreamCommercialPercentage
+  );
+  showFlag.downstream_compulsory = shouldUseAmountMode(
+    oriInfo.value.downstreamCompulsoryAmount,
+    oriInfo.value.downstreamCompulsoryPercentage
+  );
+  showFlag.downstream_tax = shouldUseAmountMode(
+    oriInfo.value.downstreamVehicleAndVesselTaxAmount,
+    oriInfo.value.downstreamVehicleAndVesselTaxPercentage
+  );
+  showFlag.upstream_non_motor = shouldUseAmountMode(
+    oriInfo.value.upstreamNonMotorAmount,
+    oriInfo.value.upstreamNonMotorPercentage
+  );
+  showFlag.downstream_non_motor = shouldUseAmountMode(
+    oriInfo.value.downstreamNonMotorAmount,
+    oriInfo.value.downstreamNonMotorPercentage
+  );
 
   if (oriInfo.value.nonMotorAmount != null){
     showFlag.is_have_non_motor = true;
-    if (oriInfo.value.upstreamNonMotorPercentage == null){
-      showFlag.upstream_non_motor = true;
-    }
-    if (oriInfo.value.downstreamNonMotorPercentage == null){
-      showFlag.downstream_non_motor = true;
-    }
   }
 
   let noSelectValue = ["不投保", "不需要"];
@@ -2932,6 +3026,18 @@ const getDataById = async () => {
 const handleNonMotorChange = (flag) => {
   showFlag.is_have_non_motor = flag;
 }
+
+/**
+ * 判断单项上下游费用是否应使用固定金额输入。比例是新建和空数据的统一默认模式；仅当后端存在
+ * 明确金额且比例确实缺失时，才恢复历史金额模式。金额为 0 仍视为明确保存的数据，避免篡改历史选择。
+ *
+ * @param {*} amount 后端返回的固定金额
+ * @param {*} percentage 后端返回的费用比例
+ * @returns {boolean} true 表示按金额，false 表示按比例
+ */
+const shouldUseAmountMode = (amount, percentage) => (
+  isEmptyDetailValue(percentage) && !isEmptyDetailValue(amount)
+);
 
 /**
 
@@ -3447,7 +3553,7 @@ const buildQuotationUpdateFrom = (status) => {
   else {
     data.upstreamCompulsoryPercentage = Number(info.upstreamCompulsoryPercentage);
   }
-  if(showFlag.upstream_vehicle_and_tax){
+  if(showFlag.upstream_tax){
     data.upstreamVehicleAndVesselTaxAmount = Number(info.upstreamVehicleAndVesselTaxAmount);
   }
   else {
@@ -3466,7 +3572,7 @@ const buildQuotationUpdateFrom = (status) => {
   else {
     data.downstreamCompulsoryPercentage = Number(info.downstreamCompulsoryPercentage);
   }
-  if (showFlag.downstream_vehicle_and_tax){
+  if (showFlag.downstream_tax){
     data.downstreamVehicleAndVesselTaxAmount = Number(info.downstreamVehicleAndVesselTaxAmount); 
   }
   else {
@@ -3814,6 +3920,47 @@ const handleRefresh = () => {
   margin-right: 20px;
   white-space: nowrap;
 }
+
+/**
+ * 证件预览和未上传占位共用固定尺寸，避免异步文件数据到达时引起详情布局跳动。
+ * 空状态使用低强调度的虚线边框、文档图标和明确文案，与真实图片加载错误保持语义区分。
+ */
+.document-preview,
+.document-empty {
+  width: 124px;
+  height: 124px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.document-preview {
+  border: 1px solid #ebeef5;
+  background-color: #f8fafc;
+}
+
+.document-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed #cbd5e1;
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.document-empty__icon {
+  width: 28px;
+  height: 28px;
+  color: #94a3b8;
+}
+
+.document-empty__icon :deep(svg) {
+  width: 100%;
+  height: 100%;
+}
 .img_detail_show_right {
   display: flex;
   justify-content: left;
@@ -3827,6 +3974,16 @@ const handleRefresh = () => {
 
 .form_gap {
   margin-right: 30px;
+}
+
+.detail-value {
+  min-width: 16px;
+  color: #303133;
+}
+
+.detail-value--empty {
+  color: #a8abb2;
+  font-weight: 400;
 }
 
 .form_margin {

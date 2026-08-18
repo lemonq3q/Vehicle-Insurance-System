@@ -1407,6 +1407,17 @@ const handleSubmit = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
     if(valid){
+      /**
+       * 工单必须携带当前企业的险种快照。若企业尚未配置险种，继续提交只会形成没有业务意义的
+       * 空险种工单，因此在进入上传和保存流程前直接提示，避免产生无效请求。
+       */
+      const insuranceCount = insuranceOptions.value.type1.length
+        + insuranceOptions.value.type2.length
+        + insuranceOptions.value.type3.length;
+      if (insuranceCount === 0) {
+        Message.error('当前企业尚未配置险种，无法创建工单，请先联系管理员完成险种配置');
+        return;
+      }
       Loading.open();
       try{
         await waitFileUpload();
@@ -1524,7 +1535,7 @@ const buildInsertData = () => {
     data.vehicleCertificate.approvedLoadCapacity = Math.trunc(transNumStrToNum(info.vehicleCertificate.approvedLoadCapacity));
 
     data.vehicleInvoice = { ...info.vehicleInvoice };
-    data.vehicleInvoice.approvedLoadCapacity = transNumStrToNum(info.vehicleInvoice.invoiceAmount);
+    data.vehicleInvoice.invoiceAmount = transNumStrToNum(info.vehicleInvoice.invoiceAmount);
     data.vehicleInvoice.seats = Math.trunc(transNumStrToNum(info.vehicleInvoice.seats));
     data.vehicleInvoice.approvedLoadCapacity = Math.trunc(transNumStrToNum(info.vehicleInvoice.approvedLoadCapacity));
   }

@@ -28,6 +28,8 @@ maintenance:
         base-url: ${SAAS_MAINTENANCE_BASE_URL:http://localhost:8081}
       - service-id: insurance-backend
         base-url: ${INSURANCE_MAINTENANCE_BASE_URL:http://localhost:8080}
+      - service-id: monitor-backend
+        base-url: ${MONITOR_MAINTENANCE_BASE_URL:http://localhost:8083}
     stages:
       - stage: 1
         groups:
@@ -63,9 +65,16 @@ maintenance:
             tasks:
               - task-id: saas-subscriptions
                 target-service: saas-backend
-                depends-on: [saas-balance-access]
+                depends-on: [saas-recent-reminders]
                 required-services: [saas-backend]
                 timeout-seconds: 1200
+          - group: reminder
+            tasks:
+              - task-id: saas-recent-reminders
+                target-service: saas-backend
+                depends-on: [saas-balance-access]
+                required-services: [saas-backend, monitor-backend]
+                timeout-seconds: 600
           - group: cleanup
             tasks:
               - task-id: saas-enterprise-data-retention

@@ -58,6 +58,21 @@ public interface EnterpriseMapper {
           + "VALUES(#{enterpriseId},0,0,0,0,0,0,NOW(),NOW())")
   int insertDefaultSubscription(Long enterpriseId);
 
+  /**
+   * 从存量企业迁移得到的标准险种目录为新企业建立独立副本。险种属于企业业务数据，复制后可在
+   * 各企业内独立维护；仅复制有效记录，主键由目标表重新生成，审计人员记为企业创建者。
+   *
+   * @param enterpriseId 新创建企业的主键
+   * @param userId 创建企业并触发初始化的用户主键
+   * @return 新企业成功初始化的险种数量
+   */
+  @Insert(
+      "INSERT INTO biz_insurance_product(enterprise_id,name,type,options_json,default_option_json,deductible_options_json,default_deductible_option_json,remark,created_at,updated_at,updated_by,deleted) "
+          + "SELECT #{enterpriseId},name,type,options_json,default_option_json,deductible_options_json,default_deductible_option_json,remark,NOW(),NOW(),#{userId},0 "
+          + "FROM biz_insurance_product WHERE enterprise_id=1 AND deleted=0")
+  int insertDefaultInsuranceProducts(
+      @Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
+
   @Update(
       "UPDATE tenant_enterprise SET name=#{name},contact_name=#{contactName},contact_phone=#{contactPhone},updated_at=NOW(),updated_by=#{userId} WHERE id=#{id} AND deleted=0")
   int updateEnterprise(Map<String, Object> enterprise);

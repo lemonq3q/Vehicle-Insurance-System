@@ -20,7 +20,7 @@
       <button class="header-icon" type="button" aria-label="折叠侧边栏" @click="toggleSidebar">
         <i class="layui-icon layui-icon-shrink-right"></i>
       </button>
-      <div>
+      <div class="header-context">
         <strong>{{ pageTitle }}</strong>
         <span>{{ enterpriseName }}</span>
       </div>
@@ -304,6 +304,16 @@ export default {
 .portal-header span {
   color: var(--portal-muted);
   font-size: 13px;
+}
+
+.header-context {
+  flex: none;
+  min-width: 160px;
+}
+
+.header-context strong,
+.header-context span {
+  white-space: nowrap;
 }
 
 .header-icon {

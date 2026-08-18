@@ -51,6 +51,14 @@ maintenance:
     zone: Asia/Shanghai
 
 saas:
+  reminder:
+    first-expiry-warning-days: ${REMINDER_FIRST_EXPIRY_WARNING_DAYS:7}
+    urgent-expiry-warning-days: ${REMINDER_URGENT_EXPIRY_WARNING_DAYS:1}
+    quota-first-percent: ${REMINDER_QUOTA_FIRST_PERCENT:80}
+    quota-urgent-percent: ${REMINDER_QUOTA_URGENT_PERCENT:90}
+    near-suspension-ratio: ${REMINDER_NEAR_SUSPENSION_RATIO:0.80}
+    data-deletion-warning-days: ${REMINDER_DATA_DELETION_WARNING_DAYS:30,15,3}
+    monitor-merge-url: ${MONITOR_REMINDER_MERGE_URL:http://localhost:8083/internal/reminders/merge}
   data-retention:
     # 最近一次套餐结束超过该天数后，清除企业在车险域内的业务资料；成员、钱包和订阅不受影响。
     retention-days: ${ENTERPRISE_DATA_RETENTION_DAYS:90}

@@ -2,6 +2,7 @@ package com.example.insurancesystem.saas.maintenance;
 
 import com.example.insurancesystem.maintenance.MaintenanceTask;
 import com.example.insurancesystem.maintenance.SimpleMaintenanceTask;
+import com.example.insurancesystem.saas.service.ReminderService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +28,16 @@ public class SaasMaintenanceTaskConfiguration {
     public MaintenanceTask subscriptionTask(SubscriptionMaintenanceCoordinator coordinator) {
         return new SimpleMaintenanceTask("saas-subscriptions", 300, true,
                 context -> coordinator.processExpiredSubscriptions());
+    }
+
+    /**
+     * 余额访问兜底完成后生成提醒、订阅到期处理前读取即将到期状态。任务需要调用监控后端，
+     * 因此禁止单机执行，并由总协调器确认 SaaS 与监控服务均可用。
+     */
+    @Bean
+    public MaintenanceTask reminderTask(ReminderService service) {
+        return new SimpleMaintenanceTask("saas-recent-reminders", 250, false,
+                context -> service.generateDailyReminders());
     }
 
     /**

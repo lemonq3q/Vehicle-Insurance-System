@@ -13,6 +13,39 @@ let currentEnterpriseId = 20001;
 const smsCodes = new Map();
 const MOCK_NOW = new Date('2026-07-14T12:00:00');
 
+const recentReminders = [
+  {
+    id: 110003,
+    reminderType: 'WALLET_BALANCE_NEAR_SUSPENSION',
+    reminderStage: 'NEAR_SUSPENSION',
+    severity: 'CRITICAL',
+    title: '账户余额接近套餐停止阈值',
+    content: '当前余额为 ¥-82.00，已达到欠费预警阈值 ¥-80.00。余额低于 ¥-100.00 时套餐服务将暂停，请尽快充值。',
+    occurredAt: '2026-07-14 10:30:00',
+    revision: 2
+  },
+  {
+    id: 110002,
+    reminderType: 'SUBSCRIPTION_EXPIRING_NO_AUTO_RENEW',
+    reminderStage: '1D',
+    severity: 'WARNING',
+    title: '套餐将在1天后到期',
+    content: '您的“专业版”套餐将于 2026-07-15 23:59 到期，当前未开启自动续费，请及时安排续费。',
+    occurredAt: '2026-07-14 04:00:00',
+    revision: 2
+  },
+  {
+    id: 110001,
+    reminderType: 'WORKORDER_QUOTA_NEAR_LIMIT',
+    reminderStage: '90_PERCENT',
+    severity: 'WARNING',
+    title: '工单额度即将用尽',
+    content: '本周期工单额度为 5000 单，已使用 4520 单（90.40%），剩余 480 单。',
+    occurredAt: '2026-07-13 04:00:00',
+    revision: 2
+  }
+];
+
 const filterByTimeRange = (rows, params, field = 'createdAt') => {
   const start = params.startTime ? new Date(params.startTime.replace(' ', 'T')).getTime() : null;
   const end = params.endTime ? new Date(params.endTime.replace(' ', 'T')).getTime() : null;
@@ -646,6 +679,15 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       redirectUrl: `${process.env.VUE_APP_INSURANCE_FRONTEND_URL || 'http://localhost:8888'}/sso/callback?code=mock-insurance-sso-code`,
       expiresIn: 60
     }, '授权成功');
+  }
+  if (url === '/portal/reminders/recent' && method === 'GET') {
+    const severityOrder = { CRITICAL: 3, WARNING: 2, NOTICE: 1 };
+    const monthAgo = new Date(MOCK_NOW);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    return ok(recentReminders
+      .filter(item => parseDateTime(item.occurredAt) >= monthAgo)
+      .sort((left, right) => severityOrder[right.severity] - severityOrder[left.severity]
+        || String(right.occurredAt).localeCompare(String(left.occurredAt))));
   }
   if (url === '/portal/enterprise/current') {
     return ok({

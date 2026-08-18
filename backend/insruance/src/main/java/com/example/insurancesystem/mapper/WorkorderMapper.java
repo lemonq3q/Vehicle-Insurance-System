@@ -20,14 +20,15 @@ public interface WorkorderMapper extends BatchBaseMapper<Workorder> {
     List<WorkorderDTO> selectByWorkorderSearchDTO(WorkorderSearchDTO params);
 
     /**
-     * 查询进入指定续保提醒窗口且未关闭提醒的工单。
+     * 查询至少完整经过一个指定周期、且当前正好到达周期边界的未关闭提醒工单。
      */
     List<WorkorderDTO> selectRenewByWorkorderSearchDTO(WorkorderSearchDTO params);
 
     /**
-     * 统计提醒窗口内的续保工单，可按创建人限定个人范围。
+     * 统计到达续保周期边界的工单，可按创建人限定个人范围。
      */
-    Integer selectRenewCount(@Param("renewalRemindDays") Integer renewalRemindDays,
+    Integer selectRenewCount(@Param("renewalCycleDays") Integer renewalCycleDays,
+                             @Param("renewalAdvanceDays") Integer renewalAdvanceDays,
                              @Param("createBy") Long createBy);
 
     /**

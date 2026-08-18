@@ -57,6 +57,11 @@ export const exchangePortalSsoCode = code => post('/portal/sso/exchange', { code
  */
 export const getEnterpriseCurrent = () => get('/portal/enterprise/current');
 /**
+ * 查询当前企业最近一个月内的仪表盘提醒。后端已按严重程度和提醒时间倒序排列，
+ * 页面不自行扩展时间范围，避免过期业务风险长期占用近期提醒区域。
+ */
+export const getRecentReminders = () => get('/portal/reminders/recent');
+/**
  * 创建新企业并将当前账号设为拥有者。
  */
 export const createEnterprise = data => post('/portal/enterprise', data);
