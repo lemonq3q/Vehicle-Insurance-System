@@ -330,39 +330,27 @@ CREATE TABLE IF NOT EXISTS `auth_role_permission` (
 
 CREATE TABLE IF NOT EXISTS `auth_role_permission_archive` LIKE `auth_role_permission`;
 
-CREATE TABLE IF NOT EXISTS `saas_usage_daily` (
+CREATE TABLE IF NOT EXISTS `monitor_enterprise_daily_usage` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `stat_date` date DEFAULT NULL COMMENT '统计日期',
-  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
-  `metric_code` varchar(50) DEFAULT NULL COMMENT 'REQUEST OCR',
-  `dimension` varchar(100) DEFAULT NULL COMMENT '接口路径 OCR类型或模块',
-  `count_value` bigint NOT NULL DEFAULT 0 COMMENT '次数',
-  `archived_at` datetime DEFAULT NULL COMMENT '归档时间',
-  `archive_batch_no` varchar(64) DEFAULT NULL COMMENT '归档批次',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='每日用量汇总表';
-
-CREATE TABLE IF NOT EXISTS `saas_usage_monthly` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `stat_month` char(7) DEFAULT NULL COMMENT '统计月份',
-  `enterprise_id` bigint DEFAULT NULL COMMENT '企业ID',
-  `metric_code` varchar(50) DEFAULT NULL COMMENT 'REQUEST OCR',
-  `dimension` varchar(100) DEFAULT NULL COMMENT '接口路径 OCR类型或模块',
-  `count_value` bigint NOT NULL DEFAULT 0 COMMENT '次数',
-  `archived_at` datetime DEFAULT NULL COMMENT '归档时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='每月用量汇总表';
-
-CREATE TABLE IF NOT EXISTS `saas_usage_archive_job` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `batch_no` varchar(64) DEFAULT NULL COMMENT '批次号',
-  `stat_date` date DEFAULT NULL COMMENT '归档日期',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1执行中 2成功 3失败',
-  `started_at` datetime DEFAULT NULL COMMENT '开始时间',
-  `finished_at` datetime DEFAULT NULL COMMENT '结束时间',
-  `error_message` varchar(1000) DEFAULT NULL COMMENT '错误信息',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用量归档任务表';
+  `stat_date` date NOT NULL COMMENT '自然日，Asia/Shanghai [00:00,次日00:00)',
+  `enterprise_id` bigint NOT NULL COMMENT '企业ID',
+  `processed_workorder_count` bigint unsigned NOT NULL DEFAULT 0 COMMENT '当日处理完成工单数',
+  `request_count` bigint unsigned NOT NULL DEFAULT 0 COMMENT '当日企业鉴权业务API请求次数',
+  `ocr_count` bigint unsigned NOT NULL DEFAULT 0 COMMENT '当日OCR供应商调用次数',
+  `new_customer_count` bigint unsigned NOT NULL DEFAULT 0 COMMENT '当日新增下游商户数',
+  `upstream_income` decimal(18,2) NOT NULL DEFAULT 0.00 COMMENT '当日上游合并费用',
+  `downstream_cost` decimal(18,2) NOT NULL DEFAULT 0.00 COMMENT '当日下游合并费用',
+  `profit_amount` decimal(18,2) NOT NULL DEFAULT 0.00 COMMENT '当日盈利',
+  `is_finalized` tinyint NOT NULL DEFAULT 0 COMMENT '是否为自然日终值',
+  `calculated_at` datetime DEFAULT NULL COMMENT '计算指标更新时间',
+  `finalized_at` datetime DEFAULT NULL COMMENT '自然日终算时间',
+  `last_flushed_at` datetime DEFAULT NULL COMMENT 'Redis指标归档时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_monitor_enterprise_usage_day` (`stat_date`,`enterprise_id`),
+  KEY `idx_monitor_enterprise_usage_query` (`enterprise_id`,`stat_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业每日统计宽表';
 
 CREATE TABLE IF NOT EXISTS `biz_merchant_category` (
   `id` bigint NOT NULL AUTO_INCREMENT,

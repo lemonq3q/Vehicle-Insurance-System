@@ -30,6 +30,16 @@ server:
 insurance:
   tenant-isolation:
     enabled: true
+  oss:
+    temporary-url:
+      # 私有 OSS GET 签名和 Redis 缓存的统一生命周期；缓存必须早于签名失效。
+      expire-minutes: ${OSS_TEMP_URL_EXPIRE_MINUTES:1440}
+      cache-minutes: ${OSS_TEMP_URL_CACHE_MINUTES:1380}
+  batch-import:
+    templates:
+      # 只保存 Bucket 内的对象路径；模板接口通过统一 OSSUtil 生成 Redis 缓存的临时下载地址。
+      upstream-object-name: insurance/templates/vehicle-insurance-upstream-import.xlsx
+      downstream-object-name: insurance/templates/vehicle-insurance-downstream-import.xlsx
   sso:
     # 车险后端使用的 SaaS 后端内部授权码兑换地址。
     saas-exchange-url: ${SAAS_SSO_EXCHANGE_URL:http://localhost:8081/internal/sso/exchange}

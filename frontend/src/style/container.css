@@ -107,6 +107,17 @@
   background-image: url("/src/assets/icons/export.png");
   margin-right: 5px;
 }
+.import_icon {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-right: 5px;
+  background-image: url("/src/assets/icons/export.png");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: rotate(180deg);
+}
 .table_header {
   display: flex;
   justify-content: space-between;
@@ -116,8 +127,18 @@
   align-items: center;
   font-size: 14px;
   color: #606266;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.header_right_button {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 .output_button:hover .export_icon{
+  background-image: url("/src/assets/icons/export_hover.png");
+}
+.output_button:hover .import_icon{
   background-image: url("/src/assets/icons/export_hover.png");
 }
 .output_button:hover {

@@ -1,5 +1,9 @@
 # 运营监控平台实施指导文档
 
+> 企业统计部分已被 `docs/enterprise-statistics-design.md` 和
+> `V20260821_01_refactor_enterprise_statistics.sql` 取代。当前采用单张自然日宽表，
+> 不再维护 `monitor_system_daily_stat` 和 `monitor_monthly_revenue`；本文其余监控账号、审计和页面设计仍可参考。
+
 > 状态：数据库基线已落地（2026-07-22）  
 > 本文是后续“静态 UI → Mock 前端与 API 文档 → 后端 → 联调”的实时实施台账。每完成一个阶段，都应更新本文的状态、决策记录、接口链接和验证结果。
 

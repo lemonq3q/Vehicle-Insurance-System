@@ -7,6 +7,7 @@ import com.example.insurancesystem.saas.mapper.FinanceMapper;
 import com.example.insurancesystem.saas.integration.InsuranceSessionInvalidationEvent;
 import com.example.insurancesystem.saas.service.EnterpriseService;
 import com.example.insurancesystem.saas.support.BusinessCodeGenerator;
+import com.example.insurancesystem.saas.support.DefaultInsuranceProductCatalog;
 import com.example.insurancesystem.saas.support.PortalContextService;
 import com.example.insurancesystem.saas.support.PortalMaps;
 import com.example.insurancesystem.saas.support.SaasCodeConstraints;
@@ -26,18 +27,21 @@ public class EnterpriseServiceImpl implements EnterpriseService {
   private final PortalContextService context;
   private final BusinessCodeGenerator codes;
   private final ApplicationEventPublisher events;
+  private final DefaultInsuranceProductCatalog insuranceProductCatalog;
 
   public EnterpriseServiceImpl(
       EnterpriseMapper mapper,
       FinanceMapper financeMapper,
       PortalContextService context,
       BusinessCodeGenerator codes,
-      ApplicationEventPublisher events) {
+      ApplicationEventPublisher events,
+      DefaultInsuranceProductCatalog insuranceProductCatalog) {
     this.mapper = mapper;
     this.financeMapper = financeMapper;
     this.context = context;
     this.codes = codes;
     this.events = events;
+    this.insuranceProductCatalog = insuranceProductCatalog;
   }
 
   public Map<String, Object> current() {
@@ -94,9 +98,10 @@ public class EnterpriseServiceImpl implements EnterpriseService {
      * 成员、钱包和订阅共用事务，任何一步失败都会整体回滚，避免留下不能录单的半成品企业。
      */
     int initializedInsuranceCount =
-        mapper.insertDefaultInsuranceProducts(enterpriseId, context.userId());
-    if (initializedInsuranceCount == 0)
-      throw new BusinessException(500, "标准险种目录尚未配置，企业创建失败，请联系系统管理员");
+        mapper.insertDefaultInsuranceProducts(
+            enterpriseId, context.userId(), insuranceProductCatalog.getProducts());
+    if (initializedInsuranceCount != insuranceProductCatalog.getProducts().size())
+      throw new BusinessException(500, "标准险种目录初始化不完整，企业创建失败，请联系系统管理员");
     insertMemberChange(
         enterpriseId, "JOIN", context.userId(), context.userId(), null, "OWNER", null, "创建企业并加入");
     return PortalMaps.camel(mapper.findEnterprise(enterpriseId));

@@ -10,6 +10,34 @@
         SELECT id FROM biz_merchant_category WHERE code = #{code} AND status = 1 AND deleted = 0 LIMIT 1
     </select>
 
+    <!--
+      主体沿用表的 AUTO_INCREMENT 规则；MyBatis 通过 JDBC generated keys 按插入顺序把数据库生成的
+      主键回填到集合元素，服务层随后才组装区域和人员关系，避免自行维护另一套主键生成规则。
+    -->
+    <insert id="insertImportBatch" useGeneratedKeys="true" keyProperty="list.id" keyColumn="id">
+        INSERT INTO biz_merchant
+        (enterprise_id, code, name, category_id, location, address, contact, phone,
+         bank, bank_card_num, channel, service_phone, default_area_code,
+         created_at, updated_at, updated_by, deleted)
+        VALUES
+        <foreach collection="list" item="merchant" separator=",">
+            (#{merchant.enterpriseId}, #{merchant.code}, #{merchant.name}, #{merchant.categoryId},
+             #{merchant.location}, #{merchant.address}, #{merchant.contact},
+             #{merchant.phone}, #{merchant.bank}, #{merchant.bankCardNum}, #{merchant.channel},
+             #{merchant.servicePhone}, #{merchant.defaultAreaCode}, NOW(), NOW(),
+             #{merchant.updateBy}, #{merchant.isDelete})
+        </foreach>
+    </insert>
+
+    <select id="selectExistingNames" resultType="java.lang.String">
+        SELECT name FROM biz_merchant
+        WHERE enterprise_id = #{enterpriseId} AND deleted = 0
+          AND name IN
+          <foreach collection="names" item="name" open="(" separator="," close=")">
+              #{name}
+          </foreach>
+    </select>
+
     <select id="selectByUpstreamSearchDTO" resultType="com.example.insurancesystem.domain.merchant.UpstreamDTO">
         SELECT m.id, m.code, m.name, c.name AS type, m.location, m.address,
                m.contact, m.phone,

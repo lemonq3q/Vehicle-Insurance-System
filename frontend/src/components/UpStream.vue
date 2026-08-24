@@ -51,6 +51,10 @@
         <span>查询结果</span>
       </div>
       <div class="header_right_button">
+        <div class="output_button" @click="batchImportRef.open()" v-if="isHasPerm('merchant:update')">
+          <i class="import_icon"></i>
+          <span class="no_select">批量导入</span>
+        </div>
         <div class="output_button" @click="handleExport">
           <i class="export_icon"></i>
           <span class="no_select">导出</span>
@@ -88,6 +92,7 @@
       <AppPagination v-model:page-num="page.pageNum" v-model:page-size="page.pageSize"
         :total="page.total" @change="handlePaginationChange" />
     </div>
+    <MerchantBatchImportDialog ref="batchImportRef" business-type="upstream" @success="handleImportSuccess" />
   </div>
 
 </template>
@@ -104,8 +109,10 @@ import { useRouter } from 'vue-router';
 import { isHasPerm } from '@/utils/authenticate';
 import Loading from '@/utils/loading';
 import AppPagination from '@/components/common/AppPagination.vue';
+import MerchantBatchImportDialog from '@/components/common/MerchantBatchImportDialog.vue';
 
 const tableLoading = ref(false);
+const batchImportRef = ref();
 
 const router = useRouter();
 const page = reactive({
@@ -299,6 +306,14 @@ const handleAdd = () => {
       id: 0
     }
   });
+}
+
+/**
+ * 批量导入至少写入一条上游机构后刷新第一页，使用户立即看到新增记录。
+ */
+const handleImportSuccess = () => {
+  page.pageNum = 1;
+  getData();
 }
 
 /**

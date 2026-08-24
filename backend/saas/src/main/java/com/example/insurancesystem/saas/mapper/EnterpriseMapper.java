@@ -1,5 +1,6 @@
 package com.example.insurancesystem.saas.mapper;
 
+import com.example.insurancesystem.saas.domain.DefaultInsuranceProductDefinition;
 import java.util.List;
 import java.util.Map;
 import org.apache.ibatis.annotations.*;
@@ -59,19 +60,28 @@ public interface EnterpriseMapper {
   int insertDefaultSubscription(Long enterpriseId);
 
   /**
-   * 从存量企业迁移得到的标准险种目录为新企业建立独立副本。险种属于企业业务数据，复制后可在
-   * 各企业内独立维护；仅复制有效记录，主键由目标表重新生成，审计人员记为企业创建者。
+   * 将资源目录中的全部标准险种一次性写入新企业。使用单条多值 INSERT 保证初始化效率，企业主键和
+   * 创建人由当前创建事务统一提供，各企业落库后拥有互不影响的独立险种副本。
    *
    * @param enterpriseId 新创建企业的主键
    * @param userId 创建企业并触发初始化的用户主键
+   * @param products 已完成启动期校验的标准险种资源
    * @return 新企业成功初始化的险种数量
    */
-  @Insert(
-      "INSERT INTO biz_insurance_product(enterprise_id,name,type,options_json,default_option_json,deductible_options_json,default_deductible_option_json,remark,created_at,updated_at,updated_by,deleted) "
-          + "SELECT #{enterpriseId},name,type,options_json,default_option_json,deductible_options_json,default_deductible_option_json,remark,NOW(),NOW(),#{userId},0 "
-          + "FROM biz_insurance_product WHERE enterprise_id=1 AND deleted=0")
+  @Insert({
+    "<script>",
+    "INSERT INTO biz_insurance_product(enterprise_id,name,type,options_json,default_option_json,deductible_options_json,default_deductible_option_json,remark,created_at,updated_at,updated_by,deleted) VALUES",
+    "<foreach collection='products' item='product' separator=','>",
+    "(#{enterpriseId},#{product.name},#{product.type},#{product.optionsJson},#{product.defaultOptionJson},",
+    "#{product.deductibleOptionsJson,jdbcType=VARCHAR},#{product.defaultDeductibleOptionJson,jdbcType=VARCHAR},",
+    "#{product.remark,jdbcType=VARCHAR},NOW(),NOW(),#{userId},0)",
+    "</foreach>",
+    "</script>"
+  })
   int insertDefaultInsuranceProducts(
-      @Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
+      @Param("enterpriseId") Long enterpriseId,
+      @Param("userId") Long userId,
+      @Param("products") List<DefaultInsuranceProductDefinition> products);
 
   @Update(
       "UPDATE tenant_enterprise SET name=#{name},contact_name=#{contactName},contact_phone=#{contactPhone},updated_at=NOW(),updated_by=#{userId} WHERE id=#{id} AND deleted=0")

@@ -1,8 +1,10 @@
 package com.example.insurancesystem.config;
 
 import com.example.insurancesystem.filter.JwtAuthenticationTokenFilter;
+import com.example.insurancesystem.filter.EnterpriseApiUsageFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,6 +36,9 @@ public class SecurityConfig {
     private JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
 
     @Autowired
+    private EnterpriseApiUsageFilter enterpriseApiUsageFilter;
+
+    @Autowired
     private AuthenticationEntryPoint authenticationEntryPoint;
 
     @Autowired
@@ -56,6 +61,18 @@ public class SecurityConfig {
      */
     public AuthenticationManager authenticationManager() throws Exception{
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    /**
+     * 禁止 Servlet 容器自动注册企业统计过滤器。它必须只在 Spring Security 链中、JWT 身份解析之后执行；
+     * 若同时自动注册，OncePerRequest 标记可能在认证前被占用，导致合法企业请求无法计数。
+     */
+    @Bean
+    public FilterRegistrationBean<EnterpriseApiUsageFilter> enterpriseApiUsageFilterRegistration() {
+        FilterRegistrationBean<EnterpriseApiUsageFilter> registration =
+                new FilterRegistrationBean<>(enterpriseApiUsageFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -82,6 +99,12 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated();
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        /*
+         * 统计过滤器放在 Spring Security 已知顺序的用户名密码过滤器之后；JWT 过滤器位于其之前，
+         * 因而到达统计过滤器时企业认证上下文已经建立。不能以自定义 JWT 类作为相对锚点，
+         * Spring Security 5.5 不为自定义过滤器注册固定顺序。
+         */
+        http.addFilterAfter(enterpriseApiUsageFilter, UsernamePasswordAuthenticationFilter.class);
         http.exceptionHandling()
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler);

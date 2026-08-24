@@ -9,6 +9,8 @@ import com.example.insurancesystem.domain.workorder.VehicleInvoice;
 import com.example.insurancesystem.domain.workorder.VehicleLicense;
 import com.example.insurancesystem.mapper.SystemFileMapper;
 import com.example.insurancesystem.service.OCRService;
+import com.example.insurancesystem.security.EnterpriseContextHolder;
+import com.example.insurancesystem.statistics.UsageMetricRecorder;
 import com.example.insurancesystem.utils.OCRUtil;
 import com.example.insurancesystem.utils.OSSUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,9 @@ public class OCRServiceImpl implements OCRService {
 
     @Autowired
     private SystemFileMapper systemFileMapper;
+
+    @Autowired
+    private UsageMetricRecorder usageMetricRecorder;
 
     @Override
     /**
@@ -93,6 +98,11 @@ public class OCRServiceImpl implements OCRService {
             return new ResponseResult(500, "生成文件访问地址失败");
         }
 
+        /*
+         * 文件和临时地址校验完成后即将实际调用 OCR 供应商，此处按供应商调用次数计量；
+         * 供应商返回失败仍属于一次外部访问，而校验阶段失败不会产生计数。
+         */
+        usageMetricRecorder.recordOcrInvocation(EnterpriseContextHolder.requireEnterpriseId());
         T recognitionData = recognizer.apply(url);
         Map<String, Object> data = new HashMap<>();
         data.put("fileInfo", storedFile);

@@ -1,0 +1,142 @@
+[
+  {
+    "name": "车辆损失险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"投保\",\"value\":\"投保\"}]",
+    "defaultOptionJson": "投保",
+    "deductibleOptionsJson": "[{\"label\":\"0\",\"value\":\"0\"},{\"label\":\"300\",\"value\":\"300\"},{\"label\":\"500\",\"value\":\"500\"},{\"label\":\"1000\",\"value\":\"1000\"},{\"label\":\"2000\",\"value\":\"2000\"}]",
+    "defaultDeductibleOptionJson": "0"
+  },
+  {
+    "name": "第三者责任险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"10万\",\"value\":\"10万\"},{\"label\":\"20万\",\"value\":\"20万\"},{\"label\":\"30万\",\"value\":\"30万\"},{\"label\":\"50万\",\"value\":\"50万\"},{\"label\":\"100万\",\"value\":\"100万\"},{\"label\":\"150万\",\"value\":\"150万\"},{\"label\":\"200万\",\"value\":\"200万\"},{\"label\":\"300万\",\"value\":\"300万\"},{\"label\":\"500万\",\"value\":\"500万\"},{\"label\":\"1000万\",\"value\":\"1000万\"}]",
+    "defaultOptionJson": "100万"
+  },
+  {
+    "name": "司机座位责任险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"3万\",\"value\":\"3万\"},{\"label\":\"4万\",\"value\":\"4万\"},{\"label\":\"5万\",\"value\":\"5万\"},{\"label\":\"10万\",\"value\":\"10万\"},{\"label\":\"15万\",\"value\":\"15万\"},{\"label\":\"20万\",\"value\":\"20万\"},{\"label\":\"30万\",\"value\":\"30万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "乘客座位责任险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"3万\",\"value\":\"3万\"},{\"label\":\"4万\",\"value\":\"4万\"},{\"label\":\"5万\",\"value\":\"5万\"},{\"label\":\"10万\",\"value\":\"10万\"},{\"label\":\"15万\",\"value\":\"15万\"},{\"label\":\"20万\",\"value\":\"20万\"},{\"label\":\"30万\",\"value\":\"30万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "车身划痕损失险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"2000\",\"value\":\"2000\"},{\"label\":\"5000\",\"value\":\"5000\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "三者险附加法定节假日限额翻倍险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"投保\",\"value\":\"投保\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "车轮单独损失险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"2000\",\"value\":\"2000\"},{\"label\":\"3000\",\"value\":\"3000\"},{\"label\":\"5000\",\"value\":\"5000\"},{\"label\":\"8000\",\"value\":\"8000\"},{\"label\":\"1万\",\"value\":\"1万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加绝对免赔率特约条款（车损）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"5%\",\"value\":\"5%\"},{\"label\":\"10%\",\"value\":\"10%\"},{\"label\":\"15%\",\"value\":\"15%\"},{\"label\":\"20%\",\"value\":\"20%\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加绝对免赔率特约条款（三者）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"5%\",\"value\":\"5%\"},{\"label\":\"10%\",\"value\":\"10%\"},{\"label\":\"15%\",\"value\":\"15%\"},{\"label\":\"20%\",\"value\":\"20%\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加绝对免赔率特约条款（车上人员司机）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"5%\",\"value\":\"5%\"},{\"label\":\"10%\",\"value\":\"10%\"},{\"label\":\"15%\",\"value\":\"15%\"},{\"label\":\"20%\",\"value\":\"20%\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加绝对免赔率特约条款（车上人员乘客）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"5%\",\"value\":\"5%\"},{\"label\":\"10%\",\"value\":\"10%\"},{\"label\":\"15%\",\"value\":\"15%\"},{\"label\":\"20%\",\"value\":\"20%\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加精神损害抚慰金责任险（三者）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"3万\",\"value\":\"3万\"},{\"label\":\"4万\",\"value\":\"4万\"},{\"label\":\"5万\",\"value\":\"5万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加精神损害抚慰金责任险（车上人员司机）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"3万\",\"value\":\"3万\"},{\"label\":\"4万\",\"value\":\"4万\"},{\"label\":\"5万\",\"value\":\"5万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加精神损害抚慰金责任险（车上人员乘客）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"3万\",\"value\":\"3万\"},{\"label\":\"4万\",\"value\":\"4万\"},{\"label\":\"5万\",\"value\":\"5万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加医保外用药责任险（三者）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"5万\",\"value\":\"5万\"},{\"label\":\"10万\",\"value\":\"10万\"},{\"label\":\"20万\",\"value\":\"20万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加医保外用药责任险（车上人员司机）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"5万\",\"value\":\"5万\"},{\"label\":\"10万\",\"value\":\"10万\"},{\"label\":\"20万\",\"value\":\"20万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "附加医保外用药责任险（车上人员乘客）",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"1万\",\"value\":\"1万\"},{\"label\":\"2万\",\"value\":\"2万\"},{\"label\":\"5万\",\"value\":\"5万\"},{\"label\":\"10万\",\"value\":\"10万\"},{\"label\":\"20万\",\"value\":\"20万\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "发动机进水损坏除外特约险",
+    "type": 1,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"投保\",\"value\":\"投保\"}]",
+    "defaultOptionJson": "不投保"
+  },
+  {
+    "name": "道路救援服务特约条款",
+    "type": 2,
+    "optionsJson": "[{\"label\":\"不需要\",\"value\":\"不需要\"},{\"label\":\"需要\",\"value\":\"需要\"}]",
+    "defaultOptionJson": "需要"
+  },
+  {
+    "name": "安全检测特约条款",
+    "type": 2,
+    "optionsJson": "[{\"label\":\"不需要\",\"value\":\"不需要\"},{\"label\":\"需要\",\"value\":\"需要\"}]",
+    "defaultOptionJson": "需要"
+  },
+  {
+    "name": "代为驾驶服务特约条款",
+    "type": 2,
+    "optionsJson": "[{\"label\":\"不需要\",\"value\":\"不需要\"},{\"label\":\"需要\",\"value\":\"需要\"}]",
+    "defaultOptionJson": "需要"
+  },
+  {
+    "name": "代为送检服务特约条款",
+    "type": 2,
+    "optionsJson": "[{\"label\":\"不需要\",\"value\":\"不需要\"},{\"label\":\"需要\",\"value\":\"需要\"}]",
+    "defaultOptionJson": "需要"
+  },
+  {
+    "name": "交强险、车船税",
+    "type": 3,
+    "optionsJson": "[{\"label\":\"不投保\",\"value\":\"不投保\"},{\"label\":\"投保\",\"value\":\"投保\"}]",
+    "defaultOptionJson": "投保"
+  }
+]

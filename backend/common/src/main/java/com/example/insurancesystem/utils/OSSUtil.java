@@ -5,6 +5,7 @@ import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.aliyun.oss.model.PutObjectResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +24,12 @@ public class OSSUtil {
 
     @Autowired
     private RedisCache redisCache;
+
+    @Value("${insurance.oss.temporary-url.expire-minutes:1440}")
+    private long temporaryUrlExpireMinutes;
+
+    @Value("${insurance.oss.temporary-url.cache-minutes:1380}")
+    private int temporaryUrlCacheMinutes;
 
     private final static String BUCKET_NAME = "lemonqwq";
 
@@ -96,10 +103,19 @@ public class OSSUtil {
     }
 
     /**
-     * 获取私有对象的 24 小时 GET 预签名地址，并在 Redis 缓存 23 小时。缓存提前一小时失效，
-     * 避免客户端取到即将过期的 URL；OSS 调用失败时返回当前空值，由上层决定是否重试。
+     * 获取私有对象的 GET 预签名地址，并按照系统配置写入 Redis 缓存。
+     * OSS 地址有效期与 Redis 缓存期分别由 insurance.oss.temporary-url 配置；缓存期必须短于地址有效期，
+     * 从而在签名即将失效前主动淘汰缓存，下次访问自动向 OSS 申请新地址。该方法同时服务工单附件、OCR
+     * 和批量导入模板，确保私有对象访问策略保持一致。
+     *
+     * @param objectName Bucket 内的完整对象路径，不包含域名和查询参数
+     * @return 可供浏览器临时访问的签名地址；OSS 生成失败时返回 null
      */
     public String getTmpUrl(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return null;
+        }
+        validateTemporaryUrlConfig();
         String tmpUrl = redisCache.getCacheObject("oss:" + objectName);
         if (tmpUrl != null && !tmpUrl.isEmpty()){
             return tmpUrl;
@@ -107,12 +123,14 @@ public class OSSUtil {
 
         OSS ossClient = OSSClientSingleton.getInstance();
         try {
-            Date expiration = new Date(new Date().getTime() + 60 * 60 * 24 * 1000L);
+            Date expiration = new Date(System.currentTimeMillis()
+                    + TimeUnit.MINUTES.toMillis(temporaryUrlExpireMinutes));
             GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(BUCKET_NAME, objectName, HttpMethod.GET);
             request.setExpiration(expiration);
             URL url = ossClient.generatePresignedUrl(request);
             tmpUrl = url.toString();
-            redisCache.setCacheObject("oss:" + objectName, tmpUrl, 23, TimeUnit.HOURS);
+            redisCache.setCacheObject("oss:" + objectName, tmpUrl,
+                    temporaryUrlCacheMinutes, TimeUnit.MINUTES);
         } catch (OSSException oe) {
             System.out.println("Caught an OSSException, which means your request made it to OSS, "
                     + "but was rejected with an error response for some reason.");
@@ -127,6 +145,18 @@ public class OSSUtil {
             System.out.println("Error Message:" + ce.getMessage());
         }
         return tmpUrl;
+    }
+
+    /**
+     * 在生成或读取临时地址前验证系统配置，防止 Redis 缓存时间不小于 OSS 签名有效期而向前端返回过期地址。
+     */
+    private void validateTemporaryUrlConfig() {
+        if (temporaryUrlExpireMinutes <= 0) {
+            throw new IllegalStateException("insurance.oss.temporary-url.expire-minutes 必须大于0");
+        }
+        if (temporaryUrlCacheMinutes <= 0 || temporaryUrlCacheMinutes >= temporaryUrlExpireMinutes) {
+            throw new IllegalStateException("insurance.oss.temporary-url.cache-minutes 必须大于0且小于OSS地址有效期");
+        }
     }
 
     /**

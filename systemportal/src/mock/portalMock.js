@@ -663,6 +663,22 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   if (url === '/portal/account/context') {
     return ok(context());
   }
+  if (url === '/portal/dashboard/statistics' && method === 'GET') {
+    return ok({
+      currentMonthProcessedWorkorders: 286,
+      previousMonthProcessedWorkorders: 242,
+      workorderComparison: { direction: 'UP', rate: 18.2 },
+      renewalReminderCount: 42,
+      renewalDueThisWeek: 12,
+      currentMonthNewCustomers: 18,
+      previousMonthNewCustomers: 15,
+      customerComparison: { direction: 'UP', rate: 20.0 },
+      currentMonthProfit: 12680.5,
+      previousMonthProfit: 10942.3,
+      profitComparison: { direction: 'UP', rate: 15.9 },
+      updatedThrough: '2026-07-13'
+    });
+  }
   if (url === '/portal/sso/authorize' && method === 'POST') {
     const member = getCurrentMember();
     const enterprise = getCurrentEnterprise();

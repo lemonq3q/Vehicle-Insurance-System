@@ -42,6 +42,10 @@ export const forgetPassword = data => post('/portal/auth/forget-password', data)
  */
 export const getAccountContext = () => get('/portal/account/context');
 /**
+ * 查询当前企业仪表盘经营指标，包含本月工单、续保提醒、新增客户、盈利及环比。
+ */
+export const getDashboardStatistics = () => get('/portal/dashboard/statistics');
+/**
  * 申请从门户进入车险系统的一次性 SSO 跳转地址。
  */
 export const createInsuranceAuthorization = () => post('/portal/sso/authorize', {});
