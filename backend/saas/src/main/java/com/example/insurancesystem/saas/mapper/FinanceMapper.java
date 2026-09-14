@@ -110,6 +110,20 @@ public interface FinanceMapper {
           + "<if test=\"orderNo != null and orderNo != ''\">AND o.order_no LIKE CONCAT('%',#{orderNo},'%')</if><if test=\"orderType != null and orderType != ''\">AND o.order_type=#{orderType}</if><if test=\"startTime != null\">AND o.created_at &gt;= #{startTime}</if><if test=\"endTime != null\">AND o.created_at &lt;= #{endTime}</if> ORDER BY o.created_at DESC LIMIT #{offset},#{pageSize}</script>")
   List<Map<String, Object>> findOrders(Map<String, Object> query);
 
+  /**
+   * 查询当前企业的一笔订阅订单及其套餐名称。
+   * 企业条件与逻辑删除条件用于隔离租户数据；详情仍保留订单中的套餐快照，避免套餐后续调整影响历史展示。
+   *
+   * @param id 订阅订单主键，来源于门户订单列表路由
+   * @param enterpriseId 当前登录账号选择的企业主键
+   * @return 匹配的订阅订单，订单不存在或不属于当前企业时返回 null
+   */
+  @Select(
+      "SELECT o.*,p.name plan_name FROM saas_order o LEFT JOIN saas_plan p ON p.id=o.plan_id "
+          + "WHERE o.id=#{id} AND o.enterprise_id=#{enterpriseId} AND o.deleted=0")
+  Map<String, Object> findOrder(
+      @Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+
   @Select(
       "<script>SELECT COUNT(1) FROM saas_order o WHERE o.enterprise_id=#{enterpriseId} AND o.deleted=0 <if test=\"orderNo != null and orderNo != ''\">AND o.order_no LIKE CONCAT('%',#{orderNo},'%')</if><if test=\"orderType != null and orderType != ''\">AND o.order_type=#{orderType}</if><if test=\"startTime != null\">AND o.created_at &gt;= #{startTime}</if><if test=\"endTime != null\">AND o.created_at &lt;= #{endTime}</if></script>")
   long countOrders(Map<String, Object> query);

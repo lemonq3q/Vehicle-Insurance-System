@@ -3,6 +3,7 @@ package com.example.insurancesystem.monitor.controller;
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.monitor.domain.ReminderMergeRequest;
+import com.example.insurancesystem.monitor.domain.ReminderDeleteRequest;
 import com.example.insurancesystem.monitor.service.MonitorReminderService;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,5 +35,15 @@ public class InternalReminderController {
             @RequestBody ReminderMergeRequest request) {
         if (!internalSecret.equals(secret)) throw new BusinessException(403, "内部调用凭证无效");
         return new ResponseResult<>(200, "操作成功", Map.of("action", service.merge(request)));
+    }
+
+    /** 校验共享密钥后幂等删除已恢复的自动续费套餐下架提醒。 */
+    @PostMapping("/delete")
+    public ResponseResult<?> delete(@RequestHeader("X-Maintenance-Secret") String secret,
+            @RequestBody ReminderDeleteRequest request) {
+        if (!internalSecret.equals(secret)) throw new BusinessException(403, "内部调用凭证无效");
+        if (request == null) throw new BusinessException(400, "提醒清理参数不能为空");
+        return new ResponseResult<>(200, "操作成功",
+                Map.of("action", service.deleteAutoRenewPlanUnavailable(request.enterpriseId, request.reminderKey)));
     }
 }

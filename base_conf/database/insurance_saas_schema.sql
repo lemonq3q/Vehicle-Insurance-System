@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS `tenant_enterprise` (
   `updated_by` bigint DEFAULT NULL COMMENT '更新人',
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '软删除',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_tenant_enterprise_code` (`code`)
+  UNIQUE KEY `uk_tenant_enterprise_code` (`code`),
+  KEY `idx_enterprise_dashboard_created` (`deleted`,`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业租户表';
 
 CREATE TABLE IF NOT EXISTS `tenant_enterprise_archive` LIKE `tenant_enterprise`;
@@ -230,6 +231,50 @@ CREATE TABLE IF NOT EXISTS `saas_subscription_change_log` (
   `changed_by` bigint DEFAULT NULL COMMENT '操作人',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订阅变更记录';
+
+CREATE TABLE IF NOT EXISTS `monitor_system_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `log_category` varchar(32) NOT NULL COMMENT 'OPERATION MAINTENANCE SYSTEM SECURITY BUSINESS',
+  `severity` varchar(16) NOT NULL DEFAULT 'INFO' COMMENT 'DEBUG INFO WARN ERROR CRITICAL',
+  `event_code` varchar(64) NOT NULL COMMENT '稳定事件编码',
+  `event_name` varchar(100) NOT NULL COMMENT '事件展示名称',
+  `source_system` varchar(32) NOT NULL COMMENT 'MONITOR SAAS INSURANCE COORDINATOR',
+  `source_module` varchar(64) DEFAULT NULL COMMENT '来源业务模块',
+  `result_status` varchar(16) NOT NULL COMMENT 'SUCCESS FAILED PARTIAL RUNNING',
+  `operator_type` varchar(16) NOT NULL DEFAULT 'SYSTEM' COMMENT 'MONITOR_USER TENANT_USER SYSTEM JOB',
+  `operator_id` bigint DEFAULT NULL COMMENT '操作人或任务记录ID',
+  `operator_name_snapshot` varchar(100) DEFAULT NULL COMMENT '操作主体名称快照',
+  `enterprise_id` bigint DEFAULT NULL COMMENT '关联tenant_enterprise.id',
+  `enterprise_name_snapshot` varchar(150) DEFAULT NULL COMMENT '企业名称快照',
+  `target_type` varchar(32) DEFAULT NULL COMMENT 'ENTERPRISE SUBSCRIPTION PLAN USER REMINDER JOB SYSTEM',
+  `target_id` varchar(100) DEFAULT NULL COMMENT '数字ID、业务编号或批次号',
+  `target_name_snapshot` varchar(150) DEFAULT NULL COMMENT '操作目标名称快照',
+  `operation_reason` varchar(500) DEFAULT NULL COMMENT '人工操作原因',
+  `summary` varchar(500) NOT NULL COMMENT '可直接展示的事件摘要',
+  `detail_json` json DEFAULT NULL COMMENT '事件扩展数据',
+  `before_json` json DEFAULT NULL COMMENT '人工操作前快照',
+  `after_json` json DEFAULT NULL COMMENT '人工操作后快照',
+  `error_code` varchar(64) DEFAULT NULL,
+  `error_message` varchar(1000) DEFAULT NULL COMMENT '脱敏错误信息',
+  `exception_digest` varchar(64) DEFAULT NULL COMMENT '相同异常聚合摘要',
+  `request_id` varchar(100) DEFAULT NULL,
+  `trace_id` varchar(100) DEFAULT NULL,
+  `job_execution_id` bigint DEFAULT NULL COMMENT 'monitor_job_execution.id',
+  `ip_address` varchar(64) DEFAULT NULL,
+  `user_agent` varchar(500) DEFAULT NULL,
+  `occurred_at` datetime(3) NOT NULL COMMENT '事件实际发生时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_system_log_category_time` (`log_category`,`occurred_at`),
+  KEY `idx_system_log_severity_time` (`severity`,`occurred_at`),
+  KEY `idx_system_log_event_time` (`event_code`,`occurred_at`),
+  KEY `idx_system_log_enterprise_time` (`enterprise_id`,`occurred_at`),
+  KEY `idx_system_log_operator_time` (`operator_type`,`operator_id`,`occurred_at`),
+  KEY `idx_system_log_target_time` (`target_type`,`target_id`,`occurred_at`),
+  KEY `idx_system_log_request` (`request_id`),
+  KEY `idx_system_log_job_execution` (`job_execution_id`),
+  KEY `idx_system_log_exception` (`exception_digest`,`occurred_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='监控平台统一系统事件日志';
 
 CREATE TABLE IF NOT EXISTS `platform_user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -907,3 +952,27 @@ FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP;
 
 
 
+-- 监控平台销售推广目标。推广任务和发送回执应使用独立事实表，避免主数据随发送次数膨胀。
+CREATE TABLE IF NOT EXISTS `monitor_promotion_target` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL COMMENT '推广目标名称',
+  `phone` varchar(32) DEFAULT NULL COMMENT '电话，允许国家区号和分机号',
+  `email` varchar(254) DEFAULT NULL COMMENT '邮箱地址',
+  `extra_fields` json DEFAULT NULL COMMENT '已在接口契约中声明的扩展推广字段',
+  `source_type` varchar(16) NOT NULL DEFAULT 'MANUAL' COMMENT 'MANUAL EXCEL_IMPORT',
+  `import_batch_no` varchar(64) DEFAULT NULL COMMENT 'Excel导入批次号，手工录入为空',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '1可推广 0停用',
+  `remark` varchar(500) DEFAULT NULL COMMENT '运营备注',
+  `created_by` bigint DEFAULT NULL COMMENT '创建人monitor_user.id，系统导入可为空',
+  `updated_by` bigint DEFAULT NULL COMMENT '最后修改人monitor_user.id',
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '0正常 1软删除',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_promotion_target_list` (`deleted`,`status`,`id`),
+  KEY `idx_promotion_target_name` (`deleted`,`name`,`id`),
+  KEY `idx_promotion_target_phone` (`deleted`,`phone`,`id`),
+  KEY `idx_promotion_target_email` (`deleted`,`email`,`id`),
+  KEY `idx_promotion_target_batch` (`import_batch_no`,`id`),
+  KEY `idx_promotion_target_created` (`deleted`,`created_at`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='监控平台销售推广目标';

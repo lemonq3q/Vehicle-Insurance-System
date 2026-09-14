@@ -89,6 +89,7 @@ public class SecurityConfig {
                 .antMatchers(
                         "/auth/login", "/auth/register", "/auth/code", "/auth/forget",
                         "/portal/auth/login", "/portal/auth/register", "/portal/auth/sms-code",
+                        "/monitor/auth/login",
                         "/portal/auth/forget-password", "/internal/sso/exchange",
                         "/internal/sso/portal-authorize", "/portal/sso/exchange",
                         "/internal/session/logout-enterprise", "/internal/session/logout-user",
@@ -96,6 +97,7 @@ public class SecurityConfig {
                         "/internal/maintenance/**",
                         "/internal/reminders/**",
                         "/auth/sso/exchange", "/portal/finance/plans"
+                        , "/portal/visitor-leads"
                 ).permitAll()
                 .anyRequest().authenticated();
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

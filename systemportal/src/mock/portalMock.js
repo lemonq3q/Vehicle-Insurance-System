@@ -12,6 +12,7 @@ const currentUser = {
 let currentEnterpriseId = 20001;
 const smsCodes = new Map();
 const MOCK_NOW = new Date('2026-07-14T12:00:00');
+let lastVisitorLeadAt = 0;
 
 const recentReminders = [
   {
@@ -627,6 +628,12 @@ export function getStatusName(type, status) {
  * 所有分支直接操作本文件的内存数据集并返回与真实接口相同的响应外壳，确保前端联调契约具有可替换性。
  */
 export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
+  if (url === '/portal/visitor-leads' && method === 'POST') {
+    if (Date.now() - lastVisitorLeadAt < 60000) return fail('提交过于频繁，请稍后再试', 429);
+    if (!data.name || !data.contact) return fail('请填写姓名和联系方式', 400);
+    lastVisitorLeadAt = Date.now();
+    return ok({ leadNo: `VL20260828${Math.random().toString(36).slice(2, 12).toUpperCase().padEnd(10, 'X')}` }, '提交成功');
+  }
   if (url === '/portal/auth/login' && method === 'POST') {
     return ok({ token: 'mock-portal-token', ...context() }, '登录成功');
   }
@@ -1019,6 +1026,11 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     if (params.orderType) filtered = filtered.filter(item => item.orderType === params.orderType);
     filtered = filterByTimeRange(filtered, params);
     return ok(paginate(filtered, params));
+  }
+  if (/^\/portal\/finance\/subscription-orders\/\d+$/.test(url) && method === 'GET') {
+    const id = Number(url.split('/').pop());
+    const order = subscriptionOrders.find(item => item.id === id);
+    return order ? ok(order) : fail('订阅订单不存在', 404);
   }
   if (url === '/portal/finance/subscription-orders/preview' && method === 'POST') {
     const preview = calculateSubscriptionOrder(data.planId, data.periodCount);

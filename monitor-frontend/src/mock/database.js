@@ -14,16 +14,31 @@ export const enterprises = [
 export const plans = [
   { id: 1, code: 'BASIC', name: '基础版', description: '适合小型车商和初创团队', billingCycle: 'YEAR', durationDays: 365, price: 3600, listPrice: 4200, memberLimit: 10, workorderLimit: 1000, sortOrder: 10, status: 1, updatedAt: '2026-07-16 10:20' },
   { id: 2, code: 'PRO', name: '专业版', description: '适合稳定增长的保险服务团队', billingCycle: 'YEAR', durationDays: 365, price: 12800, listPrice: 14800, memberLimit: 30, workorderLimit: 5000, sortOrder: 20, status: 1, updatedAt: '2026-07-16 10:30' },
-  { id: 3, code: 'ENTERPRISE', name: '企业版', description: '适合多门店与大型运营团队', billingCycle: 'YEAR', durationDays: 365, price: 28800, listPrice: 32800, memberLimit: 50, workorderLimit: 10000, sortOrder: 30, status: 1, updatedAt: '2026-07-16 10:40' },
-  { id: 4, code: 'TRIAL', name: '体验版', description: '用于售前演示和短期试用', billingCycle: 'DAY', durationDays: 30, price: 0, listPrice: 0, memberLimit: 5, workorderLimit: 1000, sortOrder: 40, status: 0, updatedAt: '2026-07-15 09:00' }
+  { id: 3, code: 'ENTERPRISE', name: '企业版', description: '适合多门店与大型运营团队', billingCycle: 'YEAR', durationDays: 365, price: 28800, listPrice: 32800, memberLimit: 50, workorderLimit: 10000, sortOrder: 30, status: 1, updatedAt: '2026-07-16 10:40' }
 ];
 
 export const platformUsers = [
-  { id: 1, username: 'linjc', realName: '林嘉诚', phone: '13812341028', email: 'linjc@xiaoma.com', roleCode: 'ADMIN', roleName: '管理员', status: 1, lastLoginAt: '2026-07-25 18:18', passwordChangedAt: '2026-07-22 08:30', createdByName: '系统初始化', createdAt: '2026-07-22 08:20', current: true },
-  { id: 2, username: 'fangsy', realName: '方思雨', phone: '18612345227', email: 'fangsy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-25 17:56', passwordChangedAt: '2026-07-22 08:30', createdByName: '林嘉诚', createdAt: '2026-07-22 08:30' },
-  { id: 3, username: 'shenhy', realName: '沈浩宇', phone: '13712348063', email: 'shenhy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-24 17:42', passwordChangedAt: '2026-07-22 08:40', createdByName: '林嘉诚', createdAt: '2026-07-22 08:40' },
-  { id: 4, username: 'luxy', realName: '陆欣怡', phone: '15912343268', email: 'luxy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-24 16:28', passwordChangedAt: '2026-07-22 08:50', createdByName: '林嘉诚', createdAt: '2026-07-22 08:50' },
-  { id: 5, username: 'service_test', realName: '测试账号', phone: '', email: '', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 0, lastLoginAt: null, passwordChangedAt: '2026-07-22 09:00', createdByName: '林嘉诚', createdAt: '2026-07-22 09:00' }
+  { id: 1, username: '13812341028', realName: '林嘉诚', email: 'linjc@xiaoma.com', roleCode: 'ADMIN', roleName: '管理员', status: 1, lastLoginAt: '2026-07-25 18:18', passwordChangedAt: '2026-07-22 08:30', createdByName: '系统初始化', createdAt: '2026-07-22 08:20', current: true },
+  { id: 2, username: '18612345227', realName: '方思雨', email: 'fangsy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-25 17:56', passwordChangedAt: '2026-07-22 08:30', createdByName: '林嘉诚', createdAt: '2026-07-22 08:30' },
+  { id: 3, username: '13712348063', realName: '沈浩宇', email: 'shenhy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-24 17:42', passwordChangedAt: '2026-07-22 08:40', createdByName: '林嘉诚', createdAt: '2026-07-22 08:40' },
+  { id: 4, username: '15912343268', realName: '陆欣怡', email: 'luxy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-24 16:28', passwordChangedAt: '2026-07-22 08:50', createdByName: '林嘉诚', createdAt: '2026-07-22 08:50' },
+  { id: 5, username: '18812345678', realName: '测试账号', email: '', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 0, lastLoginAt: null, passwordChangedAt: '2026-07-22 09:00', createdByName: '林嘉诚', createdAt: '2026-07-22 09:00' }
+];
+
+/**
+ * 销售推广目标 Mock 与数据库字段保持一致，覆盖手工录入、Excel 导入、停用以及单渠道联系方式场景。
+ * 已完成真实后端后默认不启用该数据，仅供独立前端联调和接口回归使用。
+ */
+export const promotionTargets = [
+  { id: 1, name: '王海峰', phone: '13800138001', email: 'wanghf@example.com', companyName: '杭州安途汽车服务有限公司', position: '总经理', sourceType: 'MANUAL', importBatchNo: null, status: 1, remark: '华东区域意向客户', createdAt: '2026-08-26 10:20', updatedAt: '2026-08-26 10:20' },
+  { id: 2, name: '李思雨', phone: '13900139002', email: '', companyName: '宁波诚达汽贸有限公司', position: '保险负责人', sourceType: 'EXCEL_IMPORT', importBatchNo: 'PT20260826093001', status: 1, remark: '', createdAt: '2026-08-26 09:31', updatedAt: '2026-08-26 09:31' },
+  { id: 3, name: '企业公共邮箱', phone: '', email: 'service@example.cn', companyName: '苏州启程汽车有限公司', position: '', sourceType: 'EXCEL_IMPORT', importBatchNo: 'PT20260826093001', status: 0, remark: '暂停推广', createdAt: '2026-08-26 09:31', updatedAt: '2026-08-26 15:08' }
+];
+
+/** 官网游客信息 Mock 与单表 JSON 数组结构保持一致，仅覆盖监控页编号查询和分页展示。 */
+export const visitorLeads = [
+  { id: 1, leadNo: 'VL20260828A7K3M9Q2X5', name: '陈先生', contact: '13800138000', roleCode: 'CAR_DEALER', expectedMonthlyOrders: 320, intentCodes: ['TRIAL', 'DEMO'], remark: '希望先了解多门店协作能力', createdAt: '2026-08-28 10:35:20' },
+  { id: 2, leadNo: 'VL20260828R8P6N4C2W7', name: '林女士', contact: 'lin-agent@example.com', roleCode: 'INSURANCE_AGENCY', expectedMonthlyOrders: 1200, intentCodes: ['CUSTOM_COOPERATION'], remark: '', createdAt: '2026-08-28 09:18:42' },
 ];
 
 export const members = [

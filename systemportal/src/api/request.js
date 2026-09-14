@@ -12,7 +12,8 @@ const PUBLIC_REQUESTS = [
   '/portal/auth/sms-code',
   '/portal/auth/forget-password',
   '/portal/sso/exchange',
-  '/portal/finance/plans'
+  '/portal/finance/plans',
+  '/portal/visitor-leads'
 ];
 
 const request = axios.create({
@@ -100,7 +101,17 @@ function createBusinessError(payload, response) {
  * 公开接口不读取登录态，使官网和认证页面在无会话环境中仍能正常访问。
  */
 request.interceptors.request.use(config => {
-  if (isPublicRequest(config.url)) return config;
+  if (isPublicRequest(config.url)) {
+    /*
+     * 匿名接口不携带任何历史认证信息。除不主动读取本地 token 外，同时清除请求实例或调用方
+     * 可能预置的认证头，避免过期凭据让服务端把游客请求误判为一次失败的登录态校验。
+     */
+    if (config.headers) {
+      delete config.headers.token;
+      delete config.headers.Authorization;
+    }
+    return config;
+  }
 
   const token = Storage.get(TOKEN_STORAGE_KEY);
   if (token) {

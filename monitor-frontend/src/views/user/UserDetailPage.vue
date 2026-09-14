@@ -1,41 +1,248 @@
-<template><div><PageHeader eyebrow="Platform Settings" title="编辑平台用户" description="修改用户资料、平台角色与账号状态。"><router-link class="layui-btn monitor-secondary" to="/platform-users">返回列表</router-link></PageHeader><div v-if="loading" class="panel loading-state">正在加载用户资料…</div><div v-else class="user-layout"><form class="panel" @submit.prevent="save"><section class="form-section"><h2>账号资料</h2><div class="form-grid"><div class="field"><label>登录账号 *</label><input v-model.trim="form.username" class="layui-input"></div><div class="field"><label>真实姓名 *</label><input v-model.trim="form.realName" class="layui-input"></div><div class="field"><label>手机号码</label><input v-model.trim="form.phone" type="tel" class="layui-input"></div><div class="field"><label>电子邮箱</label><input v-model.trim="form.email" type="email" class="layui-input"></div></div></section><section class="form-section"><h2>角色与状态</h2><div class="radio-cards"><label class="radio-card"><input v-model="form.roleCode" type="radio" value="ADMIN"><span><strong>管理员</strong><br><small>拥有账号管理及全部业务权限</small></span></label><label class="radio-card"><input v-model="form.roleCode" type="radio" value="CUSTOMER_SERVICE"><span><strong>售后客服</strong><br><small>除账号管理外的全部权限</small></span></label></div><div class="field account-status"><label>账号状态</label><select v-model.number="form.status" class="layui-select" :disabled="form.current"><option :value="1">启用</option><option :value="0">停用</option></select><p class="helper">当前登录账号不能停用。</p></div><div class="field reason-field"><label>修改原因 *</label><textarea v-model.trim="form.reason" class="layui-textarea"></textarea><p v-if="formError" class="error-text">{{formError}}</p></div></section><footer class="form-footer"><button class="layui-btn monitor-danger" type="button" :disabled="form.current" @click="deleteModal=true">删除用户</button><span></span><router-link class="layui-btn monitor-secondary" to="/platform-users">取消</router-link><button class="layui-btn monitor-primary" :disabled="submitting">{{submitting?'保存中…':'保存修改'}}</button></footer></form><aside class="panel audit-card"><header class="panel-header"><h2>账号信息</h2></header><dl><div><dt>用户 ID</dt><dd>#{{String(form.id).padStart(6,'0')}}</dd></div><div><dt>创建人</dt><dd>{{form.createdByName}}</dd></div><div><dt>创建时间</dt><dd>{{form.createdAt}}</dd></div><div><dt>最后登录</dt><dd>{{form.lastLoginAt||'从未登录'}}</dd></div><div><dt>最近改密</dt><dd>{{form.passwordChangedAt||'—'}}</dd></div></dl><div class="security-note"><i class="layui-icon layui-icon-vercode"></i><div><strong>安全保护</strong><p>不能删除当前账号，也不能停用最后一个管理员。</p></div></div><button class="layui-btn monitor-secondary reset-button" @click="resetModal=true">重置登录密码</button></aside></div><AppModal v-model="deleteModal" title="删除平台用户" confirm-text="确认删除" danger :loading="submitting" @confirm="remove"><p>账号删除后无法登录，但历史操作日志会继续保留。</p><div class="field"><label>删除原因 *</label><textarea v-model.trim="deleteReason" class="layui-textarea"></textarea></div></AppModal><AppModal v-model="resetModal" title="重置登录密码" confirm-text="确认重置" :loading="submitting" @confirm="resetPassword"><div class="field"><label>操作原因 *</label><textarea v-model.trim="resetReason" class="layui-textarea"></textarea></div></AppModal><AppModal v-model="passwordModal" title="密码重置成功" confirm-text="我已保存" @confirm="passwordModal=false"><p>新密码：<strong>{{initialPassword}}</strong></p><p class="helper">密码只展示一次，请通过安全渠道交付。</p></AppModal><AppToast :message="toastMessage" :type="toastType" /></div></template>
+<template>
+  <div>
+    <PageHeader
+      eyebrow="Platform Settings"
+      title="编辑平台用户"
+      description="修改用户资料、平台角色与账号状态。"
+      ><router-link class="layui-btn monitor-secondary" to="/platform-users"
+        >返回列表</router-link
+      ></PageHeader
+    >
+    <div v-if="loading" class="panel loading-state">正在加载用户资料…</div>
+    <div v-else class="user-layout">
+      <form class="panel" @submit.prevent="save">
+        <section class="form-section">
+          <h2>账号资料</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label>登录手机号 *</label
+              ><input
+                v-model.trim="form.username"
+                type="tel"
+                maxlength="11"
+                inputmode="numeric"
+                autocomplete="username"
+                class="layui-input"
+              />
+            </div>
+            <div class="field">
+              <label>真实姓名 *</label
+              ><input v-model.trim="form.realName" class="layui-input" />
+            </div>
+            <div class="field">
+              <label>电子邮箱</label
+              ><input
+                v-model.trim="form.email"
+                type="email"
+                class="layui-input"
+              />
+            </div>
+          </div>
+        </section>
+        <section class="form-section">
+          <h2>角色与状态</h2>
+          <div class="radio-cards">
+            <label class="radio-card"
+              ><input v-model="form.roleCode" type="radio" value="ADMIN" /><span
+                ><strong>管理员</strong><br /><small
+                  >拥有账号管理及全部业务权限</small
+                ></span
+              ></label
+            ><label class="radio-card"
+              ><input
+                v-model="form.roleCode"
+                type="radio"
+                value="CUSTOMER_SERVICE"
+              /><span
+                ><strong>售后客服</strong><br /><small
+                  >除账号管理外的全部权限</small
+                ></span
+              ></label
+            >
+          </div>
+          <div class="field account-status">
+            <label>账号状态</label
+            ><select
+              v-model.number="form.status"
+              class="layui-select"
+              :disabled="form.current"
+            >
+              <option :value="1">启用</option>
+              <option :value="0">停用</option>
+            </select>
+            <p class="helper">当前登录账号不能停用。</p>
+          </div>
+          <div class="field reason-field">
+            <label>修改原因 *</label
+            ><textarea
+              v-model.trim="form.reason"
+              class="layui-textarea"
+            ></textarea>
+            <p v-if="formError" class="error-text">{{ formError }}</p>
+          </div>
+        </section>
+        <footer class="form-footer">
+          <button
+            class="layui-btn monitor-danger"
+            type="button"
+            :disabled="form.current"
+            @click="deleteModal = true"
+          >
+            删除用户</button
+          ><span></span
+          ><router-link class="layui-btn monitor-secondary" to="/platform-users"
+            >取消</router-link
+          ><button class="layui-btn monitor-primary" :disabled="submitting">
+            {{ submitting ? "保存中…" : "保存修改" }}
+          </button>
+        </footer>
+      </form>
+      <aside class="panel audit-card">
+        <header class="panel-header"><h2>账号信息</h2></header>
+        <dl>
+          <div>
+            <dt>用户 ID</dt>
+            <dd>#{{ String(form.id).padStart(6, "0") }}</dd>
+          </div>
+          <div>
+            <dt>创建人</dt>
+            <dd>{{ form.createdByName }}</dd>
+          </div>
+          <div>
+            <dt>创建时间</dt>
+            <dd>{{ form.createdAt }}</dd>
+          </div>
+          <div>
+            <dt>最后登录</dt>
+            <dd>{{ form.lastLoginAt || "从未登录" }}</dd>
+          </div>
+          <div>
+            <dt>最近改密</dt>
+            <dd>{{ form.passwordChangedAt || "—" }}</dd>
+          </div>
+        </dl>
+        <div class="security-note">
+          <i class="layui-icon layui-icon-vercode"></i>
+          <div>
+            <strong>安全保护</strong>
+            <p>不能删除当前账号，也不能停用最后一个管理员。</p>
+          </div>
+        </div>
+        <button
+          class="layui-btn monitor-secondary reset-button"
+          @click="resetModal = true"
+        >
+          重置登录密码
+        </button>
+      </aside>
+    </div>
+    <AppModal
+      v-model="deleteModal"
+      title="删除平台用户"
+      confirm-text="确认删除"
+      danger
+      :loading="submitting"
+      @confirm="remove"
+      ><p>账号删除后无法登录，但历史操作日志会继续保留。</p>
+      <div class="field">
+        <label>删除原因 *</label
+        ><textarea
+          v-model.trim="deleteReason"
+          class="layui-textarea"
+        ></textarea></div></AppModal
+    ><AppModal
+      v-model="resetModal"
+      title="重置登录密码"
+      confirm-text="确认重置"
+      :loading="submitting"
+      @confirm="resetPassword"
+      ><div class="field">
+        <label>操作原因 *</label
+        ><textarea
+          v-model.trim="resetReason"
+          class="layui-textarea"
+        ></textarea></div></AppModal
+    ><AppModal
+      v-model="passwordModal"
+      title="密码重置成功"
+      confirm-text="我已保存"
+      @confirm="passwordModal = false"
+      ><p>
+        新密码：<strong>{{ initialPassword }}</strong>
+      </p>
+      <p class="helper">密码只展示一次，请通过安全渠道交付。</p></AppModal
+    ><AppToast :message="toastMessage" :type="toastType" />
+  </div>
+</template>
 <script>
-import PageHeader from '@/components/PageHeader.vue';
-import AppModal from '@/components/AppModal.vue';
-import AppToast from '@/components/AppToast.vue';
-import feedback from '@/mixins/feedback';
-import { userApi } from '@/api/monitor';
+import PageHeader from "@/components/PageHeader.vue";
+import AppModal from "@/components/AppModal.vue";
+import AppToast from "@/components/AppToast.vue";
+import feedback from "@/mixins/feedback";
+import { userApi } from "@/api/monitor";
 
 export default {
-  name: 'UserDetailPage',
+  name: "UserDetailPage",
   components: { PageHeader, AppModal, AppToast },
   mixins: [feedback],
   /**
    * 保存后台账号编辑表单，以及删除、重置密码和初始密码展示三个敏感操作弹窗的独立状态。
    */
-  data: () => ({ form: {}, loading: true, submitting: false, formError: '', deleteModal: false, resetModal: false, passwordModal: false, deleteReason: '', resetReason: '', initialPassword: '' }),
+  data: () => ({
+    form: {},
+    loading: true,
+    submitting: false,
+    formError: "",
+    deleteModal: false,
+    resetModal: false,
+    passwordModal: false,
+    deleteReason: "",
+    resetReason: "",
+    initialPassword: "",
+  }),
   /**
    * 页面挂载后按路由 ID 加载后台账号详情。
    */
-  mounted() { this.load(); },
+  mounted() {
+    this.load();
+  },
   methods: {
     /**
      * 获取账号详情并清空操作原因，确保每一次资料修改都重新填写审计说明。
      */
     async load() {
       this.loading = true;
-      try { this.form = { ...(await userApi.detail(this.$route.params.id)), reason: '' }; } catch (error) { this.errorMessage(error); } finally { this.loading = false; }
+      try {
+        this.form = {
+          ...(await userApi.detail(this.$route.params.id)),
+          reason: "",
+        };
+      } catch (error) {
+        this.errorMessage(error);
+      } finally {
+        this.loading = false;
+      }
     },
     /**
-     * 校验登录账号、姓名和修改原因后保存资料，并以服务端响应重建表单避免保留过期字段。
+     * 校验作为唯一账号的 11 位登录手机号、姓名和修改原因后保存资料，并以服务端响应重建表单避免保留过期字段。
      */
     async save() {
-      if (!this.form.username || !this.form.realName || !this.form.reason) {
-        this.formError = '登录账号、真实姓名和修改原因均为必填项'; return;
+      if (!/^1\d{10}$/.test(this.form.username) || !this.form.realName || !this.form.reason) {
+        this.formError = "有效的登录手机号、真实姓名和修改原因均为必填项";
+        return;
       }
       this.submitting = true;
-      try { this.form = { ...(await userApi.update(this.form.id, this.form)), reason: '' }; this.notify('用户资料已保存'); }
-      catch (error) { this.formError = error.message; } finally { this.submitting = false; }
+      try {
+        this.form = {
+          ...(await userApi.update(this.form.id, this.form)),
+          reason: "",
+        };
+        this.notify("用户资料已保存");
+      } catch (error) {
+        this.formError = error.message;
+      } finally {
+        this.submitting = false;
+      }
     },
     /**
      * 只有填写删除原因才允许删除平台账号，成功后离开已不存在的详情页并返回账号列表。
@@ -43,8 +250,14 @@ export default {
     async remove() {
       if (!this.deleteReason) return;
       this.submitting = true;
-      try { await userApi.remove(this.form.id, { reason: this.deleteReason }); this.$router.push('/platform-users'); }
-      catch (error) { this.errorMessage(error); } finally { this.submitting = false; }
+      try {
+        await userApi.remove(this.form.id, { reason: this.deleteReason });
+        this.$router.push("/platform-users");
+      } catch (error) {
+        this.errorMessage(error);
+      } finally {
+        this.submitting = false;
+      }
     },
     /**
      * 提交密码重置原因后接收一次性初始密码，关闭确认框并打开专用展示框供管理员安全转交。
@@ -53,13 +266,85 @@ export default {
       if (!this.resetReason) return;
       this.submitting = true;
       try {
-        const data = await userApi.resetPassword(this.form.id, { reason: this.resetReason });
+        const data = await userApi.resetPassword(this.form.id, {
+          reason: this.resetReason,
+        });
         this.initialPassword = data.initialPassword;
         this.resetModal = false;
         this.passwordModal = true;
-      } catch (error) { this.errorMessage(error); } finally { this.submitting = false; }
-    }
-  }
+      } catch (error) {
+        this.errorMessage(error);
+      } finally {
+        this.submitting = false;
+      }
+    },
+  },
 };
 </script>
-<style scoped>.user-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:16px}.account-status,.reason-field{margin-top:18px}.account-status .layui-select{max-width:280px}.form-footer{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;padding:16px 20px;border-top:1px solid var(--border)}.audit-card{height:max-content}.audit-card dl{margin:0;padding:8px 18px}.audit-card dl div{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}.audit-card dt{color:var(--muted)}.audit-card dd{margin:0;text-align:right}.security-note{display:flex;gap:10px;margin:10px 18px;padding:13px;border-radius:8px;color:#92400e;background:#fffbeb}.security-note i{font-size:21px}.security-note p{margin:3px 0 0;font-size:12px}.reset-button{width:calc(100% - 36px);margin:8px 18px 18px}@media(max-width:900px){.user-layout{grid-template-columns:1fr}}</style>
+<style scoped>
+.user-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 16px;
+}
+.account-status,
+.reason-field {
+  margin-top: 18px;
+}
+.account-status .layui-select {
+  max-width: 280px;
+}
+.form-footer {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.audit-card {
+  height: max-content;
+}
+.audit-card dl {
+  margin: 0;
+  padding: 8px 18px;
+}
+.audit-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.audit-card dt {
+  color: var(--muted);
+}
+.audit-card dd {
+  margin: 0;
+  text-align: right;
+}
+.security-note {
+  display: flex;
+  gap: 10px;
+  margin: 10px 18px;
+  padding: 13px;
+  border-radius: 8px;
+  color: #92400e;
+  background: #fffbeb;
+}
+.security-note i {
+  font-size: 21px;
+}
+.security-note p {
+  margin: 3px 0 0;
+  font-size: 12px;
+}
+.reset-button {
+  width: calc(100% - 36px);
+  margin: 8px 18px 18px;
+}
+@media (max-width: 900px) {
+  .user-layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -52,6 +52,18 @@ server {
         try_files $uri $uri/ /insurance/index.html;
     }
 
+    # Monitor frontend is deployed beside SaaS and insurance under /var/www.
+    # The explicit slash redirect keeps Vue Router's history base and relative navigation stable.
+    location = /monitor {
+        return 301 /monitor/;
+    }
+
+    location ^~ /monitor/ {
+        alias /var/www/monitor/dist/;
+        index index.html;
+        try_files $uri $uri/ /monitor/index.html;
+    }
+
     location ^~ /saasback/ {
         if ($request_method = OPTIONS) {
             add_header Access-Control-Allow-Origin "*" always;
@@ -94,6 +106,20 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Forwarded-Prefix /insuranceback;
+    }
+
+    # Keep the browser-facing API prefix stable while mapping it to the monitor backend's /monitor routes.
+    # A trailing slash on both sides is required so /api/monitor/auth/login becomes /monitor/auth/login.
+    location ^~ /api/monitor/ {
+        proxy_pass http://127.0.0.1:8083/monitor/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Prefix /api/monitor;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Expose-Headers "new-token" always;
     }
 
     location / {

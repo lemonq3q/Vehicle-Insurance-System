@@ -52,7 +52,7 @@
 
 - 必须保留：`tenant_*`、`auth_role`、`auth_permission`、`auth_role_permission`、`saas_plan`、`saas_subscription`、`saas_order`、`saas_wallet`、`saas_recharge_order`、`saas_wallet_transaction`、`biz_*`、`sys_file` 及其现有归档表。
 - 可以重建：`platform_user`、`platform_user_role`、`saas_usage_daily`、`saas_usage_monthly`、`saas_usage_archive_job` 及对应未使用归档草表。
-- 新监控表：`monitor_user`、`monitor_role`、`monitor_user_role`、`monitor_enterprise_daily_usage`、`monitor_system_daily_stat`、`monitor_monthly_revenue`、`monitor_job_execution`、`monitor_operation_log`。
+- 新监控表：`monitor_user`、`monitor_role`、`monitor_user_role`、`monitor_enterprise_daily_usage`、`monitor_system_daily_stat`、`monitor_monthly_revenue`、`monitor_job_execution`、`monitor_system_log`。
 
 监控账号不再复用 `auth_role`。`auth_role/auth_permission` 继续只服务现有租户和车险权限，避免监控平台角色改动影响两套线上系统。
 
@@ -156,7 +156,7 @@ monitor:maintenance:lock          -> distributed lock
 
 ## 6. 敏感管理动作的事务规则
 
-- 调整余额：锁定钱包，写 `saas_wallet_transaction(type=ADJUST)`，再更新余额，并写 `monitor_operation_log`；禁止只改余额字段。
+- 调整余额：锁定钱包，写 `saas_wallet_transaction(type=ADJUST)`，再更新余额，并写 `monitor_system_log(log_category=OPERATION)`；禁止只改余额字段。
 - 设置/取消套餐：更新唯一 `saas_subscription` 当前状态，必要时同步成员席位；后台赠送/调整不伪造已支付订阅订单，但必须写操作审计。具体是否生成 0 元 ADMIN_ADJUST 订单在 API 设计阶段确认。
 - 修改套餐：校验价格非负、人数和时长为正；订单继续读取自身 `plan_snapshot_json`。
 - 删除平台账号：软删除；禁止删除当前登录账号和最后一个启用 ADMIN。
@@ -177,7 +177,7 @@ monitor:maintenance:lock          -> distributed lock
 - 已依据数据库结构建立前端模型及可切换 Axios Mock 适配层。
 - 已完成全部页面的异步加载、查询、分页、导出、表单校验、确认弹窗、错误反馈及敏感管理交互。
 - 已在 `docs/api/monitor-api.md` 固化方法、路径、权限、请求、响应、错误码、事务要求和 Mock 示例。
-- 联调时只需设置 `VUE_APP_USE_MOCK=false` 并配置后端基址。
+- mock 与真实接口按 API 显式分流，不通过开发/生产环境整体切换；环境配置只负责本地或服务器接口基址。
 
 ### 阶段 3：后端（待开始）
 
@@ -205,6 +205,10 @@ monitor:maintenance:lock          -> distributed lock
 4. 监控平台只允许读取企业出单量汇总，不提供工单、车主、车牌、险种、处理人员等业务隐私明细的查询接口或页面。
 
 ## 9. 实施日志
+
+### 查询卡片 UI 约定
+
+监控前端所有列表查询和条件查询统一复用 `query-panel`、`query-toolbar`、`query-filters` 三层结构：卡片内标题置左，输入框、下拉框、查询和重置按钮置右；工具栏底部必须有分割线。文本框默认宽 220px，下拉框默认宽 130px，控件高 38px，控件间距固定 10px；空间不足时按完整控件自然换行，720px 以下控件占满一行。输入控件聚焦仅显示主题色边框，不使用阴影或渐变动画。后续新增同类页面不得重新创建独立筛选卡或页面私有布局规则。
 
 | 日期 | 阶段 | 结果 |
 | --- | --- | --- |

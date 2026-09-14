@@ -40,10 +40,9 @@ CREATE TABLE monitor_role (
 
 CREATE TABLE monitor_user (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  username VARCHAR(64) NOT NULL COMMENT '登录账号',
+  username VARCHAR(11) NOT NULL COMMENT '登录手机号，唯一登录标识',
   password_hash VARCHAR(100) NOT NULL COMMENT 'BCrypt密码摘要',
   real_name VARCHAR(64) NOT NULL COMMENT '姓名',
-  phone VARCHAR(20) DEFAULT NULL,
   email VARCHAR(100) DEFAULT NULL,
   status TINYINT NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
   last_login_at DATETIME DEFAULT NULL,
@@ -53,16 +52,14 @@ CREATE TABLE monitor_user (
   deleted TINYINT NOT NULL DEFAULT 0 COMMENT '0正常 1软删除',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  active_username VARCHAR(64)
+  active_username VARCHAR(11)
     GENERATED ALWAYS AS (CASE WHEN deleted = 0 THEN username ELSE NULL END) STORED,
-  active_phone VARCHAR(20)
-    GENERATED ALWAYS AS (CASE WHEN deleted = 0 THEN NULLIF(phone, '') ELSE NULL END) STORED,
   active_email VARCHAR(100)
     GENERATED ALWAYS AS (CASE WHEN deleted = 0 THEN NULLIF(email, '') ELSE NULL END) STORED,
   PRIMARY KEY (id),
   UNIQUE KEY uk_monitor_user_active_username (active_username),
-  UNIQUE KEY uk_monitor_user_active_phone (active_phone),
   UNIQUE KEY uk_monitor_user_active_email (active_email),
+  CONSTRAINT chk_monitor_user_username_phone CHECK (username REGEXP '^1[0-9]{10}$'),
   KEY idx_monitor_user_status_created (deleted, status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='监控平台用户';

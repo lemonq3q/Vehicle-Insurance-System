@@ -747,7 +747,70 @@ Query：
 
 Response data：分页 `SaasOrder`
 
-### 5.9 查询资金流水
+### 5.9 查询订阅订单详情
+
+`GET /portal/finance/subscription-orders/{id}`
+
+作用：从 SaaS 门户订阅订单列表查看单笔历史订单，展示下单时套餐权益快照、费用构成、支付状态和失败原因。接口按当前登录用户所选企业校验订单归属，不能跨企业查询。
+
+Path：
+
+| 字段 | 类型 | 必填 | 说明 | 示例值 |
+| --- | --- | --- | --- | --- |
+| id | number | 是 | 订阅订单主键 | 80001 |
+
+Response data：单个 `SaasOrder`。其中 `planSnapshot` 为下单时的套餐快照，`periodCount` 根据订单总服务时长和快照单周期时长计算。
+
+成功示例：
+
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": 80001,
+    "orderNo": "SO202607010001",
+    "orderType": "BUY",
+    "planId": 50002,
+    "planName": "专业版",
+    "planSnapshot": {
+      "id": 50002,
+      "name": "专业版",
+      "userLimit": 30,
+      "workorderLimit": 5000,
+      "durationDays": 365,
+      "billingPeriod": "YEAR"
+    },
+    "buyUserLimit": 30,
+    "buyWorkorderLimit": 5000,
+    "buyDurationDays": 365,
+    "periodCount": 1,
+    "priceAmount": 2999.00,
+    "discountAmount": 0.00,
+    "creditAmount": 0.00,
+    "workorderOverageCount": 0,
+    "workorderOverageAmount": 0.00,
+    "payableAmount": 2999.00,
+    "refundAmount": 0.00,
+    "paidAmount": 2999.00,
+    "payType": "BALANCE",
+    "autoRenew": true,
+    "status": 2,
+    "failureReason": null,
+    "paidAt": "2026-07-01 12:20:00",
+    "createdAt": "2026-07-01 12:18:00"
+  }
+}
+```
+
+错误情况：
+
+| HTTP/业务码 | 错误信息 | 触发条件 |
+| --- | --- | --- |
+| 401 | 未登录或登录已失效 | 请求未携带有效门户令牌 |
+| 404 | 订阅订单不存在 | 订单不存在、已删除或不属于当前企业 |
+
+### 5.10 查询资金流水
 
 `GET /portal/finance/wallet-transactions`
 

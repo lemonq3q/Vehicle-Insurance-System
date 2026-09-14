@@ -11,7 +11,7 @@
         <a href="#capabilities" @click.prevent="scrollToSection('capabilities')">产品能力</a>
         <a href="#teams" @click.prevent="scrollToSection('teams')">适用团队</a>
         <a href="#plans" @click.prevent="scrollToSection('plans')">套餐价格</a>
-        <router-link class="nav-login" to="/login">登录</router-link>
+        <button class="nav-login nav-contact" type="button" @click="openContactDialog">联系我们</button>
         <router-link class="layui-btn portal-btn nav-cta" to="/login">立即使用</router-link>
       </nav>
     </header>
@@ -187,12 +187,34 @@
       <p>香港科学园（HKSTP）Ideation 计划入选企业。</p>
       <small>© 2026 iDatag. 保留所有权利。</small>
     </footer>
+    <div v-if="contactDialogOpen" class="contact-mask" @mousedown.self="closeContactDialog">
+      <section class="contact-dialog" role="dialog" aria-modal="true" aria-labelledby="contact-dialog-title" @keydown.esc="closeContactDialog">
+        <header><div><p>CONTACT US</p><h2 id="contact-dialog-title">告诉我们你的合作计划</h2><span>提交后我们会尽快通过你留下的方式联系你。</span></div><button class="contact-close" type="button" aria-label="关闭联系我们对话框" @click="closeContactDialog">×</button></header>
+        <div v-if="contactSuccessNo" class="contact-result" role="status" aria-live="polite">
+          <span class="contact-result-icon" aria-hidden="true">✓</span><h3>提交成功</h3><p>意向信息已收到！添加专属客服，即刻获取合作方案。</p>
+          <div class="qr-placeholder" aria-label="客服微信二维码功能即将上线"><div class="qr-grid" aria-hidden="true"><i v-for="index in 25" :key="index" :class="{ dark: [1,2,3,5,6,7,9,11,13,15,17,19,21,23,24,25].includes(index) }"></i></div><strong>客服微信二维码</strong><span>扫码立即咨询</span></div>
+          <dl><dt>你的提交编号</dt><dd>{{ contactSuccessNo }}</dd></dl><button class="contact-primary contact-result-close" type="button" @click="closeContactDialog">我知道了</button>
+        </div>
+        <form v-else class="contact-form" novalidate @submit.prevent="submitContactForm">
+          <div class="contact-form-grid">
+            <label :class="{ invalid: contactErrors.name }"><span>姓名 <b>*</b></span><input ref="contactName" v-model.trim="contactForm.name" maxlength="100" autocomplete="name" @blur="validateContactField('name')" /><small v-if="contactErrors.name" role="alert">{{ contactErrors.name }}</small></label>
+            <label :class="{ invalid: contactErrors.contact }"><span>联系方式 <b>*</b></span><input v-model.trim="contactForm.contact" maxlength="100" autocomplete="tel" placeholder="手机号、微信号或邮箱" @blur="validateContactField('contact')" /><small v-if="contactErrors.contact" role="alert">{{ contactErrors.contact }}</small></label>
+            <label><span>你的角色</span><select v-model="contactForm.roleCode"><option value="">请选择</option><option v-for="role in contactRoles" :key="role.value" :value="role.value">{{ role.label }}</option></select></label>
+            <label :class="{ invalid: contactErrors.expectedMonthlyOrders }"><span>预计月单量</span><input v-model="contactForm.expectedMonthlyOrders" type="number" min="0" max="100000000" inputmode="numeric" placeholder="例如 300" @blur="validateContactField('expectedMonthlyOrders')" /><small v-if="contactErrors.expectedMonthlyOrders" role="alert">{{ contactErrors.expectedMonthlyOrders }}</small></label>
+          </div>
+          <fieldset class="intent-fieldset"><legend>合作诉求 <em>可多选</em></legend><label v-for="intent in contactIntents" :key="intent.value"><input v-model="contactForm.intentCodes" type="checkbox" :value="intent.value" /><span class="checkbox-mark" aria-hidden="true"></span><span>{{ intent.label }}</span></label></fieldset>
+          <label class="contact-remark"><span>备注</span><textarea v-model.trim="contactForm.remark" maxlength="1000" rows="3" placeholder="可以补充团队规模、当前痛点或希望了解的内容"></textarea><small>{{ contactForm.remark.length }}/1000</small></label>
+          <div v-if="contactSubmitError" class="contact-submit-error" role="alert">{{ contactSubmitError }}</div>
+          <div class="contact-actions"><button type="button" class="contact-secondary" :disabled="contactSubmitting" @click="closeContactDialog">取消</button><button type="submit" class="contact-primary" :disabled="contactSubmitting">{{ contactSubmitting ? '提交中…' : '提交合作意向' }}</button></div>
+        </form>
+      </section>
+    </div>
   </main>
 </template>
 
 <script>
 import { markRaw } from 'vue';
-import { getMarketingPlans } from '@/api/portal';
+import { createVisitorLead, getMarketingPlans } from '@/api/portal';
 
 const FALLBACK_PLANS = [
   { id: 'starter', name: '轻量版', description: '适合小团队快速建立规范的车险业务工作方式。', price: 299, billingPeriod: 'MONTH', durationDays: 30, userLimit: 5, workorderLimit: 1000 },
@@ -213,6 +235,14 @@ export default {
       plansLoading: true,
       plansError: false,
       revealObserver: null,
+      contactDialogOpen: false,
+      contactSubmitting: false,
+      contactSubmitError: '',
+      contactSuccessNo: '',
+      contactErrors: {},
+      contactForm: { name: '', contact: '', roleCode: '', expectedMonthlyOrders: '', intentCodes: [], remark: '' },
+      contactRoles: [{ value: 'OPC_AGENT', label: 'OPC 个人代理' }, { value: 'CAR_DEALER', label: '汽车经销商' }, { value: 'INSURANCE_AGENCY', label: '保险代理机构' }, { value: 'OTHER', label: '其他' }],
+      contactIntents: [{ value: 'TRIAL', label: '我要试用' }, { value: 'DEMO', label: '预约 Demo' }, { value: 'CUSTOM_COOPERATION', label: '机构定制合作' }],
       chartBars: [38, 54, 47, 68, 61, 82, 74, 92, 78, 88],
       workflows: [
         { title: '资料快速建档', text: '减少重复录入，让证件与业务资料从一开始就规范归档。', points: ['证件影像集中管理', '业务字段统一沉淀'] },
@@ -241,12 +271,14 @@ export default {
     }
   },
   /**
-   * 页面挂载后监听滚动以切换导航栏样式、初始化内容入场动画并异步加载公开套餐。
+   * 页面挂载后监听滚动、初始化内容动画并加载公开套餐。
+   * 信息页面通过 contact 查询参数返回官网时，自动打开同一套联系表单，保证各公开页面入口行为一致。
    */
   mounted() {
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     this.setupRevealAnimations();
     this.loadPlans();
+    if (this.$route.query.contact === '1') this.openContactDialog();
   },
   /**
    * 离开官网时移除全局滚动监听并断开元素观察器，避免缓存页面外继续执行动画回调。
@@ -254,8 +286,31 @@ export default {
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
     this.revealObserver?.disconnect();
+    document.body.style.overflow = '';
   },
   methods: {
+    /** 打开联系表单，将焦点送到首个字段并阻止背景页面滚动。 */
+    openContactDialog() { this.contactDialogOpen = true; this.contactSuccessNo = ''; this.contactSubmitError = ''; document.body.style.overflow = 'hidden'; this.$nextTick(() => this.$refs.contactName?.focus()); },
+    /** 关闭弹窗并恢复滚动；提交期间禁止误关闭。 */
+    closeContactDialog() { if (this.contactSubmitting) return; this.contactDialogOpen = false; this.contactSuccessNo = ''; document.body.style.overflow = ''; },
+    /** 对单个字段执行失焦校验，并把错误紧邻输入项展示。 */
+    validateContactField(field) {
+      const errors = { ...this.contactErrors };
+      if (field === 'name') errors.name = this.contactForm.name ? '' : '请填写姓名';
+      if (field === 'contact') errors.contact = this.contactForm.contact ? '' : '请填写联系方式';
+      if (field === 'expectedMonthlyOrders') { const value = Number(this.contactForm.expectedMonthlyOrders); errors.expectedMonthlyOrders = this.contactForm.expectedMonthlyOrders !== '' && (!Number.isInteger(value) || value < 0) ? '请输入非负整数' : ''; }
+      this.contactErrors = errors;
+    },
+    /** 校验完整表单；仅姓名和联系方式必填，预计月单量在填写时校验格式。 */
+    validateContactForm() { ['name', 'contact', 'expectedMonthlyOrders'].forEach(this.validateContactField); return !Object.values(this.contactErrors).some(Boolean); },
+    /** 提交联系资料，成功展示后端编号；频率限制等失败保留输入供稍后重试。 */
+    async submitContactForm() {
+      if (!this.validateContactForm() || this.contactSubmitting) return;
+      this.contactSubmitting = true; this.contactSubmitError = '';
+      try { const response = await createVisitorLead({ ...this.contactForm, expectedMonthlyOrders: this.contactForm.expectedMonthlyOrders === '' ? null : Number(this.contactForm.expectedMonthlyOrders) }); this.contactSuccessNo = response?.data?.leadNo || ''; if (!this.contactSuccessNo) throw new Error('提交响应缺少游客编号'); this.contactForm = { name: '', contact: '', roleCode: '', expectedMonthlyOrders: '', intentCodes: [], remark: '' }; this.contactErrors = {}; }
+      catch (error) { this.contactSubmitError = error?.message || '提交失败，请稍后重试'; }
+      finally { this.contactSubmitting = false; }
+    },
     /**
      * 根据页面滚动距离切换导航栏的压缩背景样式，使首屏透明效果和正文阅读对比度兼顾。
      */
@@ -349,6 +404,7 @@ export default {
 .marketing-nav nav { gap: 28px; font-size: 14px; font-weight: 600; }
 .marketing-nav nav a { white-space: nowrap; }
 .nav-login { margin-left: 10px; }
+.nav-contact { min-height: 44px; padding: 0; border: 0; color: inherit; background: transparent; font-weight: 600; cursor: pointer; }
 .nav-cta { margin: 0; min-height: 38px; padding: 0 19px; line-height: 38px; border: 1px solid #f0b44d; background: #f0b44d; color: #17362c; }
 .hero { position: relative; display: flex; align-items: center; min-height: 760px; height: 92dvh; padding: 132px clamp(24px, 7vw, 110px) 90px; overflow: hidden; color: #fff; background: #0b2e26; }
 .hero-grid-lines { position: absolute; inset: 0; opacity: .08; background-size: 54px 54px; background-image: linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px); mask-image: linear-gradient(90deg, #000, transparent 76%); }
@@ -472,6 +528,12 @@ export default {
 .final-cta { padding: 96px 24px; color: #fff; background: #0f8f68; text-align: center; }.final-cta p { margin: 0 0 12px; color: #c8f4e4; }.final-cta h2 { margin: 0 auto; }
 .marketing-footer { display: grid; grid-template-columns: 1fr auto; column-gap: 28px; row-gap: 24px; padding: 32px clamp(24px, 7vw, 110px); color: #c2d3cc; background: #081c17; }.marketing-footer > p { justify-self: end; margin: 0; white-space: nowrap; }.marketing-footer nav { display: flex; align-items: center; gap: 24px; font-size: 13px; }.marketing-footer nav a { text-decoration: none; text-underline-offset: 5px; transition: color 160ms ease, text-decoration-color 160ms ease; }.marketing-footer nav a:hover, .marketing-footer nav a:focus-visible { color: #58d2a8; text-decoration: underline; }.marketing-footer small { grid-column: 2; justify-self: end; color: #78968a; }
 
+.contact-mask { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(8,28,23,.62); backdrop-filter: blur(5px); }
+.contact-dialog { width: min(720px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; border-radius: 12px; background: #fff; box-shadow: 0 28px 90px rgba(0,0,0,.32); }
+.contact-dialog > header { position: relative; padding: 28px 32px 22px; border-bottom: 1px solid var(--line); }.contact-dialog header p{margin:0 0 5px;color:var(--green);font-size:11px;font-weight:800;letter-spacing:.12em}.contact-dialog header h2{margin:0;font-size:25px}.contact-dialog header span{display:block;margin-top:8px;color:#63766f}.contact-close{position:absolute;top:18px;right:18px;width:44px;height:44px;border:0;border-radius:50%;color:#52665f;background:#eef3f0;font-size:26px;line-height:1}.contact-close:hover{background:#dfeae5}
+.contact-form{padding:26px 32px 30px}.contact-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.contact-form label>span,.contact-remark>span,.intent-fieldset legend{display:block;margin-bottom:7px;color:var(--ink);font-size:13px;font-weight:700}.contact-form b{color:#b42318}.contact-form input,.contact-form select,.contact-form textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid #b9c9c1;border-radius:7px;background:#fff;color:var(--ink);font-size:16px}.contact-form textarea{resize:vertical}.contact-form input:focus,.contact-form select:focus,.contact-form textarea:focus{outline:3px solid rgba(15,143,104,.16);border-color:var(--green)}.contact-form label.invalid input,.contact-form label.invalid select,.intent-fieldset.invalid{border-color:#b42318}.contact-form label>small,.intent-fieldset>p{display:block;margin:5px 0 0;color:#b42318;font-size:12px}.intent-fieldset{display:flex;flex-wrap:wrap;gap:10px;padding:0;margin:22px 0;border:0}.intent-fieldset legend{width:100%}.intent-fieldset legend small{margin-left:8px;color:#71827c;font-weight:500}.intent-fieldset label{position:relative}.intent-fieldset input{position:absolute;width:1px;height:1px;opacity:0}.intent-fieldset label span{display:flex;align-items:center;min-height:44px;padding:0 15px;margin:0;border:1px solid #b9c9c1;border-radius:999px;cursor:pointer;transition:background 160ms ease,border-color 160ms ease}.intent-fieldset input:checked+span{border-color:var(--green);background:#e5f5ef;color:#0b6d50}.intent-fieldset input:focus-visible+span{outline:3px solid rgba(15,143,104,.2)}.intent-fieldset>p{width:100%}.contact-remark{position:relative}.contact-remark>small{position:absolute;right:9px;bottom:8px;color:#71827c!important}.contact-submit-error{margin-top:14px;padding:10px 12px;border-radius:6px;color:#8f1d16;background:#fff0ee}.contact-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}.contact-actions button{min-height:46px;padding:0 20px;border-radius:7px;font-weight:700}.contact-secondary{border:1px solid #b9c9c1;background:#fff;color:var(--ink)}.contact-primary{border:1px solid var(--green);background:var(--green);color:#fff}.contact-actions button:disabled{cursor:not-allowed;opacity:.55}.contact-success{position:fixed;z-index:1100;right:24px;bottom:24px;display:flex;align-items:center;gap:12px;padding:15px 18px;border-radius:9px;background:#fff;color:var(--ink);box-shadow:0 18px 50px rgba(8,28,23,.22)}.contact-success strong{color:#087657}.contact-success span{font-variant-numeric:tabular-nums}.contact-success button{min-height:36px;border:0;background:transparent;color:var(--green);font-weight:700}
+.contact-form em,.intent-fieldset em{margin-left:7px;color:#71827c;font-size:12px;font-style:normal;font-weight:500}.intent-fieldset{display:grid;grid-template-columns:repeat(3,max-content);gap:8px 24px;justify-content:start;padding:16px 0 0;border-top:1px solid var(--line)}.intent-fieldset legend{grid-column:1/-1;padding:0}.intent-fieldset label{display:flex;align-items:center;gap:9px;min-width:0;min-height:40px;cursor:pointer}.intent-fieldset label input{position:absolute;width:1px;height:1px;opacity:0}.intent-fieldset label>span:last-child{display:flex;align-items:center;min-height:20px;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font-weight:500;line-height:20px}.checkbox-mark{position:relative;display:block!important;flex:0 0 20px;width:20px;height:20px;min-height:0!important;padding:0!important;margin:0!important;border:1px solid #9fb2a9!important;border-radius:4px!important;background:#fff!important}.intent-fieldset input:checked+.checkbox-mark{border-color:var(--green)!important;background:var(--green)!important}.intent-fieldset input:checked+.checkbox-mark::after{position:absolute;top:2px;left:6px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);content:''}.intent-fieldset input:focus-visible+.checkbox-mark{outline:3px solid rgba(15,143,104,.2);outline-offset:2px}
+.contact-result{padding:34px 32px 36px;text-align:center}.contact-result-icon{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 15px;border-radius:50%;color:#fff;background:var(--green);font-size:28px;font-weight:800}.contact-result h3{margin:0;font-size:24px}.contact-result>p{margin:8px 0 24px;color:#63766f}.qr-placeholder{width:210px;margin:0 auto 22px;padding:18px;border:1px dashed #9db5aa;border-radius:10px;background:#f5f8f6}.qr-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;width:116px;height:116px;padding:8px;margin:0 auto 12px;background:#fff}.qr-grid i{background:#e1e9e5}.qr-grid i.dark{background:#163d32}.qr-placeholder strong,.qr-placeholder span{display:block}.qr-placeholder span{margin-top:3px;color:#71827c;font-size:12px}.contact-result dl{margin:0 0 22px}.contact-result dt{color:#71827c;font-size:12px}.contact-result dd{margin:5px 0 0;font-variant-numeric:tabular-nums;font-size:16px;font-weight:800;letter-spacing:.04em}.contact-result-close{min-height:46px;padding:0 28px;border-radius:7px}
 #capabilities, #teams, #plans { scroll-margin-top: 76px; }
 [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity 520ms ease, transform 600ms cubic-bezier(.2,.75,.25,1); transition-delay: var(--reveal-delay, 0ms); }
 [data-reveal="left"] { transform: translateX(-28px); }
@@ -482,7 +544,8 @@ export default {
 @media (max-width: 1100px) { .marketing-nav nav { gap: 18px; }.marketing-nav nav a:not(.nav-login):not(.nav-cta) { display: none; }.product-scene { left: 66%; opacity: .54; }.hero-content { width: 68%; }.workflow-grid { grid-template-columns: repeat(2, 1fr); }.workflow-item:nth-child(2) { border-right: 0; }.workflow-item:first-child { padding-left: 24px; }.workflow-item:nth-child(-n+2) { border-bottom: 1px solid #cad8d0; }.operations-section { gap: 54px; }.teams-grid article { padding: 28px; } }
 @media (max-width: 1280px) { .security-points { margin-left: -80px; } }
 @media (max-width: 1050px) { .security-section { grid-template-columns: 1fr; }.security-points { margin-left: 0; } }
-@media (max-width: 800px) { .brand-product, .brand-divider, .nav-login { display: none; }.marketing-nav { height: 68px; padding: 0 20px; }.hero { height: auto; min-height: 760px; padding: 112px 24px 70px; align-items: flex-start; }.hero-content { width: 100%; }.hero h1 { font-size: 48px; }.hero-desc { font-size: 16px; }.hero-facts { flex-wrap: wrap; gap: 20px; }.hero-facts div { min-width: 120px; margin: 0; padding: 0 20px 0 0; }.product-scene { top: auto; bottom: -215px; left: 26%; width: 760px; opacity: .24; transform: rotate(-2deg); }.scene-note { display: none; }.trust-strip { justify-content: flex-start; }.trust-strip p { width: 100%; }.operations-section, .security-section { grid-template-columns: 1fr; }.security-points { margin-left: 0; }.teams-grid, .plan-grid { grid-template-columns: 1fr; }.teams-grid article, .plan-card { min-height: auto; padding: 30px 0; border-right: 0; border-bottom: 1px solid var(--line); }.plan-grid { padding: 0 24px; }.plan-card.featured { margin: 0 -24px; padding: 38px 24px; }.plans-heading { display: block; }.marketing-footer { grid-template-columns: 1fr; }.marketing-footer > p { justify-self: start; white-space: normal; }.marketing-footer small { grid-column: 1; justify-self: start; } }
+@media (max-width: 800px) { .brand-product, .brand-divider, .nav-login:not(.nav-contact) { display: none; }.marketing-nav { height: 68px; padding: 0 20px; }.hero { height: auto; min-height: 760px; padding: 112px 24px 70px; align-items: flex-start; }.hero-content { width: 100%; }.hero h1 { font-size: 48px; }.hero-desc { font-size: 16px; }.hero-facts { flex-wrap: wrap; gap: 20px; }.hero-facts div { min-width: 120px; margin: 0; padding: 0 20px 0 0; }.product-scene { top: auto; bottom: -215px; left: 26%; width: 760px; opacity: .24; transform: rotate(-2deg); }.scene-note { display: none; }.trust-strip { justify-content: flex-start; }.trust-strip p { width: 100%; }.operations-section, .security-section { grid-template-columns: 1fr; }.security-points { margin-left: 0; }.teams-grid, .plan-grid { grid-template-columns: 1fr; }.teams-grid article, .plan-card { min-height: auto; padding: 30px 0; border-right: 0; border-bottom: 1px solid var(--line); }.plan-grid { padding: 0 24px; }.plan-card.featured { margin: 0 -24px; padding: 38px 24px; }.plans-heading { display: block; }.marketing-footer { grid-template-columns: 1fr; }.marketing-footer > p { justify-self: start; white-space: normal; }.marketing-footer small { grid-column: 1; justify-self: start; } }
 @media (max-width: 560px) { .nav-cta { padding: 0 13px; }.brand { gap: 8px; }.brand-name { font-size: 17px; }.hero h1 { font-size: 40px; }.hero-actions { align-items: stretch; flex-direction: column; gap: 10px; }.hero-primary { text-align: center; }.hero-facts dd { font-size: 11px; }.section { padding: 76px 20px; }.workflow-grid { grid-template-columns: 1fr; }.workflow-item, .workflow-item:first-child { padding: 28px 0; border-right: 0; border-bottom: 1px solid #cad8d0; }.workflow-item .step-number, .workflow-item:first-child .step-number { left: 0; }.workflow-item > p { min-height: auto; }.operations-section { padding: 76px 20px; }.operation-list p { flex-direction: column; }.operation-list small { margin-top: 4px; }.ledger-panel { padding: 22px; box-shadow: 10px 10px 0 #1b4035; }.ledger-total strong { font-size: 30px; }.security-section { padding: 70px 20px; }.security-points p { grid-template-columns: 1fr; gap: 6px; }.marketing-footer nav { flex-wrap: wrap; }.marketing-footer > p { font-size: 13px; } }
+@media (max-width: 620px) { .contact-mask{padding:0}.contact-dialog{width:100%;max-height:100dvh;min-height:100dvh;border-radius:0}.contact-dialog>header,.contact-form{padding-left:20px;padding-right:20px}.contact-dialog header h2{padding-right:42px;font-size:22px}.contact-form-grid{grid-template-columns:1fr}.intent-fieldset{grid-template-columns:1fr}.contact-actions{position:sticky;bottom:0;padding-top:12px;background:#fff}.contact-actions button{flex:1}.contact-success{right:12px;bottom:12px;left:12px;flex-wrap:wrap}.contact-success button{margin-left:auto} }
 @media (prefers-reduced-motion: reduce) { .plan-skeleton { animation: none; } }
 </style>

@@ -81,6 +81,18 @@ public class FinanceController {
     return ok(service.orders(pageNum, pageSize, orderNo, orderType, startTime, endTime));
   }
 
+  /**
+   * 提供 SaaS 门户历史订阅订单的只读详情。
+   * 服务层会按当前企业校验订单归属，路由参数仅作为订单定位条件，不能跨企业查询。
+   *
+   * @param id 订阅订单主键
+   * @return 订单金额、状态、支付信息和下单时套餐权益快照
+   */
+  @GetMapping("/subscription-orders/{id}")
+  public ResponseResult<?> orderDetail(@PathVariable Long id) {
+    return ok(service.orderDetail(id));
+  }
+
   @GetMapping("/wallet-transactions")
   public ResponseResult<?> transactions(
       @RequestParam(defaultValue = "1") int pageNum,

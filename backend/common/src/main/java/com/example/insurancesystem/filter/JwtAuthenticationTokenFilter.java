@@ -34,6 +34,17 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     @Autowired
     private AuthenticationEntryPoint authenticationEntryPoint;
 
+    /**
+     * 游客线索新增是官网匿名入口，其安全边界由来源白名单和提交频率保护组件负责。
+     * 明确跳过 JWT 解析可避免浏览器残留的过期令牌把本应公开的提交错误转换为 401；
+     * 这里只豁免固定路径的 POST，请求该资源的其他方法仍由 Spring Security 路由规则处理。
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && "/portal/visitor-leads".equals(request.getServletPath());
+    }
+
     @Override
     /**
      * 提取并验证 JWT，检查 Redis 中当前会话，刷新活跃会话有效期，并在 JWT 临近过期时通过 new-token 响应头续签。

@@ -39,6 +39,14 @@ public interface FinanceService {
       String startTime,
       String endTime);
 
+  /**
+   * 查询当前企业的一笔历史订阅订单，返回下单时的套餐权益快照及完整金额、支付和状态信息。
+   *
+   * @param id 订阅订单主键
+   * @return 可供门户只读详情页展示的订单数据
+   */
+  Map<String, Object> orderDetail(Long id);
+
   TableData<Map<String, Object>> transactions(
       int pageNum,
       int pageSize,

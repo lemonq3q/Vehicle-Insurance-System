@@ -9,7 +9,7 @@
       </router-link>
       <nav aria-label="官网导航">
         <button class="language-switch" type="button" @click="toggleLanguage">{{ language === 'zh' ? 'English' : '中文' }}</button>
-        <router-link to="/login">登录</router-link>
+        <router-link :to="{ path: '/', query: { contact: '1' } }">联系我们</router-link>
         <router-link class="nav-cta" to="/login">立即使用</router-link>
       </nav>
     </header>

@@ -32,6 +32,11 @@ public class DefaultBusinessCodeGenerator implements BusinessCodeGenerator {
     return "TX" + date() + random(5);
   }
 
+  /** 使用日期和十位安全随机字符生成游客线索编号，供监控检索及后续二维码场景复用。 */
+  public String visitorLeadNo() {
+    return "VL" + date() + random(10);
+  }
+
   private String timestamp() {
     return LocalDateTime.now().format(TIME);
   }

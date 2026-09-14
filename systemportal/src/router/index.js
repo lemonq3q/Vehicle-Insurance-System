@@ -18,6 +18,7 @@ const RechargePlaceholderPage = () => import('@/views/finance/RechargePlaceholde
 const RechargeOrdersPage = () => import('@/views/finance/RechargeOrdersPage.vue');
 const RechargeOrderDetailPage = () => import('@/views/finance/RechargeOrderDetailPage.vue');
 const SubscriptionOrdersPage = () => import('@/views/finance/SubscriptionOrdersPage.vue');
+const SubscriptionOrderRecordDetailPage = () => import('@/views/finance/SubscriptionOrderRecordDetailPage.vue');
 const WalletTransactionsPage = () => import('@/views/finance/WalletTransactionsPage.vue');
 const UserCenterPage = () => import('@/views/user/UserCenterPage.vue');
 const HelpCenterPage = () => import('@/views/help/HelpCenterPage.vue');
@@ -60,6 +61,7 @@ const routes = [
       { path: 'finance/recharges', name: 'finance-recharges', component: RechargeOrdersPage, meta: { title: '充值订单', requiresEnterprise: true } },
       { path: 'finance/recharges/:id', name: 'finance-recharge-detail', component: RechargeOrderDetailPage, meta: { title: '充值订单详情', requiresEnterprise: true } },
       { path: 'finance/orders', name: 'finance-orders', component: SubscriptionOrdersPage, meta: { title: '订阅订单', requiresEnterprise: true } },
+      { path: 'finance/orders/:id', name: 'finance-order-detail', component: SubscriptionOrderRecordDetailPage, meta: { title: '订阅订单详情', requiresEnterprise: true } },
       { path: 'finance/transactions', name: 'finance-transactions', component: WalletTransactionsPage, meta: { title: '资金明细', requiresEnterprise: true } },
       { path: 'enterprise-required', name: 'enterprise-required', component: NoEnterprisePage, meta: { title: '尚未加入企业' } },
       { path: 'user/profile', name: 'user-profile', component: UserCenterPage, meta: { title: '用户中心' } },

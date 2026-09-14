@@ -37,6 +37,7 @@
               <th>状态</th>
               <th>失败原因</th>
               <th>创建时间</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -54,6 +55,11 @@
               <td><span class="portal-tag" :class="{ warn: [1, 6].includes(item.status) }">{{ statusName('order', item.status) }}</span></td>
               <td>{{ item.failureReason || '-' }}</td>
               <td>{{ item.createdAt }}</td>
+              <td>
+                <router-link class="layui-btn layui-btn-xs layui-btn-primary layui-border-green" :to="{ name: 'finance-order-detail', params: { id: item.id } }">
+                  查看详情
+                </router-link>
+              </td>
             </tr>
           </tbody>
         </table>

@@ -72,6 +72,10 @@
       <article class="portal-card panel">
         <h2>近期提醒</h2>
         <div v-if="loadingReminders" class="timeline-empty">正在加载近期提醒...</div>
+        <div v-else-if="remindersError" class="timeline-empty reminder-error" role="alert">
+          <span>{{ remindersError }}</span>
+          <button class="portal-btn portal-btn-primary" type="button" @click="loadRecentReminders">重新加载</button>
+        </div>
         <div v-else-if="!notices.length" class="timeline-empty">最近一个月暂无提醒</div>
         <div v-else class="timeline">
           <div v-for="item in notices" :key="item.id" class="timeline-item" :class="`severity-${item.severity.toLowerCase()}`">
@@ -106,7 +110,8 @@ export default {
       statisticsError: '',
       loadingStatistics: false,
       notices: [],
-      loadingReminders: false
+      loadingReminders: false,
+      remindersError: ''
     };
   },
   created() {
@@ -129,8 +134,17 @@ export default {
       this.loadingStatistics = true;
       this.statisticsError = '';
       try {
-        this.statistics = await getDashboardStatistics();
+        /*
+         * 门户请求层保留统一响应外壳，页面只消费 data 中的统计业务对象。
+         * 若后端意外未返回对象，则进入现有错误卡片，避免把响应外壳误当成统计模型渲染。
+         */
+        const response = await getDashboardStatistics();
+        if (!response?.data || typeof response.data !== 'object' || Array.isArray(response.data)) {
+          throw new Error('经营数据响应格式异常');
+        }
+        this.statistics = response.data;
       } catch (error) {
+        this.statistics = null;
         this.statisticsError = error?.message || '经营数据暂时无法加载';
       } finally {
         this.loadingStatistics = false;
@@ -139,8 +153,20 @@ export default {
     /** 读取当前企业最近一个月提醒，保持原页面严重程度和时间排序展示。 */
     async loadRecentReminders() {
       this.loadingReminders = true;
+      this.remindersError = '';
       try {
-        this.notices = await getRecentReminders() || [];
+        /*
+         * 后端统一返回 {code,msg,data}，提醒列表必须读取 data 数组。接口成功但 data 缺失时按空列表
+         * 处理；若 data 类型异常则展示可重试错误，不能错误显示成“最近一个月暂无提醒”。
+         */
+        const response = await getRecentReminders();
+        if (response?.data != null && !Array.isArray(response.data)) {
+          throw new Error('提醒数据响应格式异常');
+        }
+        this.notices = response?.data || [];
+      } catch (error) {
+        this.notices = [];
+        this.remindersError = error?.message || '近期提醒暂时无法加载';
       } finally {
         this.loadingReminders = false;
       }
@@ -177,6 +203,7 @@ export default {
 .stat-note { white-space: normal; }
 .stat-note.decrease { color: var(--portal-danger); }
 .statistics-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 126px; padding: 18px; color: var(--portal-muted); }
+.reminder-error { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; color: var(--portal-danger); }
 .dashboard-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 18px; margin-top: 18px; }
 .panel { padding: 22px; }
 .panel h2 { margin: 0 0 18px; font-size: 18px; }

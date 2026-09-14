@@ -12,6 +12,17 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 server:
   port: ${MONITOR_BACKEND_PORT:8083}
+security:
+  session:
+    key-prefix: "monitor:login:"
+monitor:
+  promotion:
+    max-targets: ${MONITOR_PROMOTION_MAX_TARGETS:6000}
+  auth:
+    bootstrap:
+      username: ${MONITOR_INITIAL_ADMIN_USERNAME:}
+      password: ${MONITOR_INITIAL_ADMIN_PASSWORD:}
+      real-name: ${MONITOR_INITIAL_ADMIN_REAL_NAME:初始管理员}
 maintenance:
   participant:
     enabled: true

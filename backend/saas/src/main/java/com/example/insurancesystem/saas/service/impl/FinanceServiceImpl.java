@@ -341,6 +341,21 @@ public class FinanceServiceImpl implements FinanceService {
     return new TableData<>(mapper.countOrders(q), rows);
   }
 
+  /**
+   * 按当前企业边界读取历史订阅订单，并复用列表的快照解析逻辑补齐周期数和套餐权益。
+   * 查询不到时统一返回业务 404，既避免泄露其他企业订单，也让前端能够展示明确的空状态。
+   *
+   * @param id 由订阅订单列表进入详情页时携带的订单主键
+   * @return 已转换为小驼峰字段并解析套餐快照的订阅订单
+   * @throws BusinessException 订单不存在、已删除或不属于当前企业时抛出 404
+   */
+  public Map<String, Object> orderDetail(Long id) {
+    Map<String, Object> order = PortalMaps.camel(mapper.findOrder(id, context.enterpriseId()));
+    if (order == null) throw new BusinessException(404, "订阅订单不存在");
+    decorateOrder(order);
+    return order;
+  }
+
   public TableData<Map<String, Object>> transactions(
       int pageNum,
       int pageSize,

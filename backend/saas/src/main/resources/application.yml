@@ -51,6 +51,11 @@ maintenance:
     zone: Asia/Shanghai
 
 saas:
+  visitor-lead:
+    # 官网匿名提交仅接受明确允许的 Origin/Referer；生产域名与本地联调地址集中配置，禁止客户端自行声明来源。
+    allowed-origins: ${VISITOR_LEAD_ALLOWED_ORIGINS:http://localhost:8080,http://127.0.0.1:8080,http://localhost:8889,http://127.0.0.1:8889,https://www.idatag.com,https://idatag.com}
+    rate-limit-seconds: ${VISITOR_LEAD_RATE_LIMIT_SECONDS:60}
+    trust-proxy-headers: ${VISITOR_LEAD_TRUST_PROXY_HEADERS:false}
   reminder:
     first-expiry-warning-days: ${REMINDER_FIRST_EXPIRY_WARNING_DAYS:7}
     urgent-expiry-warning-days: ${REMINDER_URGENT_EXPIRY_WARNING_DAYS:1}
@@ -59,6 +64,7 @@ saas:
     near-suspension-ratio: ${REMINDER_NEAR_SUSPENSION_RATIO:0.80}
     data-deletion-warning-days: ${REMINDER_DATA_DELETION_WARNING_DAYS:30,15,3}
     monitor-merge-url: ${MONITOR_REMINDER_MERGE_URL:http://localhost:8083/internal/reminders/merge}
+    monitor-delete-url: ${MONITOR_REMINDER_DELETE_URL:http://localhost:8083/internal/reminders/delete}
   data-retention:
     # 最近一次套餐结束超过该天数后，清除企业在车险域内的业务资料；成员、钱包和订阅不受影响。
     retention-days: ${ENTERPRISE_DATA_RETENTION_DAYS:90}

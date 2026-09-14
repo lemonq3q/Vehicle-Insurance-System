@@ -134,6 +134,10 @@ export const getPlans = () => get('/portal/finance/plans');
 export const getMarketingPlans = () => request.get('/portal/finance/plans', {
   skipErrorNotification: true
 });
+/** 官网游客提交联系资料；来源由浏览器标准头和服务端白名单验证。 */
+export const createVisitorLead = data => request.post('/portal/visitor-leads', data, {
+  skipErrorNotification: true
+});
 /**
  * 创建指定金额和支付渠道的余额充值订单。
  */
@@ -170,6 +174,10 @@ export const updateAutoRenew = data => put('/portal/finance/subscription/auto-re
  * 按类型、状态和时间分页查询订阅订单。
  */
 export const getSubscriptionOrders = params => get('/portal/finance/subscription-orders', params);
+/**
+ * 查询当前企业单个历史订阅订单，包含下单时的套餐权益快照、费用构成和支付状态。
+ */
+export const getSubscriptionOrder = id => get(`/portal/finance/subscription-orders/${id}`);
 /**
  * 分页查询企业钱包的充值、订阅、退款和超额计费流水。
  */
