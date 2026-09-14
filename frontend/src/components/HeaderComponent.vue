@@ -1,7 +1,19 @@
 <template>
   <div class="header">
-    <!-- 操作按钮 -->
-    <h3 style="min-width: 160px; text-align: left;">保险工单管理系统</h3>
+    <div class="header_left">
+      <button class="sidebar_toggle" type="button" :aria-label="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'" :aria-expanded="!sidebarCollapsed" @click="$emit('toggle-sidebar')">
+        <i class="monitor_icon monitor_icon_shrink" aria-hidden="true"></i>
+      </button>
+      <nav class="header_breadcrumb" aria-label="当前位置">
+        <span>车险管理</span>
+        <i class="monitor_icon monitor_icon_right" aria-hidden="true"></i>
+        <template v-if="route.meta.section">
+          <span>{{ route.meta.section }}</span>
+          <i class="monitor_icon monitor_icon_right" aria-hidden="true"></i>
+        </template>
+        <strong>{{ route.meta.title || '工单管理' }}</strong>
+      </nav>
+    </div>
     <div class="header_right">
       <el-button class="portal_return_button" type="primary" plain :loading="returningPortal" :disabled="returningPortal" @click="handleReturnPortal">
         <el-icon><back /></el-icon>
@@ -63,11 +75,18 @@
   </el-dialog> -->
 </template>
 
+<script>
+export default {
+  props: { sidebarCollapsed: { type: Boolean, default: false } },
+  emits: ['toggle-sidebar'],
+};
+</script>
+
 <script setup>
 import { ArrowDown, Back } from '@element-plus/icons-vue';
 import { createPortalAuthorization, logout } from '@/api/login';
 import { selectRenewCount } from '@/api/workorder';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { computed, onMounted, ref } from 'vue';
 // import { validateStr } from '@/utils/validate';
@@ -77,6 +96,7 @@ import { jsonStrToObj } from '@/utils/convert';
 import SystemNotice from '@/components/SystemNotice.vue';
 
 const store = useStore();
+const route = useRoute();
 /**
  * * 优先从用户资料中的姓名字段生成页头问候语，并兼容历史 realName、username 字段。
  */
@@ -229,17 +249,67 @@ const handleLogout = () => {
 }
 
 .header {
-  padding: 0 30px;
+  padding: 0 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  height: 5vh;
-  min-height: 50px;
-  background-color: #fff;
-  border-bottom: 1px solid #DCDFE6;
-  color: #409EFF;
+  height: 68px;
+  min-height: 68px;
+  background-color: rgba(255, 255, 255, .94);
+  border-bottom: 1px solid var(--insurance-border);
+  color: var(--insurance-text);
+  backdrop-filter: blur(12px);
 }
+.header_left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.sidebar_toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--insurance-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--insurance-secondary);
+  cursor: pointer;
+}
+.sidebar_toggle:hover { background: #eff6ff; border-color: #93c5fd; color: var(--insurance-primary); }
+.sidebar_toggle:focus-visible { outline: 2px solid rgba(71, 85, 105, .42); outline-offset: 2px; }
+@font-face {
+  font-family: 'insurance-monitor-icon';
+  src: url('@/assets/fonts/monitor-iconfont.woff2') format('woff2');
+  font-display: block;
+}
+.monitor_icon {
+  font-family: 'insurance-monitor-icon' !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.monitor_icon_shrink::before { content: '\e668'; }
+.monitor_icon_right::before { content: '\e602'; }
+.header_breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+  color: var(--insurance-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  font-family: 'Open Sans', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+}
+.header_breadcrumb .monitor_icon { flex: 0 0 auto; font-size: 12px; }
+.header_breadcrumb strong { overflow: hidden; text-overflow: ellipsis; color: var(--insurance-text); }
+.header_right { flex: 0 0 auto; }
 
 .header_right {
   display: flex;
@@ -253,6 +323,8 @@ const handleLogout = () => {
 .header_user_container {
   display: flex;
   align-items: center;
+  color: var(--insurance-secondary);
+  cursor: pointer;
 }
 
 .header_user_img {
@@ -272,6 +344,13 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   height: 100%;
+}
+@media (max-width: 900px) {
+  .portal_return_button { margin-right: 10px; }
+  .header_notice_wrapper { margin-right: 10px; }
+}
+@media (max-width: 620px) {
+  .header { padding: 0 12px; }
 }
 
 </style>

@@ -16,13 +16,6 @@ div {
 }
 
 
-/* 去除焦点边框样式 */
-*:focus,
-*:focus-visible,
-*:focus-within {
-  outline: none !important;
-}
-
 .no_select {
     -webkit-touch-callout: none;
     -webkit-user-select: none;

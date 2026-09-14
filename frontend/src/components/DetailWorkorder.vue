@@ -73,6 +73,7 @@
           <i class="img_icon" style="height: 25px;" :style="{ backgroundImage: `url(${editIcon})` }"></i>
         </div>
       </div>
+      <Transition :css="false" v-bind="collapseTransitionHooks">
       <div class="detail_content" v-if="showFlag.quotationInfo">
         <!-- 保险公司 -->
         <div class="content_row" style="justify-content: space-between;">
@@ -366,6 +367,7 @@
           <div style="min-height: 20px;">{{ info.remark }}</div>
         </div>
       </div>
+      </Transition>
       <!-- 报价结果 -->
       <div class="detail_head no_select">
         <div class="detail_head_item" @click="handleTableExpand('quotationResult')">
@@ -376,6 +378,7 @@
           <i class="img_icon" style="height: 25px;" :style="{ backgroundImage: `url(${editIcon})` }"></i>
         </div>
       </div>
+      <Transition :css="false" v-bind="collapseTransitionHooks">
       <div class="detail_content" v-if="showFlag.quotationResult">
         <div class="img_detail_show" style="margin-top: 20px;">
           <div class="img_detail_show_right">
@@ -502,6 +505,7 @@
           </div>
         </div>        
       </div>
+      </Transition>
       <!-- 支付信息 -->
       <div class="detail_head no_select">
         <div class="detail_head_item" @click="handleTableExpand('payment')">
@@ -512,6 +516,7 @@
           <i class="img_icon" style="height: 25px;" :style="{ backgroundImage: `url(${editIcon})` }"></i>
         </div>
       </div>
+      <Transition :css="false" v-bind="collapseTransitionHooks">
       <div class="detail_content" v-if="showFlag.payment">
         <div class="img_detail_show" style="margin-top: 20px;">
           <div class="img_detail_show_right">
@@ -546,6 +551,7 @@
           </div>
         </div> -->
       </div>
+      </Transition>
       <!-- 承保资料 -->
       <div class="detail_head no_select" style="border-bottom: 0;">
         <div class="detail_head_item" @click="handleTableExpand('acceptInsurance')">
@@ -556,6 +562,7 @@
           <i class="img_icon" style="height: 25px;" :style="{ backgroundImage: `url(${editIcon})` }"></i>
         </div>
       </div>
+      <Transition :css="false" v-bind="collapseTransitionHooks">
       <div class="detail_content" v-if="showFlag.acceptInsurance" style="border-bottom: 0; border-top: 1px solid #DCDFE6;">
         <div class="img_detail_show" style="margin-top: 20px;">
           <div class="img_detail_show_right">
@@ -636,6 +643,7 @@
           </div>
         </div>
       </div>
+      </Transition>
     </div>
     <!-- 按钮 -->
     <div ref="scrollRef" style="margin: 50px 0 25px 0;" v-show="showFlag.uploadForm">
@@ -798,7 +806,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <div style="color:#409EFF;" class="no_select" v-if="!showFlag.is_have_non_motor" @click="handleNonMotorChange(true)">+添加非车险险种(最多添加1条)</div>
+            <div style="color:var(--insurance-primary);" class="no_select" v-if="!showFlag.is_have_non_motor" @click="handleNonMotorChange(true)">+添加非车险险种(最多添加1条)</div>
           </el-col>
         </el-row>
         <el-row v-if="showFlag.is_have_non_motor">
@@ -880,7 +888,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamCommercialPercentage, info.commercialAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -895,7 +903,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -911,7 +919,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamCompulsoryPercentage, info.compulsoryAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -926,7 +934,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -942,7 +950,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamVehicleAndVesselTaxPercentage, info.vehicleAndTaxAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -957,7 +965,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -973,7 +981,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamNonMotorPercentage, info.nonMotorAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -988,7 +996,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1020,7 +1028,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamCommercialPercentage, info.commercialAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1035,7 +1043,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1051,7 +1059,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamCompulsoryPercentage, info.compulsoryAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1066,7 +1074,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1082,7 +1090,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamVehicleAndVesselTaxPercentage, info.vehicleAndTaxAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1097,7 +1105,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1113,7 +1121,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamNonMotorPercentage, info.nonMotorAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1128,7 +1136,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1309,7 +1317,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <div style="color:#409EFF;" class="no_select" v-if="!showFlag.is_have_non_motor" @click="handleNonMotorChange(true)">+添加非车险险种(最多添加1条)</div>
+            <div style="color:var(--insurance-primary);" class="no_select" v-if="!showFlag.is_have_non_motor" @click="handleNonMotorChange(true)">+添加非车险险种(最多添加1条)</div>
           </el-col>
         </el-row>
         <el-row v-if="showFlag.is_have_non_motor">
@@ -1390,7 +1398,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamCommercialPercentage, info.commercialAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1405,7 +1413,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1421,7 +1429,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamCompulsoryPercentage, info.compulsoryAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1436,7 +1444,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1452,7 +1460,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamVehicleAndVesselTaxPercentage, info.vehicleAndTaxAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1467,7 +1475,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1483,7 +1491,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.upstreamNonMotorPercentage, info.nonMotorAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1498,7 +1506,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1529,7 +1537,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamCommercialPercentage, info.commercialAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1544,7 +1552,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1560,7 +1568,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamCompulsoryPercentage, info.compulsoryAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1575,7 +1583,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1591,7 +1599,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamVehicleAndVesselTaxPercentage, info.vehicleAndTaxAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1606,7 +1614,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1622,7 +1630,7 @@
               </el-input>
               <div style="display: flex;">
                 <div>{{ `${percentageMulti(info.downstreamNonMotorPercentage, info.nonMotorAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', true)" class="no_select">按金额</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', true)" class="no_select">按金额</div>
               </div>
             </el-form-item>
           </el-col>
@@ -1637,7 +1645,7 @@
                 </template>
               </el-input>
               <div style="display: flex;">
-                <div style="color: #409EFF; margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', false)" class="no_select">按比例</div>
+                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', false)" class="no_select">按比例</div>
               </div>
             </el-form-item>
           </el-col>
@@ -2115,6 +2123,90 @@ import Loading from '@/utils/loading';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+
+const collapseAnimations = new WeakMap();
+
+/**
+ * 清理当前区块的高度动画及临时布局样式。Vue 在连续点击导致过渡取消时也会调用此函数，
+ * 以免旧动画继续改变新一轮展开或收起的高度。
+ */
+const resetCollapseStyles = (element) => {
+  collapseAnimations.get(element)?.cancel();
+  collapseAnimations.delete(element);
+  element.style.height = '';
+  element.style.opacity = '';
+  element.style.overflow = '';
+  element.style.minHeight = '';
+  element.style.boxSizing = '';
+};
+
+/**
+ * 以浏览器动画的完成事件驱动 Vue 过渡结束，而非按估算时长提前卸载节点。
+ * 高度从当前像素值变化到内容高度或零；原有 v-if 与 showFlag 业务开关保持不变。
+ */
+const collapseTransitionHooks = {
+  onBeforeEnter(element) {
+    element.style.height = '0';
+    element.style.opacity = '0';
+    element.style.overflow = 'hidden';
+    element.style.minHeight = '0';
+    element.style.boxSizing = 'border-box';
+  },
+  onEnter(element, done) {
+    const targetHeight = element.scrollHeight;
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280;
+    const animation = element.animate(
+      [{ height: '0px', opacity: 0 }, { height: `${targetHeight}px`, opacity: 1 }],
+      { duration, easing: 'ease-in-out', fill: 'forwards' }
+    );
+    collapseAnimations.set(element, animation);
+    animation.onfinish = () => {
+      resetCollapseStyles(element);
+      done();
+    };
+  },
+  onEnterCancelled: resetCollapseStyles,
+  onBeforeLeave(element) {
+    element.style.height = `${element.getBoundingClientRect().height}px`;
+    element.style.opacity = '1';
+    element.style.overflow = 'hidden';
+    element.style.minHeight = '0';
+    element.style.boxSizing = 'border-box';
+  },
+  onLeave(element, done) {
+    const startHeight = element.getBoundingClientRect().height;
+    const style = window.getComputedStyle(element);
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280;
+    const animation = element.animate(
+      [
+        {
+          height: `${startHeight}px`,
+          paddingTop: style.paddingTop,
+          paddingBottom: style.paddingBottom,
+          borderTopWidth: style.borderTopWidth,
+          borderBottomWidth: style.borderBottomWidth,
+          opacity: 1,
+        },
+        {
+          height: '0px',
+          paddingTop: '0px',
+          paddingBottom: '0px',
+          borderTopWidth: '0px',
+          borderBottomWidth: '0px',
+          opacity: 0,
+        },
+      ],
+      { duration, easing: 'ease-in-out', fill: 'forwards' }
+    );
+    collapseAnimations.set(element, animation);
+    animation.onfinish = () => {
+      // 动画保留在零高度终态，Vue 移除节点后再由 onAfterLeave 清理样式。
+      done();
+    };
+  },
+  onAfterLeave: resetCollapseStyles,
+  onLeaveCancelled: resetCollapseStyles,
+};
 
 /**
  * 判断详情文本是否缺失。接口中的 null、undefined 和只包含空白的字符串都代表未录入；
@@ -3820,7 +3912,9 @@ const handleRefresh = () => {
   align-items: center;
   width: 100%;
   background-color: #fff;
-  border: 1px solid #DCDFE6;
+  border: 1px solid var(--insurance-border);
+  border-radius: var(--insurance-radius);
+  box-shadow: var(--insurance-shadow);
   min-height: 120px;
   margin-bottom: 15px;
 }
@@ -3854,7 +3948,7 @@ const handleRefresh = () => {
 }
 
 .form_text {
-  color: #606266;
+  color: var(--insurance-secondary);
 }
 
 .step_container {
@@ -3866,7 +3960,9 @@ const handleRefresh = () => {
 
 .detail_info_container {
   width: 100%;
-  border: 1px solid #DCDFE6;
+  border: 1px solid var(--insurance-border);
+  border-radius: var(--insurance-radius);
+  overflow: hidden;
 }
 .detail_head {
   padding: 10px;
@@ -3875,14 +3971,14 @@ const handleRefresh = () => {
   align-items: center;
   width: 100%;
   height: 50px;
-  background-color: #F9F8F8;
-  border-bottom: 1px solid #DCDFE6;
+  background-color: var(--insurance-surface-soft);
+  border-bottom: 1px solid var(--insurance-border);
 }
 .detail_content {
   width: 100%;
   padding: 10px;
   font-size: 14px;
-  border-bottom: 1px solid #DCDFE6;
+  border-bottom: 1px solid var(--insurance-border);
   min-height: 50px;
 }
 
@@ -3978,7 +4074,7 @@ const handleRefresh = () => {
 
 .detail-value {
   min-width: 16px;
-  color: #303133;
+  color: var(--insurance-text);
 }
 
 .detail-value--empty {
@@ -4006,7 +4102,7 @@ const handleRefresh = () => {
 .workorder_detail_insurance_table_content{
   flex: 1;
   padding: 10px;
-  background-color: #F9F8F8;
+  background-color: var(--insurance-surface-soft);
 }
 
 .workorder_detail_insurance_table_item {
@@ -4040,7 +4136,7 @@ const handleRefresh = () => {
   justify-content: center;
   align-items: center;
   border-radius: 4px;
-  background-color: #1F89FF;
+  background-color: var(--insurance-primary);
   color: #fff;
 }
 .workoerder_form_big_title {
@@ -4049,7 +4145,7 @@ const handleRefresh = () => {
 }
 
 .file_download_text {
-  color: #409EFF;
+  color: var(--insurance-primary);
 }
 
 </style>

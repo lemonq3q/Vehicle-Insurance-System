@@ -532,14 +532,8 @@ onUnmounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('@/assets/login_background.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  filter: blur(8px);
+  background: radial-gradient(circle at 15% 12%, rgba(34, 197, 94, .18), transparent 32%), linear-gradient(135deg, #07111f 0%, #0f172a 48%, #10223b 100%);
   z-index: -1;
-  transform: scale(1.05);
 }
 
 /* 标签切换 */
@@ -563,7 +557,7 @@ onUnmounted(() => {
 }
 
 .auth-tab.active {
-  background: #4289EC;
+  background: var(--insurance-primary);
   color: white;
 }
 
@@ -571,10 +565,10 @@ onUnmounted(() => {
 .auth-box {
   width: 100%;
   max-width: 450px;
-  background: rgba(255, 255, 255, 0.95);
+  background: #fff;
   padding: 40px 30px;
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 60px rgba(3, 10, 24, .24);
   backdrop-filter: blur(10px);
 }
 
@@ -600,14 +594,13 @@ onUnmounted(() => {
   height: 50px;
   font-size: 16px;
   border-radius: 8px;
-  background: #4289EC;
+  background: var(--insurance-primary);
   border: none;
   transition: all 0.3s ease;
 }
 
 .auth-btn:hover {
-  background: #3377e6;
-  transform: translateY(-2px);
+  background: var(--insurance-primary-hover);
 }
 
 /* 响应式适配 */

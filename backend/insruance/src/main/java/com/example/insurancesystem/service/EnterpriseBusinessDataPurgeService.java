@@ -13,9 +13,10 @@ import java.util.stream.Collectors;
 
 /**
  * 清空指定企业在车险在线库和对象存储中产生的全部业务资料。
- * 清理范围仅包括企业私有的上下游商户、商户人员、工单及阶段明细、车辆资料、险种配置、OCR 记录、
- * 文件元数据和 OSS 对象。租户成员、用户、订阅、余额、订单等 SaaS 域数据
- * 不在本服务的表清单中，任何调用都不得扩大到这些身份和财务数据。
+ * 清理范围仅包括企业私有的上下游商户、商户人员、工单及阶段明细、车辆资料、OCR 记录、
+ * 文件元数据和 OSS 对象。企业险种目录 biz_insurance_product 属于可重复录单的基础配置，
+ * 清理后仍须保留；工单险种明细 biz_workorder_insurance 则随所属工单一同归档，避免孤儿记录。
+ * 租户成员、用户、订阅、余额、订单等 SaaS 域数据不在本服务的表清单中。
  *
  * <p>该能力只能在分布式维护窗口内由内部接口调用。OSS 无法参与数据库事务，因此先逐个删除对象；
  * 只有全部对象删除成功后，才在单个数据库事务中把在线数据完整迁移到对应归档表并从在线表移除；
@@ -33,7 +34,7 @@ public class EnterpriseBusinessDataPurgeService {
             "biz_workorder_quote", "biz_workorder_commission", "biz_workorder_payment",
             "biz_workorder_underwriting", "biz_workorder_logistics", "biz_workorder",
             "biz_merchant_staff_role", "biz_merchant_area", "biz_merchant_staff", "biz_merchant",
-            "biz_insurance_product", "biz_ocr_record", "sys_file"
+            "biz_ocr_record", "sys_file"
     );
 
     private final JdbcTemplate jdbcTemplate;

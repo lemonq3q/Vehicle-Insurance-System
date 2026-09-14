@@ -9,6 +9,7 @@
 - 车险在线业务记录迁移到对应 `_archive` 表后从在线表移除，已有归档记录永久保留。
 - 在线及归档文件元数据仍然保留在归档表，但对应 OSS 对象会逐个调用阿里云删除接口真实删除。
 - `tenant_member`、`tenant_user`、`tenant_enterprise`、`saas_subscription`、`saas_wallet`、SaaS 订单及交易记录不参与清理。
+- `tenant_enterprise.data_retention_enabled=1` 的企业不进入超期清理候选集；新企业默认为 0，只有监控管理员可通过企业设置接口调整。
 
 ## 内部清理接口
 
@@ -70,7 +71,8 @@
 
 - 上下游信息：`biz_merchant`、`biz_merchant_area`、`biz_merchant_staff`、`biz_merchant_staff_role`
 - 工单及阶段信息：`biz_workorder`、报价、佣金、缴费、核保、物流表
-- 车辆和险种信息：车辆行驶证、发票、合格证、工单险种、企业私有险种配置
+- 车辆和工单险种明细：车辆行驶证、发票、合格证，以及随所属工单归档的已选险种记录 `biz_workorder_insurance`
+- 保留企业险种目录：`biz_insurance_product` 不参与企业资料清理，企业重新开通套餐后仍可检索险种并录单
 - OCR 和附件信息：`biz_ocr_record`、`biz_workorder_file`、`sys_file`
 
 ## 环境配置

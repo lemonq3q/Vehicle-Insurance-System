@@ -105,6 +105,7 @@
                     :to="`/enterprises/${item.id}/overview`"
                     >查看</router-link
                   >
+                  <button v-if="canEditSettings" type="button" class="layui-btn layui-btn-xs monitor-secondary" @click="openSettings(item)">设置</button>
                 </td>
               </tr>
             </tbody>
@@ -117,6 +118,16 @@
           @change="changePage"
       /></template>
     </section>
+    <AppModal v-model="settingsVisible" title="企业设置" confirm-text="保存" :loading="settingsSaving" @confirm="saveSettings">
+      <div class="field">
+        <label for="enterpriseDataRetention">数据保留特权</label>
+        <select id="enterpriseDataRetention" v-model.number="settingsForm.dataRetentionEnabled" class="layui-select">
+          <option :value="0">不保留（到期后按规则清理）</option>
+          <option :value="1">保留（跳过到期清理）</option>
+        </select>
+        <p class="helper">仅监控管理员可调整；关闭保留后，符合条件的企业会在后续维护任务中进入清理范围。</p>
+      </div>
+    </AppModal>
     <AppToast :message="toastMessage" :type="toastType" />
   </div>
 </template>
@@ -124,12 +135,14 @@
 import PageHeader from "@/components/PageHeader.vue";
 import AppPagination from "@/components/AppPagination.vue";
 import AppToast from "@/components/AppToast.vue";
+import AppModal from "@/components/AppModal.vue";
 import feedback from "@/mixins/feedback";
 import { enterpriseApi } from "@/api/monitor";
+import { authState } from "@/auth/session";
 
 export default {
   name: "EnterpriseListPage",
-  components: { PageHeader, AppPagination, AppToast },
+  components: { PageHeader, AppPagination, AppToast, AppModal },
   mixins: [feedback],
   /**
    * 保存企业关键字、状态、套餐、到期范围筛选和分页结果，同时加载套餐选项供筛选器使用。
@@ -146,7 +159,15 @@ export default {
     result: { list: [], pageNo: 1, pageSize: 10, total: 0 },
     plans: [],
     loading: false,
+    settingsVisible: false,
+    settingsSaving: false,
+    settingsEnterprise: null,
+    settingsForm: { dataRetentionEnabled: 0 },
   }),
+  computed: {
+    /** 高风险数据保留特权只向监控管理员展示入口，服务端仍独立执行权限校验。 */
+    canEditSettings() { return authState.user?.roleCode === "ADMIN"; },
+  },
   /**
    * 页面挂载后并行加载企业列表和套餐筛选选项，任一初始化异常通过统一反馈展示。
    */
@@ -159,6 +180,29 @@ export default {
     ]).catch(this.errorMessage);
   },
   methods: {
+    /** 从列表当前值打开企业设置表单，避免异步详情请求导致弹窗闪烁旧企业状态。 */
+    openSettings(item) {
+      this.settingsEnterprise = item;
+      this.settingsForm.dataRetentionEnabled = Number(item.dataRetentionEnabled || 0);
+      this.settingsVisible = true;
+    },
+    /** 只提交本次表单允许修改的数据保留字段；成功后同步当前页并保留原查询条件。 */
+    async saveSettings() {
+      if (!this.settingsEnterprise || this.settingsSaving) return;
+      this.settingsSaving = true;
+      try {
+        const result = await enterpriseApi.updateSettings(this.settingsEnterprise.id, {
+          dataRetentionEnabled: this.settingsForm.dataRetentionEnabled,
+        });
+        this.settingsEnterprise.dataRetentionEnabled = Number(result.dataRetentionEnabled);
+        this.settingsVisible = false;
+        this.notify("企业设置已保存");
+      } catch (error) {
+        this.errorMessage(error);
+      } finally {
+        this.settingsSaving = false;
+      }
+    },
     /**
      * 以中文千分位显示成员等数量。
      */

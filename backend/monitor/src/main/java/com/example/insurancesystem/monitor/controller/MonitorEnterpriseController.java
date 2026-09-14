@@ -7,10 +7,12 @@ import com.example.insurancesystem.monitor.service.MonitorEnterpriseService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,6 +40,24 @@ public class MonitorEnterpriseController {
             @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize) {
         return new ResponseResult<>(200, service.page(keyword, status, planId, expireDays, pageNo, pageSize));
+    }
+
+    /**
+     * 仅监控管理员可以修改企业设置。当前请求只接受数据保留特权，操作者身份从认证上下文取得，
+     * 前端传入的任何用户身份字段都不会参与授权或审计。
+     *
+     * @param id 监控企业列表当前选中企业的主键
+     * @param body 设置表单提交的数据保留特权状态（0 或 1）
+     * @param authentication 当前已登录监控管理员的认证上下文
+     * @return 更新后的企业设置快照；非法状态或企业不存在由服务层返回业务错误
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/settings")
+    public ResponseResult<Map<String, Object>> updateSettings(@PathVariable Long id,
+            @RequestBody Map<String, Object> body, Authentication authentication) {
+        LoginUser operator = operator(authentication);
+        return new ResponseResult<>(200, service.updateSettings(id, body,
+                operator.getUser().getId(), operator.getUser().getRealName()));
     }
 
     /** 根据名称或企业编码关键词返回有限候选项，供自定义对比的远程搜索框使用。 */

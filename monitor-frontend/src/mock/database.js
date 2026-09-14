@@ -23,7 +23,7 @@ export const platformUsers = [
   { id: 3, username: '13712348063', realName: '沈浩宇', email: 'shenhy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-24 17:42', passwordChangedAt: '2026-07-22 08:40', createdByName: '林嘉诚', createdAt: '2026-07-22 08:40' },
   { id: 4, username: '15912343268', realName: '陆欣怡', email: 'luxy@xiaoma.com', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 1, lastLoginAt: '2026-07-24 16:28', passwordChangedAt: '2026-07-22 08:50', createdByName: '林嘉诚', createdAt: '2026-07-22 08:50' },
   { id: 5, username: '18812345678', realName: '测试账号', email: '', roleCode: 'CUSTOMER_SERVICE', roleName: '售后客服', status: 0, lastLoginAt: null, passwordChangedAt: '2026-07-22 09:00', createdByName: '林嘉诚', createdAt: '2026-07-22 09:00' }
-];
+].map((enterprise, index) => ({ ...enterprise, dataRetentionEnabled: index === 0 ? 1 : 0 }));
 
 /**
  * 销售推广目标 Mock 与数据库字段保持一致，覆盖手工录入、Excel 导入、停用以及单渠道联系方式场景。

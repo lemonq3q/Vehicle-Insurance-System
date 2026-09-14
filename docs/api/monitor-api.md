@@ -72,7 +72,21 @@
 
 权限：已登录监控平台用户。query：`keyword`、`status`（1正常/2欠费限制/3停用）、`planId`、`expireDays`（7/30）、`pageNo`、`pageSize`（最大100）。
 
-返回分页企业。列表字段：`id,code,name,status,memberCount,balance,planId,planName,subscriptionEndDate,monthUsage`。`monthUsage` 包含本月 `workorderCount/requestCount/ocrCount`。分页查询固定为一次计数和一次聚合列表 SQL，不使用逐企业查询。
+返回分页企业。列表字段：`id,code,name,status,dataRetentionEnabled,memberCount,balance,planId,planName,subscriptionEndDate,monthUsage`。`dataRetentionEnabled` 为数字 0/1，0 表示超期时按规则清理，1 表示跳过超期清理。`monthUsage` 包含本月 `workorderCount/requestCount/ocrCount`。分页查询固定为一次计数和一次聚合列表 SQL，不使用逐企业查询。
+
+### PATCH `/api/monitor/enterprises/{id}/settings`
+
+作用：监控平台企业列表“设置”弹窗修改企业数据保留特权。仅 `ADMIN` 可调用；普通监控账号返回 403。企业创建流程不提供此字段，数据库和服务端创建语句均固定默认 0。
+
+请求：`Authorization: Bearer <monitor-token>`；path 参数 `id` 为必填正整数企业 ID，例如 `3`；JSON body 当前仅允许 `{ "dataRetentionEnabled": 1 }`，字段必填且必须是数字 `0` 或 `1`。其他字段、布尔值和字符串都返回 400，以防请求顺带修改其他企业资料。后续新增企业设置项时再扩展表单和接口契约。
+
+返回统一响应外壳：
+
+```json
+{"code":200,"message":"success","data":{"id":3,"name":"宁波安行汽车有限公司","dataRetentionEnabled":1},"requestId":"request-id"}
+```
+
+更新在企业行锁事务内完成；状态改变时同步写 `updated_at/updated_by` 和 `monitor_system_log(event_code=ENTERPRISE_SETTINGS_UPDATE)`，记录变更前后 0/1 快照。重复提交相同值返回当前状态，不重复写审计。常见失败：字段缺失、非 0/1 或出现额外字段返回 400；未登录返回 401；非 `ADMIN` 返回 403；企业不存在或已删除返回 404；审计写入失败时事务回滚。
 
 ### GET `/enterprises/subscription-plans`
 
@@ -97,7 +111,7 @@
 权限：两角色。返回企业概览：
 
 ```json
-{ "code":200,"message":"success","data":{"id":1,"code":"ENT-202607-0012","name":"杭州星途汽车服务有限公司","status":1,"contactName":"陈晓峰","contactPhone":"138****6821","source":"后台创建","remark":null,"memberCount":32,"memberLimit":50,"balance":28640.00,"planId":3,"planName":"企业版","subscriptionEndDate":"2027-03-16","lastActiveAt":"2026-07-25 18:16:00","createdAt":"2026-01-18 09:20:00","monthUsage":{"workorderCount":286,"requestCount":82600,"ocrCount":12400}},"requestId":"request-id" }
+{ "code":200,"message":"success","data":{"id":1,"code":"ENT-202607-0012","name":"杭州星途汽车服务有限公司","status":1,"dataRetentionEnabled":0,"contactName":"陈晓峰","contactPhone":"138****6821","source":"后台创建","remark":null,"memberCount":32,"memberLimit":50,"balance":28640.00,"planId":3,"planName":"企业版","subscriptionEndDate":"2027-03-16","lastActiveAt":"2026-07-25 18:16:00","createdAt":"2026-01-18 09:20:00","monthUsage":{"workorderCount":286,"requestCount":82600,"ocrCount":12400}},"requestId":"request-id" }
 ```
 
 ### GET `/enterprises/{id}/usage`

@@ -124,6 +124,14 @@ export async function mockAdapter(config) {
     if (params.expireDays) { const limit = new Date('2026-07-25'); limit.setDate(limit.getDate() + Number(params.expireDays)); rows = rows.filter(item => item.subscriptionEndDate && new Date(item.subscriptionEndDate) <= limit); }
     rows = rows.map(item => ({ ...item, todayUsage: dailyUsage.filter(row => row.enterpriseId === item.id).at(-1) }));
     result = ok(page(rows, Number(params.pageNo || 1), Number(params.pageSize || 10)));
+  } else if (method === 'PATCH' && /^\/enterprises\/\d+\/settings$/.test(url)) {
+    if ((platformUsers.find(item => item.current) || platformUsers[0]).roleCode !== 'ADMIN') return fail(403, '无权修改企业设置');
+    const enterpriseId = Number(url.split('/')[2]);
+    const enterprise = enterprises.find(item => item.id === enterpriseId);
+    if (!enterprise) return fail(404, '企业不存在');
+    if (!Number.isInteger(body.dataRetentionEnabled) || ![0, 1].includes(body.dataRetentionEnabled)) return fail(400, '数据保留特权仅支持 0 或 1');
+    enterprise.dataRetentionEnabled = body.dataRetentionEnabled;
+    result = ok({ id: enterprise.id, name: enterprise.name, dataRetentionEnabled: enterprise.dataRetentionEnabled });
   } else if (method === 'GET' && url === '/enterprises/options') {
     const keyword = String(params.keyword || '').trim();
     result = ok(keyword ? enterprises.filter(item => `${item.name}${item.code}`.includes(keyword)).map(({ id, name, code }) => ({ id, name, code })) : []);

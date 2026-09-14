@@ -191,15 +191,15 @@ defineExpose({ open });
 .dialog-content { width: 100%; text-align: center; }
 :global(.batch-import-dialog .el-dialog__header) { padding-right: var(--el-dialog-padding-primary); text-align: center; }
 :global(.batch-import-dialog .el-dialog__title) { display: inline-block; width: 100%; text-align: center; }
-.template-panel { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #d9e5f2; border-radius: 8px; background: #f5f9fd; text-align: center; }
-.panel-title { color: #24364b; font-size: 15px; font-weight: 600; }
-.panel-help { margin-top: 5px; color: #66758a; font-size: 13px; line-height: 1.5; }
+.template-panel { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--insurance-border); border-radius: 8px; background: var(--insurance-surface-soft); text-align: center; }
+.panel-title { color: var(--insurance-text); font-size: 15px; font-weight: 600; }
+.panel-help { margin-top: 5px; color: var(--insurance-muted); font-size: 13px; line-height: 1.5; }
 .upload-icon { color: var(--el-color-primary); font-size: 48px; }
 .result-panel { text-align: center; }
 .result-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
-.summary-item { padding: 14px 16px; border: 1px solid #e2e7ed; border-radius: 8px; background: #fafbfc; text-align: center; }
-.summary-item span { display: block; color: #66758a; font-size: 13px; }
-.summary-item strong { display: block; margin-top: 6px; color: #26374a; font-size: 26px; font-variant-numeric: tabular-nums; }
+.summary-item { padding: 14px 16px; border: 1px solid var(--insurance-border); border-radius: 8px; background: var(--insurance-surface-soft); text-align: center; }
+.summary-item span { display: block; color: var(--insurance-muted); font-size: 13px; }
+.summary-item strong { display: block; margin-top: 6px; color: var(--insurance-text); font-size: 26px; font-variant-numeric: tabular-nums; }
 .summary-item.success strong { color: var(--el-color-success); }
 .summary-item.danger strong { color: var(--el-color-danger); }
 .failure-table { margin: 16px auto 0; }

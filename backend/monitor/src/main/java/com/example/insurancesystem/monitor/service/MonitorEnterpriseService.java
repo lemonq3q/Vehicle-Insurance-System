@@ -76,7 +76,7 @@ public class MonitorEnterpriseService {
         parameters.addValue("monthStart", Date.valueOf(YearMonth.now(BUSINESS_ZONE).atDay(1)));
         parameters.addValue("nextMonth", Date.valueOf(YearMonth.now(BUSINESS_ZONE).plusMonths(1).atDay(1)));
         parameters.addValue("offset", (pageNo - 1) * pageSize).addValue("pageSize", pageSize);
-        String sql = "SELECT e.id,e.code,e.name,e.status,COALESCE(m.memberCount,0) memberCount," +
+        String sql = "SELECT e.id,e.code,e.name,e.status,e.data_retention_enabled dataRetentionEnabled,COALESCE(m.memberCount,0) memberCount," +
                 "COALESCE(w.balance_amount,0) balance," +
                 "CASE WHEN s.status IN (1,3) AND s.end_at>NOW() THEN s.plan_id END planId," +
                 "CASE WHEN s.status IN (1,3) AND s.end_at>NOW() THEN p.name END planName," +
@@ -97,13 +97,56 @@ public class MonitorEnterpriseService {
     }
 
     /**
+     * 在企业行锁和同一事务内更新数据保留特权，并写监控系统操作审计。
+     * 仅允许当前设置表单的 0/1 字段，避免客户端顺带修改企业身份、套餐或其他业务资料；
+     * 重复提交相同状态直接返回当前快照，不重复产生审计事件。
+     *
+     * @param enterpriseId 企业列表选中的未删除企业 ID
+     * @param body 请求体，只允许 dataRetentionEnabled 数字 0 或 1
+     * @param operatorId 已认证监控管理员 ID，用于更新人和审计
+     * @param operatorName 已认证监控管理员姓名快照
+     * @return 企业 ID、名称和最终数据保留特权状态
+     * @throws BusinessException 请求字段不合法或企业不存在时抛出
+     */
+    @Transactional
+    public Map<String, Object> updateSettings(Long enterpriseId, Map<String, Object> body,
+            Long operatorId, String operatorName) {
+        Object raw = body == null ? null : body.get("dataRetentionEnabled");
+        if (body == null || body.size() != 1 || !(raw instanceof Number)
+                || (((Number) raw).doubleValue() != 0 && ((Number) raw).doubleValue() != 1)) {
+            throw new BusinessException(400, "数据保留特权仅支持数字 0 或 1");
+        }
+        int enabled = ((Number) raw).intValue();
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id,name,data_retention_enabled dataRetentionEnabled FROM tenant_enterprise " +
+                        "WHERE id=? AND deleted=0 FOR UPDATE", enterpriseId);
+        if (rows.isEmpty()) throw new BusinessException(404, "企业不存在");
+        Map<String, Object> enterprise = rows.get(0);
+        int previous = ((Number) enterprise.get("dataRetentionEnabled")).intValue();
+        if (previous != enabled) {
+            jdbc.update("UPDATE tenant_enterprise SET data_retention_enabled=?,updated_at=NOW(),updated_by=? " +
+                    "WHERE id=? AND deleted=0", enabled, operatorId, enterpriseId);
+            systemLog.recordOperation("ENTERPRISE_SETTINGS_UPDATE", "修改企业设置", "enterprise",
+                    operatorId, operatorName, enterpriseId, String.valueOf(enterprise.get("name")),
+                    "ENTERPRISE", enterpriseId, String.valueOf(enterprise.get("name")), null,
+                    enabled == 1 ? "启用企业数据保留特权" : "关闭企业数据保留特权",
+                    Map.of("dataRetentionEnabled", previous), Map.of("dataRetentionEnabled", enabled));
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", enterpriseId);
+        result.put("name", enterprise.get("name"));
+        result.put("dataRetentionEnabled", enabled);
+        return result;
+    }
+
+    /**
      * 使用一条 SQL 返回企业资料、有效成员数、最近活跃时间、钱包、当前订阅和本月三项用量。
      * 企业表当前没有备注字段，接口稳定返回空备注；来源依照 1 用户自建、2 后台创建转为展示文案。
      */
     public Map<String, Object> detail(Long id) {
         LocalDate monthStart = YearMonth.now(BUSINESS_ZONE).atDay(1);
         List<Map<String, Object>> rows = jdbc.queryForList(
-                "SELECT e.id,e.code,e.name,e.status,e.contact_name contactName,e.contact_phone contactPhone,e.created_at createdAt," +
+                "SELECT e.id,e.code,e.name,e.status,e.data_retention_enabled dataRetentionEnabled,e.contact_name contactName,e.contact_phone contactPhone,e.created_at createdAt," +
                 "CASE e.source WHEN 1 THEN '用户自建' WHEN 2 THEN '后台创建' ELSE '未知' END source," +
                 "COALESCE(m.memberCount,0) memberCount,m.lastActiveAt,COALESCE(w.balance_amount,0) balance," +
                 "CASE WHEN s.status IN (1,3) AND s.end_at>NOW() THEN s.plan_id END planId," +

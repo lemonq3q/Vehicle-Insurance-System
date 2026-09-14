@@ -1,0 +1,146 @@
+/*
+ * 车险工作台视觉层。集中承接门户与监控系统共有的深色导航、浅色内容区和蓝色业务操作。
+ * 只覆盖外观属性；原页面的布局间距、表单尺寸、权限、事件与状态流转仍由原组件负责。
+ */
+:root {
+  --insurance-primary: #1e40af;
+  --insurance-primary-hover: #1d4ed8;
+  --insurance-bg: #f4f7fb;
+  --insurance-surface: #fff;
+  --insurance-surface-soft: #f8fafc;
+  --insurance-text: #0f172a;
+  --insurance-secondary: #475569;
+  --insurance-muted: #64748b;
+  --insurance-border: #dbe4f0;
+  --insurance-sidebar: #0f172a;
+  --insurance-sidebar-text: #cbd5e1;
+  --insurance-radius: 10px;
+  --insurance-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+  --el-color-primary: var(--insurance-primary);
+  --el-color-primary-light-3: #5b79cf;
+  --el-color-primary-light-5: #8da5df;
+  --el-color-primary-light-7: #b7c7ed;
+  --el-color-primary-light-8: #d2dcf4;
+  --el-color-primary-light-9: #eef2fc;
+  --el-color-primary-dark-2: #163381;
+  --el-text-color-primary: var(--insurance-text);
+  --el-text-color-regular: var(--insurance-secondary);
+  --el-text-color-secondary: var(--insurance-muted);
+  --el-border-color: var(--insurance-border);
+  --el-border-color-light: #e8edf5;
+  --el-fill-color-light: var(--insurance-surface-soft);
+  --el-bg-color-page: var(--insurance-bg);
+  --el-border-radius-base: 7px;
+  --el-input-focus-border-color: var(--insurance-primary);
+  --el-select-input-focus-border-color: var(--insurance-primary);
+}
+
+body { background: var(--insurance-bg); color: var(--insurance-text); }
+
+/* 保留既有 10px 页面留白、20px 卡片内边距和查询字段位置，只统一表面质感。 */
+.home .card,
+.home .container_body {
+  background: var(--insurance-surface);
+  border-color: var(--insurance-border);
+  border-radius: var(--insurance-radius);
+  box-shadow: var(--insurance-shadow);
+}
+.home .search,
+.home .header_tabbur,
+.home .title_container,
+.home .table_form_container,
+.home .table_form_item,
+.home .divider { border-color: var(--insurance-border); }
+.home .search_title { color: var(--insurance-text); font-size: 16px; }
+.home .form_title,
+.home .cascade_form_title,
+.home .radio_form_title { color: var(--insurance-secondary); }
+.home .table_header { align-items: center; }
+.home .output_button { color: var(--insurance-secondary); }
+.home .output_button:hover,
+.home .file_download_text { color: var(--insurance-primary); }
+.home .cascade_form_container {
+  background: #f4f7fe;
+  border-color: #d7e3f8;
+  border-radius: 7px;
+}
+
+/* Element Plus 仍沿用原组件和尺寸，统一其边框、悬停、表格及状态反馈。 */
+.home .el-button { border-radius: 7px; font-weight: 600; }
+.home .el-button--primary:not(.is-disabled):hover { background: var(--insurance-primary-hover); border-color: var(--insurance-primary-hover); }
+.home .el-input__wrapper,
+.home .el-select__wrapper,
+.home .el-textarea__inner,
+.home .el-date-editor.el-input__wrapper,
+.home .el-date-editor.el-range-editor {
+  border-radius: 7px;
+}
+.home .el-input__wrapper:hover,
+.home .el-select__wrapper:hover { box-shadow: 0 0 0 1px #94a3b8 inset; }
+.el-input__wrapper.is-focus,
+.el-input__wrapper:focus-within,
+.el-select__wrapper.is-focused,
+.el-select__wrapper:focus-within,
+.el-date-editor.el-input__wrapper.is-focus,
+.el-date-editor.el-range-editor.is-active,
+.el-date-editor.el-range-editor:focus-within {
+  outline: none !important;
+  box-shadow: 0 0 0 1px var(--insurance-primary) inset !important;
+}
+.el-input__inner:focus-visible,
+.el-select__input:focus-visible,
+.el-range-input:focus-visible,
+.el-textarea__inner:focus-visible { outline: none; }
+.el-textarea__inner:focus,
+.el-textarea__inner:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 1px var(--insurance-primary) inset;
+}
+.home .el-table {
+  --el-table-border-color: #e8edf5;
+  --el-table-header-bg-color: var(--insurance-surface-soft);
+  --el-table-row-hover-bg-color: #f4f8ff;
+  --el-table-striped-bg-color: #fbfcff;
+  border-radius: 7px;
+  overflow: hidden;
+  color: var(--insurance-secondary);
+}
+.home .el-table th.el-table__cell { color: var(--insurance-secondary); font-weight: 700; }
+.home .el-table .cell { line-height: 1.5; }
+.home .el-pagination.is-background .el-pager li.is-active { background: var(--insurance-primary); }
+.home .el-tag { border-radius: 999px; font-weight: 600; }
+.home .el-card { border-color: var(--insurance-border); border-radius: var(--insurance-radius); box-shadow: var(--insurance-shadow); }
+.home .el-steps { --el-color-primary: var(--insurance-primary); }
+.home .el-alert { border-radius: 7px; }
+
+/* 弹窗、抽屉和下拉面板经 Teleport 挂在 body 下，需要全局但窄范围的覆盖。 */
+.el-dialog,
+.el-drawer {
+  --el-dialog-border-radius: 10px;
+  border-radius: 10px;
+  color: var(--insurance-text);
+}
+.el-dialog__header,
+.el-drawer__header { border-bottom: 1px solid var(--insurance-border); }
+.el-dialog__title { color: var(--insurance-text); font-weight: 700; }
+.el-select-dropdown,
+.el-picker-panel,
+.el-message-box,
+.el-popover.el-popper { border-color: var(--insurance-border); border-radius: 8px; }
+.el-overlay { --el-overlay-color-lighter: rgba(15, 23, 42, .38); }
+
+/* 按钮与链接保留键盘焦点；表单仅用 1px 蓝色内边框提示聚焦。 */
+.home button:focus-visible,
+.home a:focus-visible,
+.home [role="button"]:focus-visible {
+  outline: 2px solid rgba(30, 64, 175, .5);
+  outline-offset: 2px;
+}
+.home .el-input__wrapper:focus-visible,
+.home .el-select__wrapper:focus-visible,
+.home .el-cascader:focus-visible,
+.home .el-date-editor:focus-visible { outline: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home *, .home *::before, .home *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

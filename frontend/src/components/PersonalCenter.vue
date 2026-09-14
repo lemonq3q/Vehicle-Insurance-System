@@ -373,13 +373,13 @@ const changePassword = async (formEl) => {
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--insurance-text);
 }
 
 /* 个人信息卡片 */
 .info-card {
   margin-bottom: 20px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--insurance-border);
 }
 
 .info-content {
@@ -398,13 +398,13 @@ const changePassword = async (formEl) => {
 }
 
 .user-avatar {
-  border: 4px solid #e6f4ff; /* 医疗蓝风格边框 */
+  border: 4px solid #dbeafe;
 }
 
 .avatar-tip {
   margin-top: 12px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--insurance-muted);
 }
 
 /* 信息展示区域 */
@@ -418,13 +418,13 @@ const changePassword = async (formEl) => {
 
 /* 密码管理卡片 */
 .pwd-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--insurance-border);
 }
 
 .pwd-tip {
   margin-top: 10px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--insurance-muted);
   line-height: 1.6;
 }
 

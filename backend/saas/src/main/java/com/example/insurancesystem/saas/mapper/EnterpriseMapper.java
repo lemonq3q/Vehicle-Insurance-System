@@ -33,8 +33,8 @@ public interface EnterpriseMapper {
   Map<String, Object> findEnterprise(Long id);
 
   @Insert(
-      "INSERT INTO tenant_enterprise(name,code,owner_user_id,contact_name,contact_phone,status,source,created_at,updated_at,deleted) "
-          + "VALUES(#{name},#{code},#{ownerUserId},#{contactName},#{contactPhone},1,1,NOW(),NOW(),0)")
+      "INSERT INTO tenant_enterprise(name,code,owner_user_id,contact_name,contact_phone,status,source,data_retention_enabled,created_at,updated_at,deleted) "
+          + "VALUES(#{name},#{code},#{ownerUserId},#{contactName},#{contactPhone},1,1,0,NOW(),NOW(),0)")
   @Options(useGeneratedKeys = true, keyProperty = "id")
   int insertEnterprise(Map<String, Object> enterprise);
 

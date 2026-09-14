@@ -83,7 +83,7 @@ const handleClear = () => {
 
 .notice_icon {
   font-size: 22px;
-  color: #409EFF;
+  color: var(--insurance-primary);
   cursor: pointer;
 }
 
@@ -98,12 +98,12 @@ const handleClear = () => {
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
-  color: #303133;
+  color: var(--insurance-text);
 }
 
 .notice_empty {
   font-size: 13px;
-  color: #909399;
+  color: var(--insurance-muted);
   padding: 10px 0;
 }
 
@@ -115,25 +115,25 @@ const handleClear = () => {
 
 .notice_item {
   padding: 10px;
-  border: 1px solid #EBEEF5;
-  border-radius: 6px;
+  border: 1px solid var(--insurance-border);
+  border-radius: 8px;
   cursor: pointer;
 }
 
 .notice_item:hover {
-  border-color: #C6E2FF;
-  background: #ECF5FF;
+  border-color: #b7c7ed;
+  background: #f4f8ff;
 }
 
 .notice_title {
   font-size: 14px;
-  color: #303133;
+  color: var(--insurance-text);
   margin-bottom: 4px;
 }
 
 .notice_content {
   font-size: 13px;
-  color: #606266;
+  color: var(--insurance-secondary);
   line-height: 18px;
 }
 </style>

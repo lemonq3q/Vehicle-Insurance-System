@@ -101,55 +101,68 @@ const routes = [
       },
       {
         path: 'upstream',
-        component: UpStream
+        component: UpStream,
+        meta: { section: '上下游管理', title: '上游管理' }
       },
       {
         path: 'downstreamMerchant',
-        component: DownstreamMerchant
+        component: DownstreamMerchant,
+        meta: { section: '上下游管理', title: '下游管理' }
       },
       {
         path: 'downstreamUser',
-        component: DownstreamUser
+        component: DownstreamUser,
+        meta: { section: '上下游管理', title: '商户管理' }
       },
       {
         path: 'editUpstream',
-        component: EditUpstream
+        component: EditUpstream,
+        meta: { section: '上下游管理', title: '编辑上游' }
       },
       {
         path: 'editDownstreamMerchant',
-        component: EditDownstreamMerchant
+        component: EditDownstreamMerchant,
+        meta: { section: '上下游管理', title: '编辑下游' }
       },
       {
         path: 'editDownstreamUser',
-        component: EditDownstreamUser
+        component: EditDownstreamUser,
+        meta: { section: '上下游管理', title: '编辑商户' }
       },
       {
         path: 'acceptWorkOrder',
-        component: AcceptWorkOrder
+        component: AcceptWorkOrder,
+        meta: { section: '工单管理', title: '工单接单' }
       },
       {
         path: 'dispatchWorkOrder',
-        component: DispatchWorkOrder
+        component: DispatchWorkOrder,
+        meta: { section: '工单管理', title: '工单分派' }
       },
       {
         path: 'editWorkorder',
-        component: EditBaseWorkorder
+        component: EditBaseWorkorder,
+        meta: { section: '工单管理', title: '工单录入' }
       },
       {
         path: 'detailWorkorder',
-        component: DetailWorkorder
+        component: DetailWorkorder,
+        meta: { section: '工单管理', title: '工单详情' }
       },
       {
         path: 'personalCenter',
-        component: PersonalCenter
+        component: PersonalCenter,
+        meta: { title: '个人中心' }
       },
       {
         path: 'allWorkorder',
-        component: AllWorkOrder
+        component: AllWorkOrder,
+        meta: { title: '工单管理' }
       },
       {
         path: 'renewWorkorder',
-        component: RenewWorkorder
+        component: RenewWorkorder,
+        meta: { title: '工单续保' }
       }
     ]
   }

@@ -78,6 +78,8 @@ export const enterpriseApi = {
    * 按关键字、状态、套餐和分页条件查询 SaaS 企业列表。
    */
   list: (params) => request.get("/enterprises", { params }),
+  /** 仅监控管理员可更新企业设置；当前设置表单只提交数据保留特权。 */
+  updateSettings: (id, data) => request.patch(`/enterprises/${id}/settings`, data),
   /**
    * 获取企业选择器使用的精简企业 ID 与名称集合。
    */
