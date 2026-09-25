@@ -326,12 +326,13 @@ export default {
       }
     },
     /**
-     * 管理者不能移除企业拥有者或自己，防止企业失去唯一拥有者以及当前会话自我失效。
+     * 管理者不能移除企业拥有者或自己，防止企业失去唯一拥有者以及当前会话自我失效。用户标识按
+     * 字符串比较，兼容后端为保护 Java Long 精度而返回的字符串 ID，不将其转换为 JavaScript Number。
      */
     canRemoveMember(item) {
       return this.canManage
         && item.roleCode !== 'OWNER'
-        && Number(item.userId) !== Number(this.$store.state.user?.id);
+        && String(item.userId) !== String(this.$store.state.user?.id);
     },
     /**
      * 保存待移除成员并打开二次确认框。

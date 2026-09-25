@@ -38,7 +38,7 @@ class SsoServiceImplTest {
         redis,
         mock(PortalAuthService.class),
         "http://localhost:8888",
-        "http://localhost:8889",
+        "http://localhost:8887",
         "secret",
         60);
   }
@@ -64,6 +64,23 @@ class SsoServiceImplTest {
 
     assertTrue(String.valueOf(result.get("redirectUrl")).startsWith("http://localhost:8888/sso/callback?code="));
     verify(redis).setCacheObject(startsWith("sso:insurance:code:"), anyMap(), eq(60), any());
+  }
+
+  /**
+   * 验证车险系统申请返回门户时使用门户独立开发端口，防止授权回调误入同机的监控前端。
+   */
+  @Test
+  void issuesPortalCodeForTheDedicatedPortalFrontend() {
+    when(enterprises.findMemberByUser(20L, 9L)).thenReturn(Map.of(
+        "id", 8L, "enterprise_id", 20L, "user_id", 9L, "status", 1));
+    when(enterprises.findEnterprise(20L)).thenReturn(Map.of("id", 20L, "status", 1));
+
+    Map<String, Object> result = service.authorizePortal(
+        "secret", Map.of("userId", 9L, "enterpriseId", 20L));
+
+    assertTrue(String.valueOf(result.get("redirectUrl"))
+        .startsWith("http://localhost:8887/sso/callback?code="));
+    verify(redis).setCacheObject(startsWith("sso:portal:code:"), anyMap(), eq(60), any());
   }
 
   private void stubEnabledIdentity() {

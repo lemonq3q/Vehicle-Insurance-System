@@ -159,7 +159,7 @@
       @confirm="setSubscription"
       ><div class="field">
         <label>套餐 *</label
-        ><select v-model.number="subscriptionForm.planId" class="layui-select">
+        ><select v-model="subscriptionForm.planId" class="layui-select">
           <option :value="null" disabled>请选择套餐</option>
           <option v-for="plan in activePlans" :key="plan.id" :value="plan.id">
             {{ plan.name }}
@@ -243,8 +243,8 @@ export default {
     formError: "",
   }),
   computed: {
-    /** 路由企业标识统一转为数字。 */ id() {
-      return Number(this.$route.params.id);
+    /** 路由企业标识保持字符串，避免 Java Long 在 JavaScript Number 中发生不可逆的精度损失。 */ id() {
+      return String(this.$route.params.id || '');
     },
     /** 将企业状态码转换为展示文案。 */ statusText() {
       return this.enterprise.status === 1

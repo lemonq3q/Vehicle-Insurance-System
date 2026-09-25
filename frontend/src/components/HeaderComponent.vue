@@ -88,7 +88,7 @@ import { createPortalAuthorization, logout } from '@/api/login';
 import { selectRenewCount } from '@/api/workorder';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 // import { validateStr } from '@/utils/validate';
 // import { updatePassword } from '@/api/user';
 import Message from '@/utils/message';
@@ -106,6 +106,15 @@ const username = computed(() => {
 });
 const router = useRouter();
 const returningPortal = ref(false);
+
+/**
+ * 浏览器从门户页后退时可能通过 back-forward cache 恢复整个车险页面，此时组件不会重新创建，
+ * 跳转前写入的 loading 状态也会被一并恢复。pageshow 在普通显示和缓存恢复时都会触发，统一复位后
+ * 返回门户按钮可以再次申请新的单次授权码，避免沿用已经消费或过期的跳转状态。
+ */
+const resetPortalReturnState = () => {
+  returningPortal.value = false;
+};
 
 /**
  * 申请车险系统到 SaaS 门户的单点登录授权，并跳转后端返回的完整门户地址。
@@ -196,7 +205,16 @@ const refreshRenewCount = async () => {
 
  */
 onMounted(() => {
+  window.addEventListener('pageshow', resetPortalReturnState);
+  resetPortalReturnState();
   refreshRenewCount();
+});
+
+/**
+ * 页头真正销毁时移除全局事件，避免布局重新挂载后残留监听器重复修改按钮状态。
+ */
+onBeforeUnmount(() => {
+  window.removeEventListener('pageshow', resetPortalReturnState);
 });
 
 

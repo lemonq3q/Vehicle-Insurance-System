@@ -26,7 +26,7 @@ portal:
   sso:
     # 可修改为车险前端的正式域名，不要带末尾斜杠。
     insurance-frontend-url: ${INSURANCE_FRONTEND_URL:http://localhost:8888}
-    portal-frontend-url: ${PORTAL_FRONTEND_URL:http://localhost:8889}
+    portal-frontend-url: ${PORTAL_FRONTEND_URL:http://localhost:8887}
     # 两台服务器上配置相同的高强度密钥，生产环境必须修改。
     insurance-client-secret: ${INSURANCE_SSO_CLIENT_SECRET:wsbld2wjb56gjlmy}
     code-ttl-seconds: ${INSURANCE_SSO_CODE_TTL_SECONDS:60}
@@ -53,7 +53,7 @@ maintenance:
 saas:
   visitor-lead:
     # 官网匿名提交仅接受明确允许的 Origin/Referer；生产域名与本地联调地址集中配置，禁止客户端自行声明来源。
-    allowed-origins: ${VISITOR_LEAD_ALLOWED_ORIGINS:http://localhost:8080,http://127.0.0.1:8080,http://localhost:8889,http://127.0.0.1:8889,https://www.idatag.com,https://idatag.com}
+    allowed-origins: ${VISITOR_LEAD_ALLOWED_ORIGINS:http://localhost:8080,http://127.0.0.1:8080,http://localhost:8887,http://127.0.0.1:8887,https://www.idatag.com,https://idatag.com}
     rate-limit-seconds: ${VISITOR_LEAD_RATE_LIMIT_SECONDS:60}
     trust-proxy-headers: ${VISITOR_LEAD_TRUST_PROXY_HEADERS:false}
   reminder:

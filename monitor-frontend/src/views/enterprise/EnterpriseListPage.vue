@@ -99,14 +99,14 @@
                 <td>{{ format(item.monthUsage.workorderCount) }}</td>
                 <td>{{ format(item.monthUsage.requestCount) }}</td>
                 <td>{{ format(item.monthUsage.ocrCount) }}</td>
-                <td>
+                <td><div class="enterprise-actions">
                   <router-link
                     class="layui-btn layui-btn-xs monitor-primary"
                     :to="`/enterprises/${item.id}/overview`"
                     >查看</router-link
                   >
                   <button v-if="canEditSettings" type="button" class="layui-btn layui-btn-xs monitor-secondary" @click="openSettings(item)">设置</button>
-                </td>
+                </div></td>
               </tr>
             </tbody>
           </table>
@@ -120,12 +120,11 @@
     </section>
     <AppModal v-model="settingsVisible" title="企业设置" confirm-text="保存" :loading="settingsSaving" @confirm="saveSettings">
       <div class="field">
-        <label for="enterpriseDataRetention">数据保留特权</label>
+        <label for="enterpriseDataRetention">是否保留数据</label>
         <select id="enterpriseDataRetention" v-model.number="settingsForm.dataRetentionEnabled" class="layui-select">
           <option :value="0">不保留（到期后按规则清理）</option>
           <option :value="1">保留（跳过到期清理）</option>
         </select>
-        <p class="helper">仅监控管理员可调整；关闭保留后，符合条件的企业会在后续维护任务中进入清理范围。</p>
       </div>
     </AppModal>
     <AppToast :message="toastMessage" :type="toastType" />
@@ -266,3 +265,12 @@ export default {
   },
 };
 </script>
+<style scoped>
+.enterprise-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.enterprise-actions :deep(.layui-btn + .layui-btn) { margin-left: 0; }
+</style>

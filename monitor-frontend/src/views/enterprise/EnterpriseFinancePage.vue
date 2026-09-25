@@ -30,9 +30,9 @@ export default {
   }),
   computed: {
     /**
-     * 将路由中的企业 ID 转为财务接口使用的数字标识。
+     * 将路由中的企业 ID 保持为字符串，供财务接口无损还原后端 Long 标识。
      */
-    id() { return Number(this.$route.params.id); },
+    id() { return String(this.$route.params.id || ''); },
     /**
      * 获取当前标签配置，为标题和导出文件名提供一致文案。
      */

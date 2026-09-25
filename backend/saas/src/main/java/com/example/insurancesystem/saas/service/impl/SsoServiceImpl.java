@@ -40,7 +40,7 @@ public class SsoServiceImpl implements SsoService {
       RedisCache redisCache,
       PortalAuthService portalAuthService,
       @Value("${portal.sso.insurance-frontend-url:http://localhost:8888}") String insuranceFrontendUrl,
-      @Value("${portal.sso.portal-frontend-url:http://localhost:8889}") String portalFrontendUrl,
+      @Value("${portal.sso.portal-frontend-url:http://localhost:8887}") String portalFrontendUrl,
       @Value("${portal.sso.insurance-client-secret:change-me-in-production}") String clientSecret,
       @Value("${portal.sso.code-ttl-seconds:60}") int codeTtlSeconds) {
     this.context = context;

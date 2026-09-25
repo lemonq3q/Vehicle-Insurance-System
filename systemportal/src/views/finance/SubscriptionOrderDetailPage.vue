@@ -160,15 +160,17 @@ export default {
       return period === 'YEAR' ? '年' : period === 'MONTH' ? '月' : '日';
     },
     /**
-     * 并行读取钱包订阅概览和可售套餐，按路由 planId 选定目标套餐。自动续订默认继承当前有效订阅，
-     * 路由显式传值时则沿用用户在充值往返流程中的选择，最后加载试算并校正最低购买周期。
+     * 并行读取钱包订阅概览和可售套餐，按路由 planId 选定目标套餐。套餐标识在前后端契约中按字符串
+     * 传递，以避免 Java Long 超出 JavaScript 安全整数范围时发生精度损失；路由显式传值时沿用用户在
+     * 充值往返流程中的选择，最后加载试算并校正最低购买周期。
      */
     async loadPage() {
       this.loading = true;
       try {
         const [overviewResponse, plansResponse] = await Promise.all([getFinanceOverview(), getPlans()]);
         this.overview = overviewResponse.data;
-        this.plan = plansResponse.data.find(item => item.id === Number(this.$route.params.planId)) || null;
+        const routePlanId = String(this.$route.params.planId || '');
+        this.plan = plansResponse.data.find(item => String(item.id) === routePlanId) || null;
         if (!this.plan) return;
 
         this.form.autoRenew = this.$route.query.autoRenew === undefined

@@ -200,7 +200,7 @@ export default {
     async completePendingSubscription() {
       if (!this.hasOrderContext) return;
       const response = await createSubscriptionOrder({
-        planId: Number(this.$route.query.planId),
+        planId: String(this.$route.query.planId),
         periodCount: Number(this.$route.query.periodCount),
         autoRenew: this.$route.query.autoRenew === 'true'
       });

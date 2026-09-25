@@ -174,13 +174,14 @@ export default {
      */
     actionName(plan) {
       if (!this.hasCurrentSubscription) return '订阅套餐';
-      return plan.id === this.overview.subscription.planId ? '续订套餐' : '改订套餐';
+      return String(plan.id) === String(this.overview.subscription.planId) ? '续订套餐' : '改订套餐';
     },
     /**
      * 比较套餐 ID 判断套餐卡片是否为企业当前正在生效的方案。
      */
     isCurrentPlan(plan) {
-      return this.hasCurrentSubscription && plan.id === this.overview.subscription?.planId;
+      return this.hasCurrentSubscription
+        && String(plan.id) === String(this.overview.subscription?.planId);
     },
     /**
      * 财务管理者可进入独立充值页，普通成员即使触发方法也不会发生跳转。

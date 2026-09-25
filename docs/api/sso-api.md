@@ -160,7 +160,7 @@ mock 模式只验证 SaaS 前端的按钮与跳转。完整的跨后端兑换需
   "code": 200,
   "msg": "授权成功",
   "data": {
-    "redirectUrl": "http://localhost:8889/sso/callback?code=64位随机授权码",
+    "redirectUrl": "http://localhost:8887/sso/callback?code=64位随机授权码",
     "expiresIn": 60
   }
 }
@@ -223,5 +223,5 @@ mock 模式只验证 SaaS 前端的按钮与跳转。完整的跨后端兑换需
 
 | 应用 | 环境变量 | 默认值/作用 |
 | --- | --- | --- |
-| SaaS 后端 | `PORTAL_FRONTEND_URL` | `http://localhost:8889`，门户前端根地址 |
+| SaaS 后端 | `PORTAL_FRONTEND_URL` | `http://localhost:8887`，门户前端根地址；8889 由监控前端使用 |
 | 车险后端 | `SAAS_PORTAL_AUTHORIZE_URL` | `http://localhost:8081/internal/sso/portal-authorize` |

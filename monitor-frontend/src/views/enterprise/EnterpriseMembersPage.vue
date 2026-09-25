@@ -98,10 +98,10 @@ export default {
   }),
   computed: {
     /**
-     * 将路由企业标识转为数字，作为所有成员接口的租户范围参数。
+     * 将路由企业标识作为字符串传给成员接口，避免超出安全整数范围的 Java Long 在浏览器中丢失精度。
      */
     id() {
-      return Number(this.$route.params.id);
+      return String(this.$route.params.id || '');
     },
   },
   /**

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve",
+    "serve": "node ../scripts/assert-dev-port.js 8887 saas-portal && vue-cli-service serve --port 8887",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },

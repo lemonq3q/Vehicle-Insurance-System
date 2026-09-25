@@ -121,7 +121,7 @@ export default {
       this.submitting = true;
       try {
         const response = await createSubscriptionOrder({
-          planId: Number(this.$route.query.planId),
+          planId: String(this.$route.query.planId),
           periodCount: Number(this.$route.query.periodCount),
           autoRenew: this.$route.query.autoRenew === 'true'
         });
