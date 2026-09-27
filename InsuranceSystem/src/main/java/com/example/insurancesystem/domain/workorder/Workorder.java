@@ -233,7 +233,7 @@ public class Workorder {
             return null;
         }
         if(computeType == 1){
-            return amount.divide(new BigDecimal("1.06")).multiply(percentage.divide(new BigDecimal("100")));
+            return amount.multiply(percentage).divide(new BigDecimal("106"), 2, RoundingMode.HALF_UP);
         }
         return amount.multiply(percentage.divide(new BigDecimal("100")));
     }
