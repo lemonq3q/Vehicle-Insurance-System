@@ -16,7 +16,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * 验证统一余额入口的负余额策略和有效套餐状态边界。
- * 测试使用 Mapper mock 隔离数据库，重点确保工单扣费可透支、普通付款不可透支、双阈值采用严格比较，
+ * 测试使用 Mapper mock 隔离数据库，重点确保工单扣费可透支、普通付款不可透支、停止严格小于而恢复包含等值，
  * 且过期套餐与非欠费暂停不会被自动改写。
  */
 class WalletBalanceServiceImplTest {
@@ -66,7 +66,7 @@ class WalletBalanceServiceImplTest {
   }
 
   @Test
-  void doesNotSwitchStateAtExactThresholds() {
+  void keepsActiveAtSuspendThresholdAndRestoresAtExactRestoreThreshold() {
     stubState(1, null, LocalDateTime.now().plusDays(10), new BigDecimal("-90.00"));
     service.changeBalance(20L, new BigDecimal("-10.00"), null, true);
     verify(mapper, never()).suspendSubscriptionForArrears(anyLong(), anyString());
@@ -75,6 +75,31 @@ class WalletBalanceServiceImplTest {
     when(mapper.updateWallet(anyMap())).thenReturn(1);
     stubState(3, "ARREARS", LocalDateTime.now().plusDays(10), new BigDecimal("-10.00"));
     service.changeBalance(20L, new BigDecimal("10.00"), 9L, false);
+    verify(mapper).restoreArrearsSubscription(7L, "ARREARS");
+  }
+
+  /**
+   * 仍欠一分钱时不可恢复；允许透支的余额入口用于验证负数边界，而不受普通付款防透支校验影响。
+   */
+  @Test
+  void doesNotRestoreWhileBalanceRemainsNegative() {
+    stubState(3, "ARREARS", LocalDateTime.now().plusDays(10), new BigDecimal("-10.00"));
+    service.changeBalance(20L, new BigDecimal("9.99"), 9L, true);
+    verify(mapper, never()).restoreArrearsSubscription(anyLong(), anyString());
+  }
+
+  /**
+   * 每日余额维护与充值共用恢复规则，已经补至0的欠费暂停套餐也必须恢复；到期套餐不能因此复活。
+   */
+  @Test
+  void maintenanceRestoresAtZeroButLeavesExpiredSubscriptionUntouched() {
+    stubState(3, "ARREARS", LocalDateTime.now().plusDays(10), BigDecimal.ZERO);
+    service.reconcileSubscriptionAccess(20L);
+    verify(mapper).restoreArrearsSubscription(7L, "ARREARS");
+
+    reset(mapper);
+    stubState(3, "ARREARS", LocalDateTime.now().minusSeconds(1), BigDecimal.ZERO);
+    service.reconcileSubscriptionAccess(20L);
     verify(mapper, never()).restoreArrearsSubscription(anyLong(), anyString());
   }
 

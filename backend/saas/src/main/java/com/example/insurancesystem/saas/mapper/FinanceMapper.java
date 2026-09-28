@@ -44,13 +44,70 @@ public interface FinanceMapper {
   Map<String, Object> lockRechargeOrder(
       @Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
 
-  @Update(
-      "UPDATE saas_recharge_order SET status=2,paid_at=NOW(),updated_at=NOW() WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND status=1 AND deleted=0")
-  int completeRechargeOrder(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+  /**
+   * Stripe 回调按不可猜测的 Checkout Session ID 锁定充值订单。
+   * 该查询不依赖登录企业上下文，只允许在 Webhook 验签成功后的事务中调用。
+   */
+  @Select(
+      "SELECT * FROM saas_recharge_order WHERE stripe_checkout_session_id=#{checkoutSessionId} AND deleted=0 FOR UPDATE")
+  Map<String, Object> lockRechargeOrderByStripeSession(String checkoutSessionId);
 
+  /**
+   * 外部退款按原 PaymentIntent 锁定充值订单，串行化同一付款的多笔部分退款。
+   * 仅由验签后的支付服务调用，不依赖用户登录上下文。
+   */
+  @Select("SELECT * FROM saas_recharge_order WHERE stripe_payment_intent_id=#{paymentIntentId} AND deleted=0 FOR UPDATE")
+  Map<String, Object> lockRechargeOrderByPaymentIntent(String paymentIntentId);
+
+  /**
+   * 复用 Webhook 审计表保存本地退款幂等状态；该键使用独立命名空间，不与 evt_ 事件冲突。
+   * 调用方已持有原充值订单锁，状态记录与钱包变更同一事务提交，不新增表结构。
+   */
+  @Select("SELECT payload_json FROM saas_stripe_webhook_event WHERE event_id=#{stateKey} AND event_type='saas.refund.state' FOR UPDATE")
+  String lockStripeRefundState(String stateKey);
+
+  /**
+   * 按已有 Session 索引读取本充值的所有退款状态。锁定读避免事务快照遗漏并发刚提交的退款，
+   * 上层按 JSON 中的已回撤额校验累计金额，实际 Stripe 原始事件仍作为独立审计记录保留。
+   */
+  @Select("SELECT payload_json FROM saas_stripe_webhook_event WHERE checkout_session_id=#{sessionId} AND event_type='saas.refund.state' FOR UPDATE")
+  List<String> findStripeRefundStates(String sessionId);
+
+  /**
+   * 保存首次退款的本地业务状态，event_id 唯一索引与充值订单锁防止跨事件重复回撤。
+   */
+  @Insert("INSERT INTO saas_stripe_webhook_event(event_id,event_type,checkout_session_id,payload_json,created_at) VALUES(#{stateKey},'saas.refund.state',#{sessionId},#{payload},NOW())")
+  int insertStripeRefundState(@Param("stateKey") String stateKey, @Param("sessionId") String sessionId, @Param("payload") String payload);
+
+  /**
+   * 与钱包和流水在同一事务更新已回撤金额；事务失败时不能留下假成功标记。
+   */
+  @Update("UPDATE saas_stripe_webhook_event SET payload_json=#{payload},processed_at=NOW() WHERE event_id=#{stateKey} AND event_type='saas.refund.state'")
+  int updateStripeRefundState(@Param("stateKey") String stateKey, @Param("payload") String payload);
+
+  /**
+   * 将仍待支付的 Stripe 充值订单原子更新为已支付并保存最终 PaymentIntent。
+   * status 条件与行锁共同保证重复 Webhook 不会重复入账。
+   */
   @Update(
-      "UPDATE saas_recharge_order SET status=3,updated_at=NOW() WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND status=1 AND deleted=0")
-  int cancelRechargeOrder(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
+      "UPDATE saas_recharge_order SET status=2,pay_trade_no=#{paymentIntentId},stripe_payment_intent_id=#{paymentIntentId},payment_failure_reason=NULL,paid_at=NOW(),updated_at=NOW() WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND status IN (1,7) AND deleted=0")
+  int completeStripeRechargeOrder(
+      @Param("id") Long id,
+      @Param("enterpriseId") Long enterpriseId,
+      @Param("paymentIntentId") String paymentIntentId);
+
+  /**
+   * 在原充值行锁保护下更新累计成功退款额及对应状态。
+   * 与钱包回撤、退款状态记录处于同一事务，只允许修改已经入账的订单。
+   * @param id 原充值主键
+   * @param enterpriseId 原充值所属企业
+   * @param refundAmount 全部退款当前实际回撤的累计金额
+   * @param status 汇总计算的已支付、部分退款或完全退款状态
+   * @return 更新的订单数量
+   */
+  @Update("UPDATE saas_recharge_order SET refund_amount=#{refundAmount},status=#{status},updated_at=NOW() WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND status IN (2,8,9) AND deleted=0")
+  int updateRechargeRefundSummary(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId,
+      @Param("refundAmount") java.math.BigDecimal refundAmount, @Param("status") int status);
 
   @Select(
       "<script>SELECT * FROM saas_recharge_order WHERE enterprise_id=#{enterpriseId} AND deleted=0 "

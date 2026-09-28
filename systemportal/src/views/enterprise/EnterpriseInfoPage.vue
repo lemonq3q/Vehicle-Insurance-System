@@ -171,10 +171,12 @@ export default {
       return this.$store.getters.canManageEnterprise;
     },
     /**
-     * 仅将状态值为 1 的订阅视为当前有效套餐，并对套餐关联数据缺失给出可识别的兜底文案。
+     * 当前身份展示已关联的套餐名称，不把欠费暂停误判为从未订阅。
+     * 生效中和已暂停订阅均保留套餐关联；该展示不代表权益可用，不修改权限或恢复状态。
+     * 未订阅、已过期、已取消仍沿用原文案，关联套餐数据缺失时提示维护者核查。
      */
     subscriptionName() {
-      if (Number(this.subscription?.status) !== 1) return '暂未订阅';
+      if (![1, 3].includes(Number(this.subscription?.status))) return '暂未订阅';
       return this.subscription?.plan?.name || '套餐信息缺失';
     }
   },

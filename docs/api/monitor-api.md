@@ -22,6 +22,8 @@
 
 分页结构：
 
+监控端所有分页栏提供每页 10、20、50、100 条选项，默认 10 条。切换条数时保留筛选条件，将 `pageNo` 重置为 1，并使用所选 `pageSize` 请求现有分页接口，无新增接口或响应字段。推广发送页面的导入名单、已选对象使用独立本地分页，切换条数不清空勾选；现有 Mock 分页适配器沿用同样的 `pageNo`、`pageSize` 参数。
+
 ```json
 { "list": [], "pageNo": 1, "pageSize": 10, "total": 0 }
 ```
@@ -136,19 +138,44 @@ query：`keyword`、`roleName`、`status`、`pageNo/pageSize`。返回分页 `{i
 
 返回 `{balance,totalRecharge,totalSubscriptionExpense,monthTransactionCount}`。累计充值仅已支付充值订单；套餐支出读取已支付订阅订单；钱包余额读取 `saas_wallet`。
 
-该接口读取真实 SaaS 财务表：`balance` 来自未删除钱包，`totalRecharge` 汇总 `status=2` 的充值订单，`totalSubscriptionExpense` 汇总 `status=2` 的订阅订单实际支付金额，`monthTransactionCount` 按 Asia/Shanghai 自然月统计钱包流水。企业不存在返回 404。
+该接口读取真实 SaaS 财务表：`balance` 来自未删除钱包，`totalRecharge` 汇总 `status IN (2,8,9)` 的充值订单原始金额（历史充值总额，非扣除退款后的净额），`totalSubscriptionExpense` 汇总 `status=2` 的订阅订单实际支付金额，`monthTransactionCount` 按 Asia/Shanghai 自然月统计钱包流水。企业不存在返回 404。
 
 ### GET `/enterprises/{id}/recharge-orders`
 
-query：`businessNo`（充值订单号包含匹配）、`startDate/endDate`（创建日期闭区间，格式 `yyyy-MM-dd`）、`pageNo/pageSize`。返回分页字段：`id,enterpriseId,orderNo,amount,channel,status,paidAt,createdAt`。
+query：`businessNo`（充值订单号包含匹配）、`startDate/endDate`（创建日期闭区间，格式 `yyyy-MM-dd`）、`pageNo/pageSize`。完整路径为 `GET /api/monitor/enterprises/{id}/recharge-orders`，权限沿用 ADMIN/CUSTOMER_SERVICE，只读查询。
+
+返回分页字段：`id,enterpriseId,orderNo,amount,refundAmount,channel,status,paidAt,createdAt`。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| refundAmount | number | 累计实际回撤的退款金额，来自 saas_recharge_order.refund_amount，与 amount 同币种 |
+| status | number | 1待支付、2已支付、3已取消、4支付失败、5已过期、6已关闭、7支付处理中、8已部分退款、9已完全退款 |
+
+监控前端按 SaaS 列表展示订单号、金额、支付渠道、第三方交易号、状态、支付时间、创建时间，不展示退款金额列；refundAmount 保留在响应中。8为已部分退款（警示色），9为已完全退款（中性色），5为已过期，只有7为支付处理中。各订单枚举互不混用，无新增筛选参数。充值响应增加 payTradeNo。
+
+Mock 样例（完整样例位于 `monitor-frontend/src/mock/database.js` 的 finance.recharges）：
+
+```json
+{"code":200,"message":"success","data":{"list":[{"id":3,"enterpriseId":1,"orderNo":"RC202609280003","amount":1000,"refundAmount":300,"channel":"STRIPE","status":8,"paidAt":"2026-09-28 10:00","createdAt":"2026-09-28 09:55"},{"id":4,"enterpriseId":1,"orderNo":"RC202609280004","amount":1000,"refundAmount":1000,"channel":"STRIPE","status":9,"paidAt":"2026-09-28 11:00","createdAt":"2026-09-28 10:55"}],"pageNo":1,"pageSize":10,"total":2},"requestId":"web-example"}
+```
 
 ### GET `/enterprises/{id}/subscription-orders`
 
 query：`businessNo`（订阅订单号包含匹配）、`startDate/endDate`（创建日期闭区间，格式 `yyyy-MM-dd`）、`pageNo/pageSize`。返回分页字段：`id,enterpriseId,orderNo,planName,amount,status,startedAt,endedAt,createdAt`；套餐名称优先来自订单快照，不使用当前套餐配置覆盖历史。
 
+同时返回 `orderType,periodCount,priceAmount,creditAmount,refundAmount,workorderOverageCount,workorderOverageAmount,payableAmount,paidAmount,autoRenew,failureReason`，与 SaaS 套餐列表对应。金额均为 number，周期与超额工单数为整数，autoRenew 为0/1或boolean；failureReason 可为空。periodCount 按购买时长除以下单快照 durationDays 计算，缺少有效快照时显示1，不使用当前套餐时长重算历史周期。状态1待支付、2已支付、3已取消、4已退款、5已关闭、6自动续费失败；退款优先于抵扣展示，超额工单数为0时显示占位符。
+
 ### GET `/enterprises/{id}/wallet-transactions`
 
 query：`businessNo`（钱包流水号包含匹配）、`startDate/endDate`（发生日期闭区间，格式 `yyyy-MM-dd`）、`pageNo/pageSize`。返回分页字段：`id,enterpriseId,transactionNo,type,amount,balanceAfter,referenceNo,remark,createdAt`。
+
+增加 `transactionType,direction,balanceBefore`，type 保留为 transactionType 的兼容别名。amount 改为与 SaaS 一致的非负流水金额，收支由 direction=IN/OUT 表达；余额可为负。页面按流水号、方向、类型、金额、变动前、变动后、说明、时间展示。三类记录及CSV金额均保留两位小数，日期显示 yyyy-MM-dd HH:mm:ss，缺失信息显示“-”；导出与当前列表共用列，不提供付款或编辑操作。
+
+新增字段联调样例：
+
+```json
+{"subscription":{"orderNo":"SO-example","orderType":"CHANGE_PLAN","planName":"专业版","periodCount":2,"priceAmount":598,"creditAmount":100,"refundAmount":0,"workorderOverageCount":0,"workorderOverageAmount":0,"payableAmount":498,"paidAmount":498,"autoRenew":1,"status":2,"failureReason":null},"transaction":{"transactionNo":"TX-example","transactionType":"REFUND","type":"REFUND","direction":"OUT","amount":300,"balanceBefore":20,"balanceAfter":-280,"remark":"退款余额回撤","createdAt":"2026-09-28 10:00:00"}}
+```
 
 三个财务分页接口均按 `created_at DESC,id DESC` 排序。开始日期晚于结束日期、日期格式非法或业务编号超过 64 个字符时返回 400；企业不存在时返回 404。
 
@@ -235,6 +262,8 @@ query：`keyword`、`roleCode(ADMIN/CUSTOMER_SERVICE)`、`status`、`pageNo/page
 body：`{"reason":"测试账号清理"}`。软删除，不能删除当前账号或最后一个启用 ADMIN。返回 `data:null`。
 
 ## 6. Mock 与联调切换
+
+提醒查询生效状态及周期同步契约见 [提醒生命周期 API](reminder-lifecycle-api.md)，提醒 Mock 位于 `src/mock/reminders.js`，由现有 Adapter 分发。
 
 - Mock 数据：`src/mock/database.js`；路由行为：`src/mock/adapter.js`。
 - mock 与真实后端按接口封装中的 `useMock` 显式标记分流；环境文件仅配置接口基址，不控制功能开发阶段。

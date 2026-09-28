@@ -61,15 +61,19 @@ export const dailyUsage = enterprises.flatMap((enterprise, enterpriseIndex) => d
 
 export const finance = {
   recharges: [
-    { id: 1, enterpriseId: 1, orderNo: 'RC202607180028', amount: 20000, channel: 'WECHAT', status: 2, paidAt: '2026-07-18 14:26', createdAt: '2026-07-18 14:20' },
-    { id: 2, enterpriseId: 1, orderNo: 'RC202606120016', amount: 10000, channel: 'ALIPAY', status: 2, paidAt: '2026-06-12 09:38', createdAt: '2026-06-12 09:32' }
+      { id: 1, enterpriseId: 1, orderNo: 'RC202607180028', amount: 20000, refundAmount: 0, payTradeNo: 'pi_mock_1', channel: 'WECHAT', status: 2, paidAt: '2026-07-18 14:26', createdAt: '2026-07-18 14:20' },
+      { id: 2, enterpriseId: 1, orderNo: 'RC202606120016', amount: 10000, refundAmount: 0, payTradeNo: 'pi_mock_2', channel: 'ALIPAY', status: 2, paidAt: '2026-06-12 09:38', createdAt: '2026-06-12 09:32' },
+      { id: 3, enterpriseId: 1, orderNo: 'RC202609280003', amount: 1000, refundAmount: 300, payTradeNo: 'pi_mock_3', channel: 'STRIPE', status: 8, paidAt: '2026-09-28 10:00', createdAt: '2026-09-28 09:55' },
+        { id: 4, enterpriseId: 1, orderNo: 'RC202609280004', amount: 1000, refundAmount: 1000, payTradeNo: 'pi_mock_4', channel: 'STRIPE', status: 9, paidAt: '2026-09-28 11:00:00', createdAt: '2026-09-28 10:55:00' },
+        { id: 5, enterpriseId: 1, orderNo: 'RC202609280005', amount: 1000, refundAmount: 0, channel: 'STRIPE', payTradeNo: null, status: 5, paidAt: null, createdAt: '2026-09-28 08:00:00' }
   ],
   subscriptions: [
-    { id: 1, enterpriseId: 1, orderNo: 'SO202603160012', planName: '企业版', amount: 28800, status: 2, startedAt: '2026-03-16', endedAt: '2027-03-16', createdAt: '2026-03-16 11:20' },
-    { id: 2, enterpriseId: 1, orderNo: 'SO202602030006', planName: '专业版', amount: 12800, status: 2, startedAt: '2026-02-03', endedAt: '2027-02-03', createdAt: '2026-02-03 16:08' }
+      { id: 1, enterpriseId: 1, orderNo: 'SO202603160012', orderType: 'BUY', planName: '企业版', periodCount: 12, priceAmount: 28800, creditAmount: 0, refundAmount: 0, workorderOverageCount: 0, workorderOverageAmount: 0, payableAmount: 28800, paidAmount: 28800, autoRenew: 1, failureReason: null, amount: 28800, status: 2, startedAt: '2026-03-16', endedAt: '2027-03-16', createdAt: '2026-03-16 11:20:00' },
+      { id: 2, enterpriseId: 1, orderNo: 'SO202602030006', orderType: 'CHANGE_PLAN', planName: '专业版', periodCount: 12, priceAmount: 12800, creditAmount: 1000, refundAmount: 0, workorderOverageCount: 2, workorderOverageAmount: 10, payableAmount: 11810, paidAmount: 11810, autoRenew: 0, failureReason: null, amount: 11810, status: 2, startedAt: '2026-02-03', endedAt: '2027-02-03', createdAt: '2026-02-03 16:08:00' }
   ],
   transactions: [
-    { id: 1, enterpriseId: 1, transactionNo: 'TX202607180041', type: 'RECHARGE', amount: 20000, balanceAfter: 28640, referenceNo: 'RC202607180028', remark: '充值入账', createdAt: '2026-07-18 14:26' },
-    { id: 2, enterpriseId: 1, transactionNo: 'TX202603160022', type: 'BUY_PLAN', amount: -28800, balanceAfter: 8640, referenceNo: 'SO202603160012', remark: '购买企业版', createdAt: '2026-03-16 11:20' }
+      { id: 1, enterpriseId: 1, transactionNo: 'TX202607180041', type: 'RECHARGE', transactionType: 'RECHARGE', direction: 'IN', amount: 20000, balanceBefore: 8640, balanceAfter: 28640, referenceNo: 'RC202607180028', remark: '充值入账', createdAt: '2026-07-18 14:26:00' },
+      { id: 2, enterpriseId: 1, transactionNo: 'TX202603160022', type: 'BUY_PLAN', transactionType: 'BUY_PLAN', direction: 'OUT', amount: 28800, balanceBefore: 37440, balanceAfter: 8640, referenceNo: 'SO202603160012', remark: '购买企业版', createdAt: '2026-03-16 11:20:00' },
+      { id: 3, enterpriseId: 1, transactionNo: 'TX202609280003', type: 'REFUND', transactionType: 'REFUND', direction: 'OUT', amount: 300, balanceBefore: 20, balanceAfter: -280, referenceNo: 'RC202609280003', remark: '退款余额回撤', createdAt: '2026-09-28 10:00:00' }
   ]
 };

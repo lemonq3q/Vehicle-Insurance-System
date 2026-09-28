@@ -48,16 +48,20 @@ public class MaintenanceFilter implements Filter {
                 res.setHeader("Access-Control-Max-Age", "3600");
                 res.setHeader("Access-Control-Allow-Headers", "*");
             }
+            res.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             res.setContentType("application/json;charset=UTF-8");
-            res.getWriter().write("{\"code\":503,\"msg\":\"系统维护中，请稍后再试\"}");
+            res.getWriter().write("{\"code\":503,\"msg\":\"系统维护中，服务不可用\"}");
             return;
         }
 
         chain.doFilter(request, response);
     }
 
-    /** 仅精确放行分布式协调所需接口，避免维护期间开放其他内部业务接口。 */
+    /**
+     * 放行维护协议和提醒合并的精确路径，使每日提醒任务能够在监控服务READY期间同步。
+     * 不放行整个internal业务前缀；提醒合并控制器仍必须校验服务间共享密钥。
+     */
     private boolean isMaintenanceEndpoint(String path) {
-        return path != null && path.startsWith("/internal/maintenance/");
+        return path != null && (path.startsWith("/internal/maintenance/") || "/internal/reminders/merge".equals(path));
     }
 }

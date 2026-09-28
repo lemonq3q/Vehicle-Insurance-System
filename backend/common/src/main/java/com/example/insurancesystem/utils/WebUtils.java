@@ -15,11 +15,11 @@ import java.util.List;
 public class WebUtils {
     /**
      * 将已经序列化的 JSON 写入响应，统一使用 UTF-8 和 application/json；该方法用于过滤器阶段，
-     * 此时无法依赖 Spring MVC 的返回值转换器。写出异常被记录，返回值保留历史 String 契约。
+     * 此时无法依赖 Spring MVC 的返回值转换器。保留调用方设置的HTTP状态，避免将认证失败覆盖为200。
+     * 写出异常被记录，返回值保留历史 String 契约。
      */
     public static String renderString(HttpServletResponse response, String string){
         try{
-            response.setStatus(200);
             response.setContentType("application/json");
             response.setCharacterEncoding("utf-8");
             response.getWriter().print(string);

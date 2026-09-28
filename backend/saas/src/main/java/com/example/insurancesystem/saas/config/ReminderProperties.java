@@ -17,6 +17,16 @@ public class ReminderProperties {
     private int quotaUrgentPercent = 90;
     private BigDecimal nearSuspensionRatio = new BigDecimal("0.80");
     private int[] dataDeletionWarningDays = new int[]{30, 15, 3};
+    private int reconciliationBatchSize = 100;
+
+    /**
+     * 每次数据库游标读取的提醒数量；服务层限制1到500，控制内存及业务快照查询范围。
+     */
+    public int getReconciliationBatchSize() { return reconciliationBatchSize; }
+    /**
+     * 绑定单批大小配置，实际调用时由服务限制范围，不改变业务触发条件。
+     */
+    public void setReconciliationBatchSize(int value) { reconciliationBatchSize = value; }
 
     public int getFirstExpiryWarningDays() { return firstExpiryWarningDays; }
     public void setFirstExpiryWarningDays(int value) { this.firstExpiryWarningDays = value; }

@@ -45,6 +45,7 @@ public class EnterpriseApiUsageFilter extends OncePerRequestFilter {
                 && !path.startsWith("/internal/")
                 && !path.startsWith("/auth/")
                 && !path.startsWith("/portal/auth/")
+                && !path.startsWith("/portal/payment/stripe/webhook")
                 && !path.startsWith("/actuator/")
                 && !path.contains(".");
     }

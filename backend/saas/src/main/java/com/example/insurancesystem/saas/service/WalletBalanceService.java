@@ -14,7 +14,7 @@ public interface WalletBalanceService {
    * @param enterpriseId 企业主键，来自当前门户上下文或维护任务订阅快照
    * @param changeAmount 带符号变更额；正数入账、负数扣款，零仅用于状态校准
    * @param operatorUserId 操作用户；系统维护允许为空
-   * @param allowNegative 是否允许本次业务把余额扣为负数；只有超额工单计费应传 true
+   * @param allowNegative 是否允许变更后余额为负；工单计费、外部退款及向负余额钱包充值可传 true，套餐购买不能透支
    * @return 钱包主键及变更前后余额，供资金流水保持同一金额快照
    * @throws IllegalStateException 钱包不存在、余额不足或发生并发更新时抛出并回滚调用事务
    */

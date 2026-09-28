@@ -2,6 +2,7 @@ package com.example.insurancesystem.saas.controller;
 
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.saas.service.FinanceService;
+import com.example.insurancesystem.saas.payment.StripePaymentService;
 import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,9 +10,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/portal/finance")
 public class FinanceController {
   private final FinanceService service;
+  private final StripePaymentService stripePaymentService;
 
-  public FinanceController(FinanceService service) {
+  public FinanceController(FinanceService service, StripePaymentService stripePaymentService) {
     this.service = service;
+    this.stripePaymentService = stripePaymentService;
   }
 
   @GetMapping("/overview")
@@ -34,14 +37,9 @@ public class FinanceController {
     return ok(service.rechargeDetail(id));
   }
 
-  @PostMapping("/recharge-orders/complete")
-  public ResponseResult<?> completeRecharge(@RequestBody Map<String, Object> body) {
-    return new ResponseResult<>(200, "模拟支付成功，余额已到账", service.completeRecharge(body));
-  }
-
   @PostMapping("/recharge-orders/{id}/cancel")
   public ResponseResult<?> cancelRecharge(@PathVariable Long id) {
-    return new ResponseResult<>(200, "充值订单已取消", service.cancelRecharge(id));
+    return new ResponseResult<>(200, "充值订单已取消", stripePaymentService.cancelRecharge(id));
   }
 
   @GetMapping("/recharge-orders")

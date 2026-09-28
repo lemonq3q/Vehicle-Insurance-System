@@ -138,7 +138,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .modal-card>header { justify-content:space-between; border-bottom:1px solid var(--border); }.modal-card>header h2{margin:0;font-size:18px}.modal-card>header .icon-button{width:34px;height:34px}
 .modal-card>footer { justify-content:flex-end; border-top:1px solid var(--border); }.modal-body{padding:20px}.modal-body .field+.field{margin-top:14px}
 .app-toast { position:fixed; z-index:1200; top:82px; left:50%; min-width:220px; padding:12px 18px; border-radius:8px; color:#fff; background:#047857; box-shadow:var(--shadow); transform:translateX(-50%); text-align:center; }
-.app-toast.error{background:#b91c1c}.toast-enter-active,.toast-leave-active{transition:opacity .2s,transform .2s}.toast-enter-from,.toast-leave-to{opacity:0;transform:translate(-50%,-8px)}
+/* 全局消息最长720px，移动端保留边距；短消息仍按内容宽度展示。 */
+.app-toast { width: max-content; min-width: 0; max-width: min(720px, calc(100vw - 32px)); box-sizing: border-box; overflow-wrap: anywhere; }
+/* 只动画透明度和位移，自动关闭和手动关闭均沿用组件的过渡生命周期。 */
+/* 用户明确要求提示始终缓入缓出，限定覆盖全局时长规则，不影响其他组件。 */
+.app-toast.error{background:#b91c1c}.app-toast.toast-enter-active,.app-toast.toast-leave-active{transition:opacity 320ms ease-in-out,transform 320ms ease-in-out!important}.toast-enter-from,.toast-leave-to{opacity:0;transform:translate(-50%,-12px)}
 @media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(3,1fr); } .filter-grid, .enterprise-filter { grid-template-columns: repeat(2,1fr); } .enterprise-filter { justify-content: stretch; } }
 @media (max-width: 900px) { .monitor-sidebar { width: 76px; } .brand-copy,.nav-caption,.nav-item span { display:none; }.monitor-header{left:76px}.monitor-main,.monitor-app.collapsed .monitor-main{padding-left:100px}.chart-grid,.equal-grid{grid-template-columns:1fr}.metrics-grid{grid-template-columns:repeat(2,1fr)} }
 @media (max-width: 620px) { .monitor-header { padding: 0 12px; } .breadcrumb span,.breadcrumb i,.operator div,.operator > i,.logout-button{font-size:0}.logout-button{width:40px;padding:0;justify-content:center}.logout-button i{font-size:16px}.monitor-main,.monitor-app.collapsed .monitor-main{padding:84px 12px 24px 88px}.page-heading{align-items:flex-start;flex-direction:column}.metrics-grid,.filter-grid,.form-grid,.summary-strip{grid-template-columns:1fr}.summary-item{border-right:0;border-bottom:1px solid var(--border)}.metric-card{min-height:110px}.page-actions{width:100%}.page-actions .layui-btn{flex:1}.chart{height:250px!important} }

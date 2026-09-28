@@ -51,12 +51,28 @@ maintenance:
     zone: Asia/Shanghai
 
 saas:
+  payment:
+    stripe:
+      # 本地默认关闭真实支付；启用后密钥必须通过环境变量注入，禁止提交到代码仓库。
+      enabled: ${STRIPE_ENABLED:false}
+      secret-key: ${STRIPE_SECRET_KEY:}
+      publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      currency: ${STRIPE_RECHARGE_CURRENCY:cny}
+      minimum-amount: ${STRIPE_RECHARGE_MIN_AMOUNT:1.00}
+      maximum-amount: ${STRIPE_RECHARGE_MAX_AMOUNT:50000.00}
+      return-url: ${STRIPE_RECHARGE_RETURN_URL:http://localhost:8887/portal/finance/recharges/{orderId}?payment_return=1}
+      # 每轮最多处理 100 个到期候选，使用索引与固定延迟控制数据库和 Stripe API 压力。
+      reconciliation-batch-size: ${STRIPE_RECONCILIATION_BATCH_SIZE:100}
+      reconciliation-interval-ms: ${STRIPE_RECONCILIATION_INTERVAL_MS:300000}
+      reconciliation-initial-delay-ms: ${STRIPE_RECONCILIATION_INITIAL_DELAY_MS:60000}
   visitor-lead:
     # 官网匿名提交仅接受明确允许的 Origin/Referer；生产域名与本地联调地址集中配置，禁止客户端自行声明来源。
     allowed-origins: ${VISITOR_LEAD_ALLOWED_ORIGINS:http://localhost:8080,http://127.0.0.1:8080,http://localhost:8887,http://127.0.0.1:8887,https://www.idatag.com,https://idatag.com}
     rate-limit-seconds: ${VISITOR_LEAD_RATE_LIMIT_SECONDS:60}
     trust-proxy-headers: ${VISITOR_LEAD_TRUST_PROXY_HEADERS:false}
   reminder:
+    reconciliation-batch-size: ${REMINDER_RECONCILIATION_BATCH_SIZE:100}
     first-expiry-warning-days: ${REMINDER_FIRST_EXPIRY_WARNING_DAYS:7}
     urgent-expiry-warning-days: ${REMINDER_URGENT_EXPIRY_WARNING_DAYS:1}
     quota-first-percent: ${REMINDER_QUOTA_FIRST_PERCENT:80}
@@ -79,5 +95,5 @@ saas:
     balance-access:
       # 有效套餐余额严格低于该值时暂停车险业务访问；超额工单扣费允许穿透到负数。
       suspend-threshold: ${BALANCE_SUSPEND_THRESHOLD:-100.00}
-      # 欠费暂停企业余额严格高于该值时恢复；与停止阈值之间保留缓冲区避免反复切换。
+      # 欠费暂停企业余额大于等于该值时恢复；与停止阈值之间保留缓冲区避免反复切换。
       restore-threshold: ${BALANCE_RESTORE_THRESHOLD:0.00}

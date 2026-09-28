@@ -328,7 +328,11 @@ export default {
       });
       this.load();
     },
-    /** 分页时保留当前筛选。 */ changePage(pageNo) {
+    /**
+     * 同步分页页码和条数后查询，保留日志筛选；条数切换时由组件重置为第一页。
+     */
+    changePage(pageNo, pageSize = this.query.pageSize) {
+      this.query.pageSize = pageSize;
       this.query.pageNo = pageNo;
       this.load();
     },

@@ -1,3 +1,19 @@
+/*
+ * 统一车险端全局消息宽度，覆盖组件默认上限而不影响确认对话框。
+ * 长提示在桌面端最多720px，移动端预留两侧16px；文本与关闭按钮保持可见。
+ */
+.el-message {
+    width: max-content;
+    min-width: 0;
+    max-width: min(720px, calc(100vw - 32px));
+    box-sizing: border-box;
+    transition: opacity 320ms ease-in-out, transform 320ms ease-in-out !important;
+}
+.el-message .el-message__content { min-width: 0; overflow-wrap: anywhere; }
+/* 沿用组件的进入/离开类，仅使用轻微位移与淡入淡出，避免改变堆叠布局。 */
+.el-message.el-message-fade-enter-from,
+.el-message.el-message-fade-leave-to { opacity: 0; transform: translate(-50%, -12px); }
+
 div {
     box-sizing: border-box;
     /* padding: 0.1rem; */

@@ -32,9 +32,10 @@ public class MonitorReminderController {
             @RequestParam(required = false) String categoryCode, @RequestParam(required = false) String typeCode,
             @RequestParam(required = false) String typeCodes,
             @RequestParam(required = false) Long enterpriseId, @RequestParam(required = false) Integer processStatus,
+            @RequestParam(defaultValue = "1") int isActive,
             @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize) {
         String resolvedTypeCodes = typeCodes == null || typeCodes.isBlank() ? typeCode : typeCodes;
-        return new ResponseResult<>(200, service.page(severity, categoryCode, resolvedTypeCodes, enterpriseId, processStatus, pageNo, pageSize));
+        return new ResponseResult<>(200, service.page(severity, categoryCode, resolvedTypeCodes, enterpriseId, processStatus, isActive, pageNo, pageSize));
     }
 
     /** 一次返回级联类别/类型和有提醒企业选项，降低页面初始化数据库访问次数。 */

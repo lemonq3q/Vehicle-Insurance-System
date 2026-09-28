@@ -7,8 +7,8 @@
 
 `AUTO_RENEW_PLAN_UNAVAILABLE:subscription-{subscriptionId}:renew-{nextRenewAt}`
 
-目标套餐在同一续费周期恢复上架后，SaaS 删除企业端相同键的提醒，并调用监控内部清理接口删除客服端提醒。
-两个删除操作均为幂等操作；每日维护会重复请求监控端，以补偿此前跨服务失败。
+目标套餐在同一续费周期恢复上架后，周期复核将原提醒标记失效并通过合并接口同步，保留两端历史。
+新版不再调用删除接口；下面的删除接口仅保留旧版本兼容说明。
 
 ### POST `/internal/reminders/delete`
 
@@ -58,10 +58,13 @@
 | `typeCode` | string | 否 | 兼容旧版客户端的单个提醒类型编码；新页面使用 `typeCodes` |
 | `enterpriseId` | long | 否 | 所属企业 ID |
 | `processStatus` | integer | 否 | `0` 待处理，`1` 已处理 |
+| `isActive` | integer | 否 | 默认1生效，0失效，-1全部；与人工处理状态独立 |
 | `pageNo` | integer | 否 | 默认 1 |
 | `pageSize` | integer | 否 | 默认 10，最大 100 |
 
 返回 `data` 包含 `list`、`pageNo`、`pageSize`、`total`。列表按紧急程度降序、最近触发时间降序排列；类型字典无法匹配时，`typeName` 回退为原始 `reminderType`。每条记录额外返回 `enterpriseNameSnapshot`、`enterpriseCode`、`enterpriseContactName` 和 `enterpriseContactPhone`，供所属企业列以不可点击文本展示企业名称、编码和联系方式。
+
+每条同时返回 `isActive`、`invalidatedAt`、`lifecycleVersion`，失效提醒保留历史但禁止人工处理/恢复；并发失效返回409。完整请求及Mock示例见 [提醒生命周期契约](reminder-lifecycle-api.md)。
 
 ## PATCH /api/monitor/reminders/{id}/processed
 

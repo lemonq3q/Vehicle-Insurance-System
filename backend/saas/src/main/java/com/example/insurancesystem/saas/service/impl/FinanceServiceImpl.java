@@ -2,11 +2,11 @@ package com.example.insurancesystem.saas.service.impl;
 
 import com.example.insurancesystem.domain.encapsulate.TableData;
 import com.example.insurancesystem.handler.exception.BusinessException;
-import com.example.insurancesystem.saas.integration.payment.PaymentGateway;
 import com.example.insurancesystem.saas.config.WorkorderOverageBillingProperties;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
 import com.example.insurancesystem.saas.mapper.FinanceMapper;
 import com.example.insurancesystem.saas.mapper.WorkorderOverageBillingMapper;
+import com.example.insurancesystem.saas.payment.StripePaymentProperties;
 import com.example.insurancesystem.saas.service.FinanceService;
 import com.example.insurancesystem.saas.service.MemberSeatService;
 import com.example.insurancesystem.saas.service.WalletBalanceService;
@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,12 +29,12 @@ public class FinanceServiceImpl implements FinanceService {
   private final EnterpriseMapper enterprises;
   private final PortalContextService context;
   private final BusinessCodeGenerator codes;
-  private final PaymentGateway payments;
   private final ObjectMapper objectMapper;
   private final MemberSeatService seats;
   private final WorkorderOverageBillingMapper workorderBillingMapper;
   private final WorkorderOverageBillingProperties workorderBillingProperties;
   private final WalletBalanceService balances;
+  private final StripePaymentProperties stripePaymentProperties;
   private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
 
   public FinanceServiceImpl(
@@ -41,30 +42,43 @@ public class FinanceServiceImpl implements FinanceService {
       EnterpriseMapper enterprises,
       PortalContextService context,
       BusinessCodeGenerator codes,
-      PaymentGateway payments,
       ObjectMapper objectMapper,
       MemberSeatService seats,
       WorkorderOverageBillingMapper workorderBillingMapper,
       WorkorderOverageBillingProperties workorderBillingProperties,
-      WalletBalanceService balances) {
+      WalletBalanceService balances,
+      StripePaymentProperties stripePaymentProperties) {
     this.mapper = mapper;
     this.enterprises = enterprises;
     this.context = context;
     this.codes = codes;
-    this.payments = payments;
     this.objectMapper = objectMapper;
     this.seats = seats;
     this.workorderBillingMapper = workorderBillingMapper;
     this.workorderBillingProperties = workorderBillingProperties;
     this.balances = balances;
+    this.stripePaymentProperties = stripePaymentProperties;
   }
 
+  /**
+   * 返回当前企业的财务概览以及服务器实际生效的充值金额边界。
+   *
+   * <p>充值边界来自部署环境中的 Stripe 支付配置，前端使用该值进行即时校验和提示；创建订单时仍会在
+   * 服务端重复校验，避免调用方绕过页面限制。返回配置不包含任何 Stripe 密钥或其他敏感信息。
+   *
+   * @return 钱包、订阅、成员数量以及充值金额上下限
+   */
   public Map<String, Object> overview() {
     Long enterpriseId = context.enterpriseId();
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("wallet", walletView(enterpriseId));
     data.put("subscription", subscriptionView(enterpriseId));
     data.put("currentMemberCount", enterprises.countActiveMembers(enterpriseId));
+    Map<String, Object> rechargeLimits = new LinkedHashMap<>();
+    rechargeLimits.put("minimumAmount", stripePaymentProperties.getMinimumAmount());
+    rechargeLimits.put("maximumAmount", stripePaymentProperties.getMaximumAmount());
+    rechargeLimits.put("currency", stripePaymentProperties.getCurrency());
+    data.put("rechargeLimits", rechargeLimits);
     return data;
   }
 
@@ -72,32 +86,57 @@ public class FinanceServiceImpl implements FinanceService {
     return PortalMaps.camel(mapper.findPlans());
   }
 
+  /**
+   * 创建一笔待支付充值订单。
+   *
+   * <p>金额来自门户充值表单，必须精确到分且位于服务器配置的充值区间内。校验在任何数据库写入之前
+   * 完成，因此超限请求不会生成无法支付的本地订单；该服务端规则独立于前端和 Stripe Session 校验。
+   *
+   * @param body 请求体，amount 为用户提交的充值金额
+   * @return 新建的待支付充值订单
+   * @throws BusinessException 金额格式错误、精度超过两位或超出配置范围时抛出
+   */
   @Transactional
   public Map<String, Object> createRecharge(Map<String, Object> body) {
     Long enterpriseId =
         ((Number) context.requireRoles("OWNER", "ADMIN").get("enterpriseId")).longValue();
-    ensureWallet(enterpriseId);
-    BigDecimal amount = decimal(body, "amount");
-    if (amount.signum() <= 0) throw new BusinessException(400, "充值金额必须大于 0");
-    String channel = required(body, "payChannel").toUpperCase();
-    if (!Set.of("WECHAT", "ALIPAY", "BANK").contains(channel))
-      throw new BusinessException(400, "支付渠道不支持");
+    final BigDecimal amount;
+    try {
+      amount = decimal(body, "amount").setScale(2, RoundingMode.UNNECESSARY);
+    } catch (ArithmeticException exception) {
+      throw new BusinessException(400, "充值金额最多保留两位小数");
+    }
+    validateRechargeAmount(amount);
+    ensureWallet(enterpriseId, context.userId());
     Map<String, Object> order = new LinkedHashMap<>();
     order.put("enterpriseId", enterpriseId);
     order.put("userId", context.userId());
     order.put("amount", amount);
-    order.put("payChannel", channel);
+    order.put("refundAmount", BigDecimal.ZERO);
+    order.put("payChannel", "STRIPE");
     order.put("status", 1);
     order.put("createdAt", LocalDateTime.now());
     UniqueCodeRetryUtil.insertWithGeneratedCode(
         SaasCodeConstraints.RECHARGE_NO,
         codes::rechargeNo,
-        rechargeNo -> {
-          order.put("rechargeNo", rechargeNo);
-          order.put("payTradeNo", payments.createPayment(rechargeNo, amount, channel));
-        },
+        rechargeNo -> order.put("rechargeNo", rechargeNo),
         () -> mapper.insertRecharge(order));
     return PortalMaps.camel(order);
+  }
+
+  /**
+   * 使用部署环境中实际生效的上下限校验本地充值订单金额。
+   *
+   * @param amount 已规范为两位小数的充值金额
+   * @throws BusinessException 金额小于最小值或大于单笔最大值时抛出
+   */
+  private void validateRechargeAmount(BigDecimal amount) {
+    BigDecimal minimumAmount = stripePaymentProperties.getMinimumAmount();
+    BigDecimal maximumAmount = stripePaymentProperties.getMaximumAmount();
+    if (amount.compareTo(minimumAmount) < 0)
+      throw new BusinessException(400, "单笔充值金额不能低于 " + minimumAmount.toPlainString() + " 元");
+    if (amount.compareTo(maximumAmount) > 0)
+      throw new BusinessException(400, "单笔充值金额不能超过 " + maximumAmount.toPlainString() + " 元");
   }
 
   public Map<String, Object> rechargeDetail(Long id) {
@@ -108,28 +147,37 @@ public class FinanceServiceImpl implements FinanceService {
   }
 
   @Transactional
-  public Map<String, Object> completeRecharge(Map<String, Object> body) {
-    context.requireRoles("OWNER", "ADMIN");
-    Long enterpriseId = context.enterpriseId();
-    Long orderId = number(body, "rechargeOrderId");
-    Map<String, Object> order = PortalMaps.camel(mapper.lockRechargeOrder(orderId, enterpriseId));
-    if (order == null) throw new BusinessException(404, "充值订单不存在");
+  public Map<String, Object> completeStripeRecharge(
+      String checkoutSessionId, String paymentIntentId) {
+    Map<String, Object> order =
+        PortalMaps.camel(mapper.lockRechargeOrderByStripeSession(checkoutSessionId));
+    if (order == null) throw new BusinessException(404, "Stripe 充值订单不存在");
+
+    Long orderId = ((Number) order.get("id")).longValue();
+    Long enterpriseId = ((Number) order.get("enterpriseId")).longValue();
+    Long userId = ((Number) order.get("userId")).longValue();
 
     int status = ((Number) order.get("status")).intValue();
-    if (status == 2) return order;
-    if (status != 1) throw new BusinessException(409, "当前充值订单状态不可支付");
+    /* 退款状态仍代表原付款已经入账，迟到的付款通知不得重复增加余额。 */
+    if (RechargeOrderStatus.isPaid(status)) return order;
+    if (status != 1 && status != 7)
+      throw new BusinessException(409, "当前充值订单状态不可支付");
 
-    ensureWallet(enterpriseId);
+    ensureWallet(enterpriseId, userId);
     BigDecimal amount = money(order.get("amount"));
+    /*
+     * 外部退款可能已使钱包为负；后续小额充值仍应正常冲抵欠款，不能要求一次补足所有欠款。
+     * 本方法只增加已验证的正金额，允许充值后仍为负不等于允许用户主动透支购买套餐。
+     */
     BalanceChangeResult balanceChange =
-        balances.changeBalance(enterpriseId, amount, context.userId(), false);
-    if (mapper.completeRechargeOrder(orderId, enterpriseId) == 0)
+        balances.changeBalance(enterpriseId, amount, userId, true);
+    if (mapper.completeStripeRechargeOrder(orderId, enterpriseId, paymentIntentId) == 0)
       throw new BusinessException(409, "充值订单状态已变化，请刷新后重试");
 
     Map<String, Object> transaction = new LinkedHashMap<>();
     transaction.put("enterpriseId", enterpriseId);
     transaction.put("walletId", balanceChange.walletId());
-    transaction.put("userId", context.userId());
+    transaction.put("userId", userId);
     transaction.put("direction", "IN");
     transaction.put("transactionType", "RECHARGE");
     transaction.put("amount", amount);
@@ -150,19 +198,117 @@ public class FinanceServiceImpl implements FinanceService {
     return order;
   }
 
+  /**
+   * 外部退款的财务记账入口，不依赖浏览器登录或用户主动申请退款。
+   * 原充值订单锁串行化多笔退款，Refund 已回撤金额用于计算本次差额；钱包、流水和
+   * 退款记录及订单累计退款摘要同一事务提交。退款已经实际发生时允许形成负余额，复用钱包的欠费暂停规则。
+   * 订单根据当前累计回撤金额更新为已支付、已部分退款或已完全退款；退款失败补回时同步恢复摘要。
+   *
+   * @param refundId Stripe退款唯一标识
+   * @param paymentIntentId 原充值付款标识
+   * @param currency 经 Stripe 查询确认的币种
+   * @param minorAmount 单笔退款的最小货币单位金额
+   * @param status Stripe最新退款状态，非客户端状态
+   */
   @Transactional
-  public Map<String, Object> cancelRecharge(Long id) {
-    context.requireRoles("OWNER", "ADMIN");
-    Long enterpriseId = context.enterpriseId();
-    Map<String, Object> order = PortalMaps.camel(mapper.lockRechargeOrder(id, enterpriseId));
-    if (order == null) throw new BusinessException(404, "充值订单不存在");
-    int status = ((Number) order.get("status")).intValue();
-    if (status == 3) return order;
-    if (status != 1) throw new BusinessException(409, "只有待支付订单可以取消");
-    if (mapper.cancelRechargeOrder(id, enterpriseId) == 0)
-      throw new BusinessException(409, "充值订单状态已变化，请刷新后重试");
-    order.put("status", 3);
-    return order;
+  public void reconcileStripeRefund(String refundId, String paymentIntentId, String currency,
+      long minorAmount, String status) {
+    if (refundId == null || refundId.isBlank() || paymentIntentId == null || paymentIntentId.isBlank()
+        || minorAmount <= 0 || status == null || !Set.of("pending", "requires_action", "succeeded", "failed", "canceled").contains(status))
+      throw new BusinessException(400, "Stripe 退款数据无效");
+    if (currency == null || !stripePaymentProperties.getCurrency().equalsIgnoreCase(currency))
+      throw new BusinessException(409, "Stripe 退款币种与充值币种不一致");
+    Map<String, Object> order = PortalMaps.camel(mapper.lockRechargeOrderByPaymentIntent(paymentIntentId));
+    if (order == null || !RechargeOrderStatus.isPaid(intValue(order.get("status"))))
+      throw new BusinessException(409, "Stripe 原充值尚未入账，请重试退款通知");
+    Long orderId = ((Number) order.get("id")).longValue();
+    Long enterpriseId = ((Number) order.get("enterpriseId")).longValue();
+    BigDecimal amount = BigDecimal.valueOf(minorAmount, 2);
+    if (amount.compareTo(money(order.get("amount"))) > 0)
+      throw new BusinessException(409, "Stripe 退款金额超过原充值金额");
+    String stateKey = "saas-refund-state:" + refundId;
+    String stored = mapper.lockStripeRefundState(stateKey);
+    Map<String, Object> existing = stored == null ? null : parseRefundState(stored);
+    BigDecimal applied = existing == null ? BigDecimal.ZERO : money(existing.get("appliedAmount"));
+    /*
+     * 同一 Refund 的金额、原支付和订单不可变；避免错误关联导致扣错企业钱包。
+     * 不按 event.id 判断财务是否完成，因为 created、updated 等不同事件可能对应同一退款。
+     */
+    if (existing != null && (!paymentIntentId.equals(existing.get("paymentIntentId"))
+        || ((Number) existing.get("rechargeOrderId")).longValue() != orderId.longValue()
+        || money(existing.get("amount")).compareTo(amount) != 0
+        || !currency.equalsIgnoreCase(String.valueOf(existing.get("currency")))))
+      throw new BusinessException(409, "Stripe 退款关联数据发生变化");
+    BigDecimal target = "succeeded".equals(status) ? amount : BigDecimal.ZERO;
+    BigDecimal delta = applied.subtract(target);
+    /* 汇总所有 Refund 的实际回撤金额，而非单条 webhook 金额，支持多次部分退款及补回。 */
+    BigDecimal total = BigDecimal.ZERO;
+    for (String state : mapper.findStripeRefundStates(String.valueOf(order.get("stripeCheckoutSessionId"))))
+      total = total.add(money(parseRefundState(state).get("appliedAmount")));
+    total = total.subtract(applied).add(target);
+    if (total.signum() < 0 || total.compareTo(money(order.get("amount"))) > 0)
+      throw new BusinessException(409, "Stripe 累计退款超过原充值金额");
+    int orderStatus = total.signum() == 0 ? RechargeOrderStatus.PAID
+        : total.compareTo(money(order.get("amount"))) == 0 ? RechargeOrderStatus.FULLY_REFUNDED
+        : RechargeOrderStatus.PARTIALLY_REFUNDED;
+    boolean summaryChanged = intValue(order.get("status")) != orderStatus
+        || money(order.get("refundAmount")).compareTo(total) != 0;
+    if (existing != null && delta.signum() == 0 && status.equals(existing.get("status"))
+        && !summaryChanged) return;
+    Map<String, Object> refund = new LinkedHashMap<>();
+    refund.put("refundId", refundId);
+    refund.put("rechargeOrderId", orderId);
+    refund.put("paymentIntentId", paymentIntentId);
+    refund.put("currency", currency.toLowerCase(Locale.ROOT));
+    refund.put("amount", amount);
+    refund.put("status", status);
+    refund.put("appliedAmount", target);
+    /*
+     * 仅差额非零时修改余额：退款成功扣除，后续失败或撤回则补回。
+     * 系统事件操作人为空，不把 Stripe 后台退款伪装为原充值用户操作；流水仍关联原充值单。
+     */
+    if (delta.signum() != 0) {
+      BalanceChangeResult change = balances.changeBalance(enterpriseId, delta, null, true);
+      Map<String, Object> transaction = new LinkedHashMap<>();
+      transaction.put("enterpriseId", enterpriseId);
+      transaction.put("walletId", change.walletId());
+      transaction.put("userId", null);
+      transaction.put("direction", delta.signum() < 0 ? "OUT" : "IN");
+      transaction.put("transactionType", "REFUND");
+      transaction.put("amount", delta.abs());
+      transaction.put("balanceBefore", change.balanceBefore());
+      transaction.put("balanceAfter", change.balanceAfter());
+      transaction.put("rechargeOrderId", orderId);
+      transaction.put("remark", (delta.signum() < 0 ? "Stripe退款余额回撤 " : "Stripe退款撤回余额恢复 ") + refundId);
+      UniqueCodeRetryUtil.insertWithGeneratedCode(
+          SaasCodeConstraints.WALLET_TRANSACTION_NO, codes::transactionNo,
+          transactionNo -> transaction.put("transactionNo", transactionNo),
+          () -> mapper.insertTransaction(transaction));
+    }
+    int changed = existing == null
+        ? mapper.insertStripeRefundState(stateKey, String.valueOf(order.get("stripeCheckoutSessionId")), json(refund))
+        : mapper.updateStripeRefundState(stateKey, json(refund));
+    if (changed != 1)
+      throw new BusinessException(409, "Stripe 退款记账状态更新失败");
+    /* 订单摘要与钱包、退款幂等记录同一事务提交；摘要修复本身不会再次扣款。 */
+    if (summaryChanged && mapper.updateRechargeRefundSummary(orderId, enterpriseId, total, orderStatus) != 1)
+      throw new BusinessException(409, "Stripe 充值退款摘要更新失败");
+  }
+
+  /**
+   * 解析服务器写入审计表的退款记账状态，不读取客户端 metadata。
+   * 损坏的数据必须中止事务并重试，不能当作首次退款再次扣款。
+   *
+   * @param payload 本地 saas.refund.state 的 JSON
+   * @return 原付款、退款额、已回撤金额及状态快照
+   */
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> parseRefundState(String payload) {
+    try {
+      return objectMapper.readValue(payload, Map.class);
+    } catch (JsonProcessingException exception) {
+      throw new BusinessException(500, "Stripe 退款记账记录损坏");
+    }
   }
 
   public TableData<Map<String, Object>> recharges(
@@ -388,7 +534,7 @@ public class FinanceServiceImpl implements FinanceService {
             sub == null
                 ? null
                 : PortalMaps.camel(mapper.findPlan(((Number) sub.get("planId")).longValue()));
-    LocalDateTime now = LocalDateTime.now(), start = now, end;
+    LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE), start = now, end;
     String type;
     double remainingDays = 0, remainingPeriods = 0;
     int minimum = 1;
@@ -400,7 +546,12 @@ public class FinanceServiceImpl implements FinanceService {
       end = now.plusDays((long) duration * periods);
     } else {
       LocalDateTime oldEnd = (LocalDateTime) sub.get("endAt");
-      remainingDays = Math.max(0, Duration.between(now, oldEnd).toSeconds() / 86400d);
+      /*
+       * 改订按上海业务自然日计算旧套餐剩余价值，不随当日付款耗时减少抵扣。
+       * 到期日期减去当前日期得到整数剩余天数；到期当天剩余计价天数为零。
+       * 预览与实际订阅共用此计算入口，跨日时重新计价，生效资格仍按实际到期时间校验。
+       */
+      remainingDays = Math.max(0, ChronoUnit.DAYS.between(now.toLocalDate(), oldEnd.toLocalDate()));
       if (((Number) sub.get("planId")).longValue() == planId) {
         type = "RENEW";
         start = oldEnd.isAfter(now) ? oldEnd : now;
@@ -414,8 +565,8 @@ public class FinanceServiceImpl implements FinanceService {
           remainingPeriods = remainingDays / oldDuration;
           credit =
               money(currentPlan.get("price"))
-                  .multiply(BigDecimal.valueOf(remainingPeriods))
-                  .setScale(2, RoundingMode.HALF_UP);
+                  .multiply(BigDecimal.valueOf((long) remainingDays))
+                  .divide(BigDecimal.valueOf(oldDuration), 2, RoundingMode.HALF_UP);
         }
       }
     }
@@ -487,7 +638,7 @@ public class FinanceServiceImpl implements FinanceService {
     if (status != 1 && status != 3) return null;
     if (status == 3 && !"ARREARS".equals(subscription.get("suspendReason"))) return null;
     Object endAt = subscription.get("endAt");
-    return endAt instanceof LocalDateTime && ((LocalDateTime) endAt).isAfter(LocalDateTime.now())
+    return endAt instanceof LocalDateTime && ((LocalDateTime) endAt).isAfter(LocalDateTime.now(BUSINESS_ZONE))
         ? subscription
         : null;
   }
@@ -506,12 +657,12 @@ public class FinanceServiceImpl implements FinanceService {
     return emptyWallet;
   }
 
-  private Map<String, Object> ensureWallet(Long enterpriseId) {
+  private Map<String, Object> ensureWallet(Long enterpriseId, Long operatorUserId) {
     enterprises.lockEnterprise(enterpriseId);
     Map<String, Object> wallet = PortalMaps.camel(mapper.lockWallet(enterpriseId));
     if (wallet != null) return wallet;
 
-    enterprises.insertWallet(enterpriseId, context.userId());
+    enterprises.insertWallet(enterpriseId, operatorUserId);
     wallet = PortalMaps.camel(mapper.lockWallet(enterpriseId));
     if (wallet == null) throw new BusinessException(500, "企业钱包初始化失败");
     return wallet;

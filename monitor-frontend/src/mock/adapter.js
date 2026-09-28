@@ -1,4 +1,5 @@
 import { dailyUsage, enterprises, finance, members, plans, platformUsers, promotionTargets, visitorLeads } from './database';
+import { reminders } from './reminders';
 
 /**
  * 构造与监控后端一致的成功响应外壳，并附加可追踪的模拟请求编号。
@@ -65,7 +66,29 @@ export async function mockAdapter(config) {
   const body = parseBody(config.data);
   let result;
 
-  if (method === 'POST' && url === '/auth/login') {
+  if (method === 'GET' && url === '/reminders/filter-options') {
+    result = ok({ categories: [{ code: 'ACCOUNT_BALANCE', name: '账户资金', types: [{ code: 'WALLET_BALANCE_NEGATIVE', name: '账户余额为负' }] }] });
+  } else if (method === 'GET' && url === '/reminders/enterprise-options') {
+    result = ok(enterprises.filter(item => `${item.name} ${item.code}`.includes(params.keyword || '')).slice(0, 20));
+  } else if (method === 'GET' && url === '/reminders') {
+    const active = Number(params.isActive ?? 1);
+    if (![0, 1, -1].includes(active)) return fail(400, '生效状态不合法');
+    const rows = reminders.filter(item => (active === -1 || item.isActive === active)
+      && (!params.severity || item.severity === params.severity)
+      && (!params.categoryCode || item.categoryCode === params.categoryCode)
+      && (!params.typeCodes || params.typeCodes.split(',').includes(item.reminderType))
+      && (!params.enterpriseId || String(item.enterpriseId) === String(params.enterpriseId))
+      && (params.processStatus == null || params.processStatus === '' || item.processStatus === Number(params.processStatus)))
+      .sort((a, b) => ({ CRITICAL: 3, WARNING: 2, NOTICE: 1 }[b.severity] - { CRITICAL: 3, WARNING: 2, NOTICE: 1 }[a.severity]) || b.lastTriggeredAt.localeCompare(a.lastTriggeredAt) || b.id - a.id);
+    result = ok(page(rows, Number(params.pageNo || 1), Number(params.pageSize || 10)));
+  } else if (method === 'PATCH' && /^\/reminders\/\d+\/(unprocessed|processed)$/.test(url)) {
+    const item = reminders.find(row => row.id === Number(url.split('/')[2]));
+    if (!item) return fail(404, '提醒不存在');
+    if (!item.isActive || item.revision !== body.revision) return fail(409, '提醒已失效或版本已变化');
+    item.processStatus = url.endsWith('/unprocessed') ? 0 : 1;
+    item.revision++;
+    result = ok(null);
+  } else if (method === 'POST' && url === '/auth/login') {
     const user = platformUsers.find(item => item.username === body.username && item.status === 1);
     if (!user || body.password !== mockMonitorPassword) return fail(400, '手机号或密码错误');
     result = ok({ token: 'mock-monitor-token', user });

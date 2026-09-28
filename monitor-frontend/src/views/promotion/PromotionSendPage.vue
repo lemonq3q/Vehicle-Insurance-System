@@ -14,7 +14,7 @@
       <div v-if="source==='EXCEL'" class="source-panel">
         <div class="upload-toolbar"><label class="layui-btn monitor-secondary file-button"><i class="layui-icon layui-icon-upload-drag"></i>{{importing?'正在解析':'选择推广 Excel'}}<input type="file" accept=".xlsx" :disabled="importing" @change="previewImport"></label><span v-if="importResult">导入 {{importResult.totalRows}} 行，成功 {{importResult.successRows}} 行，失败 {{importResult.failureRows}} 行</span><span v-else>文件结构与“信息录入”页面下载的官方模板一致</span></div>
         <RecipientTable title="Excel 导入结果" :rows="importPageRows" :selected-keys="selectedKeys" :channel="form.channel" :all-checked="excelAllSelected" :limit-reached="limitReached" empty-text="请先导入 Excel 文件" @toggle-all="toggleExcelAll" @toggle-row="toggleRow" />
-        <AppPagination :page-no="importPageNo" :page-size="pageSize" :total="importRows.length" @change="importPageNo=$event" />
+        <AppPagination :page-no="importPageNo" :page-size="importPageSize" :total="importRows.length" @change="changeImportPage" />
       </div>
 
       <div v-else class="source-panel">
@@ -27,7 +27,7 @@
         <div class="table-heading"><div><h3>已勾选信息</h3></div><strong :class="{limit:limitReached}">已选 {{selectedItems.length}} / {{maxTargets}}</strong></div>
         <p v-if="limitReached" class="limit-notice"><i class="layui-icon layui-icon-notice"></i>勾选数量已达上限，无法继续添加推广对象。</p>
         <RecipientTable :show-heading="false" :show-select-all="false" :rows="selectedPageRows" :selected-keys="selectedKeys" :channel="form.channel" :limit-reached="limitReached" empty-text="尚未勾选推广对象" @toggle-row="toggleRow" />
-        <AppPagination :page-no="selectedPageNo" :page-size="pageSize" :total="selectedItems.length" @change="selectedPageNo=$event" />
+        <AppPagination :page-no="selectedPageNo" :page-size="selectedPageSize" :total="selectedItems.length" @change="changeSelectedPage" />
       </section>
 
       <div class="step"><span>3</span><div><h2>填写推广信息</h2></div></div>
@@ -57,12 +57,12 @@ export default {
   name: 'PromotionSendPage',
   components: { PageHeader, AppPagination, AppModal, AppToast, RecipientTable },
   mixins: [feedback],
-  data: () => ({ source: 'SYSTEM', query: { keyword: '', sourceType: '', status: 1, pageNo: 1, pageSize: PAGE_SIZE }, result: { list: [], pageNo: 1, pageSize: PAGE_SIZE, total: 0 }, form: { channel: 'PHONE', content: '' }, selectedItems: [], importRows: [], importResult: null, importPageNo: 1, selectedPageNo: 1, bulkSearchKeys: [], loading: false, importing: false, selectingAll: false, sending: false, confirmVisible: false, resultVisible: false, sendResult: null, maxTargets: MAX_TARGETS, pageSize: PAGE_SIZE }),
+  data: () => ({ source: 'SYSTEM', query: { keyword: '', sourceType: '', status: 1, pageNo: 1, pageSize: PAGE_SIZE }, result: { list: [], pageNo: 1, pageSize: PAGE_SIZE, total: 0 }, form: { channel: 'PHONE', content: '' }, selectedItems: [], importRows: [], importResult: null, importPageNo: 1, selectedPageNo: 1, bulkSearchKeys: [], loading: false, importing: false, selectingAll: false, sending: false, confirmVisible: false, resultVisible: false, sendResult: null, maxTargets: MAX_TARGETS, importPageSize: PAGE_SIZE, selectedPageSize: PAGE_SIZE }),
   computed: {
     selectedKeys() { return this.selectedItems.map(item => item._key); },
     limitReached() { return this.selectedItems.length >= this.maxTargets; },
-    importPageRows() { const start = (this.importPageNo - 1) * this.pageSize; return this.importRows.slice(start, start + this.pageSize); },
-    selectedPageRows() { const start = (this.selectedPageNo - 1) * this.pageSize; return this.selectedItems.slice(start, start + this.pageSize); },
+    importPageRows() { const start = (this.importPageNo - 1) * this.importPageSize; return this.importRows.slice(start, start + this.importPageSize); },
+    selectedPageRows() { const start = (this.selectedPageNo - 1) * this.selectedPageSize; return this.selectedItems.slice(start, start + this.selectedPageSize); },
     excelEligibleRows() { return this.importRows.filter(item => this.hasChannel(item)); },
     excelAllSelected() { return this.excelEligibleRows.length > 0 && this.excelEligibleRows.every(item => this.selectedKeys.includes(item._key)); },
     searchAllSelected() { return this.bulkSearchKeys.length > 0 && this.bulkSearchKeys.every(key => this.selectedKeys.includes(key)); }
@@ -77,7 +77,20 @@ export default {
     async load() { this.loading = true; try { const data = await promotionApi.targets({ ...this.query, channel: this.form.channel }); this.result = { ...data, list: data.list.map(this.normalizeSystem) }; this.bulkSearchKeys = []; } catch (e) { this.errorMessage(e); } finally { this.loading = false; } },
     search() { this.query.pageNo = 1; this.load(); },
     reset() { Object.assign(this.query, { keyword: '', sourceType: '', status: 1, pageNo: 1 }); this.load(); },
-    changePage(pageNo) { this.query.pageNo = pageNo; this.load(); },
+    /**
+     * 导入结果只调整本地切片，不重新导入或清空已勾选对象；条数切换由分页组件重置到第一页。
+     */
+    changeImportPage(pageNo, pageSize = this.importPageSize) { this.importPageNo = pageNo; this.importPageSize = pageSize; },
+    /**
+     * 已选对象独立维护分页条数，仅改变展示范围，保留全部接收人及其勾选状态。
+     */
+    changeSelectedPage(pageNo, pageSize = this.selectedPageSize) { this.selectedPageNo = pageNo; this.selectedPageSize = pageSize; },
+    /**
+     * 更新系统搜索结果的页码和条数后查询；已选接收人不随结果刷新而清空。
+     */
+    changePage(pageNo, pageSize = this.query.pageSize) {
+      this.query.pageSize = pageSize;
+      this.query.pageNo = pageNo; this.load(); },
     switchSource(source) { this.source = source; },
     /** 切换渠道后剔除已选但无法通过新渠道触达的数据，并重新查询系统候选。 */
     changeChannel() { const before = this.selectedItems.length; this.selectedItems = this.selectedItems.filter(this.hasChannel); this.selectedPageNo = 1; this.bulkSearchKeys = []; if (before !== this.selectedItems.length) this.notify('已移除当前渠道联系方式为空的已选目标'); this.load(); },
@@ -98,7 +111,7 @@ export default {
     async selectSystemRows(unconditional) { this.selectingAll = true; try { const base = unconditional ? { keyword: '', sourceType: '', status: 1, channel: this.form.channel } : { keyword: this.query.keyword, sourceType: this.query.sourceType, status: 1, channel: this.form.channel }; const first = await promotionApi.targets({ ...base, pageNo: 1, pageSize: 100 }); const pageCount = Math.ceil(Math.min(first.total, this.maxTargets) / 100); const requests = Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => promotionApi.targets({ ...base, pageNo: index + 2, pageSize: 100 })); const pages = requests.length ? await Promise.all(requests) : []; const rows = [first, ...pages].flatMap(page => page.list).slice(0, this.maxTargets).map(this.normalizeSystem); this.bulkSearchKeys = rows.map(item => item._key); this.addRows(rows, first.total, unconditional ? '系统全部信息' : '当前搜索结果'); } catch (e) { this.errorMessage(e); } finally { this.selectingAll = false; } },
     /** 后端仅解析 Excel 并回传有效行；页面保留全部数据并在本地进行分页展示。 */
     async previewImport(event) { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; this.importing = true; try { this.importResult = await promotionApi.previewImport(file); this.importRows = (this.importResult.list || []).map(this.normalizeImport); this.importPageNo = 1; this.notify(`Excel 导入完成，共展示 ${this.importRows.length} 条有效信息`); } catch (e) { this.errorMessage(e); } finally { this.importing = false; } },
-    fixSelectedPage() { const pages = Math.max(1, Math.ceil(this.selectedItems.length / this.pageSize)); this.selectedPageNo = Math.min(this.selectedPageNo, pages); },
+    fixSelectedPage() { const pages = Math.max(1, Math.ceil(this.selectedItems.length / this.selectedPageSize)); this.selectedPageNo = Math.min(this.selectedPageNo, pages); },
     /** 发送请求只携带最终勾选的系统 ID 和浏览器暂存 Excel 行，不再依赖数量预览或临时令牌。 */
     payload() { return { channel: this.form.channel, content: this.form.content, selectionMode: 'MIXED', targetIds: this.selectedItems.filter(item => item._source === 'SYSTEM').map(item => item.id), importedTargets: this.selectedItems.filter(item => item._source === 'EXCEL').map(({ name, phone, email, remark }) => ({ name, phone, email, remark })) }; },
     openConfirmation() { if (!this.selectedItems.length) { this.notify('请至少勾选一个推广目标', 'error'); return; } if (!this.form.content) { this.notify('请填写推广信息', 'error'); return; } this.confirmVisible = true; },

@@ -1,5 +1,9 @@
 # 近期提醒数据库与文案模板设计
 
+> 生命周期实现已于2026-09-28更新：不再按最近一个月或expires_at过滤，使用is_active及业务复核失效。
+> 增量结构参见V20260928_03_add_reminder_lifecycle.sql，最新契约见../api/reminder-lifecycle-api.md。
+> 下文保留原设计背景，涉及expires_at隐藏的建议不再作为当前实现依据。
+
 ## 1. 设计依据与边界
 
 - 企业、套餐、订阅、钱包分别沿用 `tenant_enterprise`、`saas_plan`、`saas_subscription`、`saas_wallet`。
@@ -171,9 +175,9 @@ CREATE TABLE `monitor_enterprise_reminder` (
 - 触发建议：订阅从生效状态变为 `status=3` 且 `suspend_reason=ARREARS` 时立即生成。
 - 级别：`CRITICAL`。
 - 企业标题：`套餐服务已因欠费暂停`
-- 企业内容：`您的账户余额为 ¥{balanceAmount}，已低于服务暂停阈值 ¥{suspendThreshold}，“{planName}”套餐已于 {suspendedAt} 暂停。请充值至高于 ¥{restoreThreshold}；到账并满足恢复条件后，系统将自动恢复服务。`
+- 企业内容：`您的账户余额为 ¥{balanceAmount}，已低于服务暂停阈值 ¥{suspendThreshold}，“{planName}”套餐已于 {suspendedAt} 暂停。请充值至不低于 ¥{restoreThreshold}；到账并满足恢复条件后，系统将自动恢复服务。`
 - 客服标题：`【服务已暂停】{enterpriseName} 欠费超过阈值`
-- 客服内容：`企业“{enterpriseName}”（{enterpriseCode}）余额为 ¥{balanceAmount}，已低于暂停阈值 ¥{suspendThreshold}，“{planName}”套餐于 {suspendedAt} 因欠费暂停。余额需恢复至高于 ¥{restoreThreshold} 才会自动恢复，请优先跟进。`
+- 客服内容：`企业“{enterpriseName}”（{enterpriseCode}）余额为 ¥{balanceAmount}，已低于暂停阈值 ¥{suspendThreshold}，“{planName}”套餐于 {suspendedAt} 因欠费暂停。余额需恢复至不低于 ¥{restoreThreshold} 才会自动恢复，请优先跟进。`
 - 关键快照：`subscriptionId`、`planName`、`balanceAmount`、`suspendThreshold`、`restoreThreshold`、`suspendedAt`。
 - 事件键：`SUBSCRIPTION_SUSPENDED_ARREARS:subscription-{subscriptionId}:suspended-{suspendedAt}`。
 

@@ -19,8 +19,6 @@
 -- Current Database: `insurance_saas`
 --
 
-/*!40000 DROP DATABASE IF EXISTS `insurance_saas`*/;
-
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `insurance_saas` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 
 USE `insurance_saas`;
@@ -68,7 +66,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_auth_permission_bi` BEFORE INSERT ON `auth_permission` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_auth_permission_bi` BEFORE INSERT ON `auth_permission` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -83,7 +81,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_auth_permission_bu` BEFORE UPDATE ON `auth_permission` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_auth_permission_bu` BEFORE UPDATE ON `auth_permission` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -164,7 +162,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_auth_role_bi` BEFORE INSERT ON `auth_role` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_auth_role_bi` BEFORE INSERT ON `auth_role` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -179,7 +177,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_auth_role_bu` BEFORE UPDATE ON `auth_role` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_auth_role_bu` BEFORE UPDATE ON `auth_role` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -315,7 +313,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_insurance_product_bi` BEFORE INSERT ON `biz_insurance_product` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_insurance_product_bi` BEFORE INSERT ON `biz_insurance_product` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -330,7 +328,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_insurance_product_bu` BEFORE UPDATE ON `biz_insurance_product` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_insurance_product_bu` BEFORE UPDATE ON `biz_insurance_product` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -430,7 +428,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_bi` BEFORE INSERT ON `biz_merchant` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_bi` BEFORE INSERT ON `biz_merchant` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -445,7 +443,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_bu` BEFORE UPDATE ON `biz_merchant` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_bu` BEFORE UPDATE ON `biz_merchant` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -535,7 +533,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_area_bi` BEFORE INSERT ON `biz_merchant_area` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_area_bi` BEFORE INSERT ON `biz_merchant_area` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -550,7 +548,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_area_bu` BEFORE UPDATE ON `biz_merchant_area` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_area_bu` BEFORE UPDATE ON `biz_merchant_area` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -630,7 +628,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_category_bi` BEFORE INSERT ON `biz_merchant_category` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP); */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_category_bi` BEFORE INSERT ON `biz_merchant_category` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP); */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -645,7 +643,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_category_bu` BEFORE UPDATE ON `biz_merchant_category` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP; */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_category_bu` BEFORE UPDATE ON `biz_merchant_category` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP; */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -697,7 +695,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_staff_bi` BEFORE INSERT ON `biz_merchant_staff` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP); */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_staff_bi` BEFORE INSERT ON `biz_merchant_staff` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP); */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -712,7 +710,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_staff_bu` BEFORE UPDATE ON `biz_merchant_staff` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP; */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_staff_bu` BEFORE UPDATE ON `biz_merchant_staff` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP; */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -805,7 +803,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_staff_role_bi` BEFORE INSERT ON `biz_merchant_staff_role` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP); */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_staff_role_bi` BEFORE INSERT ON `biz_merchant_staff_role` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP); */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -820,7 +818,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_merchant_staff_role_bu` BEFORE UPDATE ON `biz_merchant_staff_role` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP; */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_merchant_staff_role_bu` BEFORE UPDATE ON `biz_merchant_staff_role` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP; */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -977,7 +975,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_vehicle_certificate_bi` BEFORE INSERT ON `biz_vehicle_certificate` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_vehicle_certificate_bi` BEFORE INSERT ON `biz_vehicle_certificate` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -992,7 +990,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_vehicle_certificate_bu` BEFORE UPDATE ON `biz_vehicle_certificate` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_vehicle_certificate_bu` BEFORE UPDATE ON `biz_vehicle_certificate` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1082,7 +1080,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_vehicle_invoice_bi` BEFORE INSERT ON `biz_vehicle_invoice` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_vehicle_invoice_bi` BEFORE INSERT ON `biz_vehicle_invoice` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1097,7 +1095,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_vehicle_invoice_bu` BEFORE UPDATE ON `biz_vehicle_invoice` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_vehicle_invoice_bu` BEFORE UPDATE ON `biz_vehicle_invoice` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1192,7 +1190,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_vehicle_license_bi` BEFORE INSERT ON `biz_vehicle_license` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_vehicle_license_bi` BEFORE INSERT ON `biz_vehicle_license` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1207,7 +1205,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_vehicle_license_bu` BEFORE UPDATE ON `biz_vehicle_license` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_vehicle_license_bu` BEFORE UPDATE ON `biz_vehicle_license` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1321,7 +1319,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_bi` BEFORE INSERT ON `biz_workorder` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_bi` BEFORE INSERT ON `biz_workorder` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1336,7 +1334,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_bu` BEFORE UPDATE ON `biz_workorder` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_bu` BEFORE UPDATE ON `biz_workorder` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1443,7 +1441,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_commission_bi` BEFORE INSERT ON `biz_workorder_commission` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_commission_bi` BEFORE INSERT ON `biz_workorder_commission` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1458,7 +1456,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_commission_bu` BEFORE UPDATE ON `biz_workorder_commission` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_commission_bu` BEFORE UPDATE ON `biz_workorder_commission` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1541,7 +1539,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_file_bi` BEFORE INSERT ON `biz_workorder_file` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_file_bi` BEFORE INSERT ON `biz_workorder_file` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1556,7 +1554,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_file_bu` BEFORE UPDATE ON `biz_workorder_file` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_file_bu` BEFORE UPDATE ON `biz_workorder_file` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1634,7 +1632,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_insurance_bi` BEFORE INSERT ON `biz_workorder_insurance` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_insurance_bi` BEFORE INSERT ON `biz_workorder_insurance` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1649,7 +1647,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_insurance_bu` BEFORE UPDATE ON `biz_workorder_insurance` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_insurance_bu` BEFORE UPDATE ON `biz_workorder_insurance` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1726,7 +1724,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_logistics_bi` BEFORE INSERT ON `biz_workorder_logistics` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_logistics_bi` BEFORE INSERT ON `biz_workorder_logistics` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1741,7 +1739,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_logistics_bu` BEFORE UPDATE ON `biz_workorder_logistics` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_logistics_bu` BEFORE UPDATE ON `biz_workorder_logistics` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1825,7 +1823,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_payment_bi` BEFORE INSERT ON `biz_workorder_payment` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_payment_bi` BEFORE INSERT ON `biz_workorder_payment` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1840,7 +1838,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_payment_bu` BEFORE UPDATE ON `biz_workorder_payment` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_payment_bu` BEFORE UPDATE ON `biz_workorder_payment` FOR EACH ROW SET NEW.updated_at = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1932,7 +1930,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_quote_bi` BEFORE INSERT ON `biz_workorder_quote` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_quote_bi` BEFORE INSERT ON `biz_workorder_quote` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -1947,7 +1945,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_quote_bu` BEFORE UPDATE ON `biz_workorder_quote` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_quote_bu` BEFORE UPDATE ON `biz_workorder_quote` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2037,7 +2035,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_underwriting_bi` BEFORE INSERT ON `biz_workorder_underwriting` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_underwriting_bi` BEFORE INSERT ON `biz_workorder_underwriting` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2052,7 +2050,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_biz_workorder_underwriting_bu` BEFORE UPDATE ON `biz_workorder_underwriting` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_biz_workorder_underwriting_bu` BEFORE UPDATE ON `biz_workorder_underwriting` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2390,7 +2388,7 @@ CREATE TABLE `monitor_user` (
 
 LOCK TABLES `monitor_user` WRITE;
 /*!40000 ALTER TABLE `monitor_user` DISABLE KEYS */;
-INSERT INTO `monitor_user` (`id`, `username`, `password_hash`, `real_name`, `email`, `status`, `last_login_at`, `password_changed_at`, `created_by`, `updated_by`, `deleted`, `created_at`, `updated_at`) VALUES (1,'15762502276','$2a$10$amA/chxjv2Jz0Up6g0lVMe1So2S52ySuYdrzwyCN6iu42UwHuLeqy','lemon','3041811612@qq.com',1,'2026-09-15 08:57:02','2026-08-24 18:23:22',NULL,1,0,'2026-08-24 18:23:22','2026-09-15 08:57:01');
+INSERT INTO `monitor_user` (`id`, `username`, `password_hash`, `real_name`, `email`, `status`, `last_login_at`, `password_changed_at`, `created_by`, `updated_by`, `deleted`, `created_at`, `updated_at`) VALUES (1,'15762502276','$2a$10$amA/chxjv2Jz0Up6g0lVMe1So2S52ySuYdrzwyCN6iu42UwHuLeqy','lemon','3041811612@qq.com',1,'2026-09-21 16:26:41','2026-08-24 18:23:22',NULL,1,0,'2026-08-24 18:23:22','2026-09-21 16:26:41');
 /*!40000 ALTER TABLE `monitor_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2500,6 +2498,12 @@ CREATE TABLE `saas_order` (
   `paid_amount` decimal(12,2) DEFAULT NULL COMMENT '实付金额',
   `pay_channel` varchar(32) DEFAULT NULL COMMENT '支付渠道',
   `pay_trade_no` varchar(100) DEFAULT NULL COMMENT '第三方交易号',
+  `stripe_checkout_session_id` varchar(255) DEFAULT NULL COMMENT '套餐一次性支付的 Checkout Session',
+  `stripe_payment_intent_id` varchar(255) DEFAULT NULL COMMENT '套餐一次性支付的 PaymentIntent',
+  `stripe_invoice_id` varchar(255) DEFAULT NULL COMMENT 'Stripe 订阅账单，按账单幂等生效',
+  `service_period_start_at` datetime DEFAULT NULL COMMENT '本订单购买的权益周期开始时间',
+  `service_period_end_at` datetime DEFAULT NULL COMMENT '本订单购买的权益周期结束时间',
+  `workorder_overage_ids_json` json DEFAULT NULL COMMENT 'Stripe 改订时已计费的超额工单 ID 快照',
   `wallet_transaction_id` bigint DEFAULT NULL COMMENT 'wallet transaction id',
   `original_subscription_id` bigint DEFAULT NULL COMMENT 'original subscription id',
   `old_plan_id` bigint DEFAULT NULL COMMENT 'old plan id',
@@ -2513,7 +2517,12 @@ CREATE TABLE `saas_order` (
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '软删除',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_saas_order_enterprise_no` (`enterprise_id`,`order_no`),
-  KEY `idx_saas_order_enterprise_created` (`enterprise_id`,`deleted`,`created_at`)
+  UNIQUE KEY `uk_saas_order_stripe_checkout` (`stripe_checkout_session_id`),
+  UNIQUE KEY `uk_saas_order_stripe_intent` (`stripe_payment_intent_id`),
+  UNIQUE KEY `uk_saas_order_stripe_invoice` (`stripe_invoice_id`),
+  KEY `idx_saas_order_enterprise_created` (`enterprise_id`,`deleted`,`created_at`),
+  KEY `idx_saas_order_period` (`enterprise_id`,`service_period_start_at`,`service_period_end_at`),
+  KEY `idx_saas_order_stripe_pending` (`status`,`stripe_checkout_session_id`,`created_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='SaaS套餐订单表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2523,7 +2532,7 @@ CREATE TABLE `saas_order` (
 
 LOCK TABLES `saas_order` WRITE;
 /*!40000 ALTER TABLE `saas_order` DISABLE KEYS */;
-INSERT INTO `saas_order` VALUES (1,'SO20260717L3FUK','BUY',1,1,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0}',5,NULL,30,0,0.00,'BALANCE',299.00,299.00,0.00,0.00,299.00,0.00,299.00,NULL,NULL,2,1,NULL,50001,1,2,NULL,'2026-07-17 16:51:43','2026-07-17 16:51:43','2026-07-17 16:51:43',0),(2,'SO202607177FC8D','CHANGE_PLAN',1,1,50002,'{\"id\": 50002, \"code\": \"PRO_YEAR\", \"name\": \"专业版\", \"price\": 2999.0, \"sortNo\": 2, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 30, \"description\": \"适合稳定经营团队，支持更多成员、续保跟进和财务对账。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 3999.0}',30,NULL,730,0,0.00,'BALANCE',5699.97,5998.00,0.00,298.03,5699.97,0.00,5699.97,NULL,NULL,4,1,50001,50002,1,2,NULL,'2026-07-17 19:11:15','2026-07-17 19:11:15','2026-07-17 19:11:15',0),(3,'SO20260717SM8D3','CHANGE_PLAN',1,1,50003,'{\"id\": 50003, \"code\": \"ENTERPRISE_YEAR\", \"name\": \"企业版\", \"price\": 8999.0, \"sortNo\": 3, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 100, \"description\": \"适合多网点企业，提供更高成员上限和专属服务支持。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 10999.0}',100,NULL,730,0,0.00,'BALANCE',12000.00,17998.00,0.00,5998.00,12000.00,0.00,12000.00,NULL,NULL,6,1,50002,50003,1,2,NULL,'2026-07-17 19:11:29','2026-07-17 19:11:29','2026-07-17 19:11:29',0),(4,'SO202607206QFJE','BUY',2,14,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0}',5,NULL,30,0,0.00,'BALANCE',299.00,299.00,0.00,0.00,299.00,0.00,299.00,NULL,NULL,8,2,NULL,50001,1,2,NULL,'2026-07-20 12:40:02','2026-07-20 12:40:02','2026-07-20 12:40:02',0),(5,'SO20260725AW9VC','BUY',3,27,50002,'{\"id\": 50002, \"code\": \"PRO_YEAR\", \"name\": \"专业版\", \"price\": 2999.0, \"sortNo\": 2, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 30, \"description\": \"适合稳定经营团队，支持更多成员、续保跟进和财务对账。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 3999.0}',30,NULL,365,0,0.00,'BALANCE',2999.00,2999.00,0.00,0.00,2999.00,0.00,2999.00,NULL,NULL,10,3,NULL,50002,1,2,NULL,'2026-07-25 21:05:34','2026-07-25 21:05:34','2026-07-25 21:05:34',0),(6,'SO20260815F54WT','CHANGE_PLAN',1,1,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:20:32\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0, \"workorderLimit\": 1}',5,1,720,20,4.00,'BALANCE',0.00,7176.00,0.00,17279.72,0.00,10099.72,0.00,NULL,NULL,11,1,50003,50001,1,2,NULL,'2026-08-15 22:23:41','2026-08-15 22:23:41','2026-08-15 22:23:41',0),(7,'SO202608152HT2W','CHANGE_PLAN',1,1,50003,'{\"id\": 50003, \"code\": \"ENTERPRISE_YEAR\", \"name\": \"企业版\", \"price\": 8999.0, \"sortNo\": 3, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:20:32\", \"userLimit\": 100, \"description\": \"适合多网点企业，提供更高成员上限和专属服务支持。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 10999.0, \"workorderLimit\": 10000}',100,10000,730,0,0.00,'BALANCE',10822.00,17998.00,0.00,7176.00,10822.00,0.00,10822.00,NULL,NULL,13,1,50001,50003,1,2,NULL,'2026-08-15 22:24:15','2026-08-15 22:24:15','2026-08-15 22:24:15',0),(8,'SO20260815DMFF2','CHANGE_PLAN',1,1,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:20:32\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0, \"workorderLimit\": 1}',5,1,750,0,0.00,'BALANCE',0.00,7475.00,0.00,17997.94,0.00,10522.94,0.00,NULL,NULL,14,1,50003,50001,1,2,NULL,'2026-08-15 22:27:49','2026-08-15 22:27:49','2026-08-15 22:27:49',0),(9,'SO20260821UFNCL','BUY',2,14,50002,'{\"id\": 50002, \"code\": \"PRO_YEAR\", \"name\": \"专业版\", \"price\": 2999.0, \"sortNo\": 2, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:01:39\", \"userLimit\": 30, \"description\": \"适合稳定经营团队，支持更多成员、续保跟进和财务对账。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 3999.0, \"workorderLimit\": 5000}',30,5000,365,0,0.00,'BALANCE',2999.00,2999.00,0.00,0.00,2999.00,0.00,2999.00,NULL,NULL,17,2,NULL,50002,1,2,NULL,'2026-08-21 12:07:59','2026-08-21 12:07:59','2026-08-21 12:07:59',0);
+INSERT INTO `saas_order` VALUES (1,'SO20260717L3FUK','BUY',1,1,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0}',5,NULL,30,0,0.00,'BALANCE',299.00,299.00,0.00,0.00,299.00,0.00,299.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,2,1,NULL,50001,1,2,NULL,'2026-07-17 16:51:43','2026-07-17 16:51:43','2026-07-17 16:51:43',0),(2,'SO202607177FC8D','CHANGE_PLAN',1,1,50002,'{\"id\": 50002, \"code\": \"PRO_YEAR\", \"name\": \"专业版\", \"price\": 2999.0, \"sortNo\": 2, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 30, \"description\": \"适合稳定经营团队，支持更多成员、续保跟进和财务对账。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 3999.0}',30,NULL,730,0,0.00,'BALANCE',5699.97,5998.00,0.00,298.03,5699.97,0.00,5699.97,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,4,1,50001,50002,1,2,NULL,'2026-07-17 19:11:15','2026-07-17 19:11:15','2026-07-17 19:11:15',0),(3,'SO20260717SM8D3','CHANGE_PLAN',1,1,50003,'{\"id\": 50003, \"code\": \"ENTERPRISE_YEAR\", \"name\": \"企业版\", \"price\": 8999.0, \"sortNo\": 3, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 100, \"description\": \"适合多网点企业，提供更高成员上限和专属服务支持。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 10999.0}',100,NULL,730,0,0.00,'BALANCE',12000.00,17998.00,0.00,5998.00,12000.00,0.00,12000.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,6,1,50002,50003,1,2,NULL,'2026-07-17 19:11:29','2026-07-17 19:11:29','2026-07-17 19:11:29',0),(4,'SO202607206QFJE','BUY',2,14,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0}',5,NULL,30,0,0.00,'BALANCE',299.00,299.00,0.00,0.00,299.00,0.00,299.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8,2,NULL,50001,1,2,NULL,'2026-07-20 12:40:02','2026-07-20 12:40:02','2026-07-20 12:40:02',0),(5,'SO20260725AW9VC','BUY',3,27,50002,'{\"id\": 50002, \"code\": \"PRO_YEAR\", \"name\": \"专业版\", \"price\": 2999.0, \"sortNo\": 2, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-07-16T18:08:07\", \"userLimit\": 30, \"description\": \"适合稳定经营团队，支持更多成员、续保跟进和财务对账。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 3999.0}',30,NULL,365,0,0.00,'BALANCE',2999.00,2999.00,0.00,0.00,2999.00,0.00,2999.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,10,3,NULL,50002,1,2,NULL,'2026-07-25 21:05:34','2026-07-25 21:05:34','2026-07-25 21:05:34',0),(6,'SO20260815F54WT','CHANGE_PLAN',1,1,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:20:32\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0, \"workorderLimit\": 1}',5,1,720,20,4.00,'BALANCE',0.00,7176.00,0.00,17279.72,0.00,10099.72,0.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,11,1,50003,50001,1,2,NULL,'2026-08-15 22:23:41','2026-08-15 22:23:41','2026-08-15 22:23:41',0),(7,'SO202608152HT2W','CHANGE_PLAN',1,1,50003,'{\"id\": 50003, \"code\": \"ENTERPRISE_YEAR\", \"name\": \"企业版\", \"price\": 8999.0, \"sortNo\": 3, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:20:32\", \"userLimit\": 100, \"description\": \"适合多网点企业，提供更高成员上限和专属服务支持。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 10999.0, \"workorderLimit\": 10000}',100,10000,730,0,0.00,'BALANCE',10822.00,17998.00,0.00,7176.00,10822.00,0.00,10822.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13,1,50001,50003,1,2,NULL,'2026-08-15 22:24:15','2026-08-15 22:24:15','2026-08-15 22:24:15',0),(8,'SO20260815DMFF2','CHANGE_PLAN',1,1,50001,'{\"id\": 50001, \"code\": \"STARTER_MONTH\", \"name\": \"轻量版\", \"price\": 299.0, \"sortNo\": 1, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:20:32\", \"userLimit\": 5, \"description\": \"适合小团队起步，覆盖基础成员协作和车险工单处理。\", \"durationDays\": 30, \"billingPeriod\": \"MONTH\", \"originalPrice\": 399.0, \"workorderLimit\": 1}',5,1,750,0,0.00,'BALANCE',0.00,7475.00,0.00,17997.94,0.00,10522.94,0.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,14,1,50003,50001,1,2,NULL,'2026-08-15 22:27:49','2026-08-15 22:27:49','2026-08-15 22:27:49',0),(9,'SO20260821UFNCL','BUY',2,14,50002,'{\"id\": 50002, \"code\": \"PRO_YEAR\", \"name\": \"专业版\", \"price\": 2999.0, \"sortNo\": 2, \"status\": 1, \"deleted\": 0, \"createdAt\": \"2026-07-16T18:08:07\", \"updatedAt\": \"2026-08-15T22:01:39\", \"userLimit\": 30, \"description\": \"适合稳定经营团队，支持更多成员、续保跟进和财务对账。\", \"durationDays\": 365, \"billingPeriod\": \"YEAR\", \"originalPrice\": 3999.0, \"workorderLimit\": 5000}',30,5000,365,0,0.00,'BALANCE',2999.00,2999.00,0.00,0.00,2999.00,0.00,2999.00,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17,2,NULL,50002,1,2,NULL,'2026-08-21 12:07:59','2026-08-21 12:07:59','2026-08-21 12:07:59',0);
 /*!40000 ALTER TABLE `saas_order` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -2535,7 +2544,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_order_bi` BEFORE INSERT ON `saas_order` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_order_bi` BEFORE INSERT ON `saas_order` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2550,7 +2559,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_order_bu` BEFORE UPDATE ON `saas_order` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_order_bu` BEFORE UPDATE ON `saas_order` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2657,7 +2666,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_plan_bi` BEFORE INSERT ON `saas_plan` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_plan_bi` BEFORE INSERT ON `saas_plan` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2672,7 +2681,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_plan_bu` BEFORE UPDATE ON `saas_plan` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_plan_bu` BEFORE UPDATE ON `saas_plan` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2731,15 +2740,23 @@ CREATE TABLE `saas_recharge_order` (
   `amount` decimal(12,2) DEFAULT NULL COMMENT 'recharge amount',
   `pay_channel` varchar(32) DEFAULT NULL COMMENT 'pay channel',
   `pay_trade_no` varchar(100) DEFAULT NULL COMMENT 'third-party trade no',
-  `status` tinyint NOT NULL DEFAULT '1' COMMENT '1 pending 2 paid 3 canceled 4 failed',
+  `stripe_checkout_session_id` varchar(255) DEFAULT NULL COMMENT 'Stripe Checkout Session ID',
+  `stripe_session_expires_at` datetime DEFAULT NULL COMMENT 'Stripe Checkout Session 到期时间',
+  `stripe_payment_intent_id` varchar(255) DEFAULT NULL COMMENT 'Stripe PaymentIntent ID',
+  `payment_failure_reason` varchar(500) DEFAULT NULL COMMENT '第三方支付失败原因',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '1待支付 2已支付 3已取消 4支付失败 5已过期 6已关闭 7支付处理中',
   `paid_at` datetime DEFAULT NULL COMMENT 'paid time',
   `created_at` datetime DEFAULT NULL COMMENT 'created time',
   `updated_at` datetime DEFAULT NULL COMMENT 'updated time',
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT 'soft delete',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_saas_recharge_order_enterprise_no` (`enterprise_id`,`recharge_no`),
+  UNIQUE KEY `uk_saas_recharge_stripe_session` (`stripe_checkout_session_id`),
+  UNIQUE KEY `uk_saas_recharge_stripe_payment_intent` (`stripe_payment_intent_id`),
   KEY `idx_recharge_paid_rollup` (`deleted`,`status`,`paid_at`,`enterprise_id`),
-  KEY `idx_recharge_enterprise_created` (`enterprise_id`,`deleted`,`created_at`)
+  KEY `idx_recharge_enterprise_created` (`enterprise_id`,`deleted`,`created_at`),
+  KEY `idx_saas_recharge_pending_created` (`status`,`stripe_checkout_session_id`,`created_at`),
+  KEY `idx_saas_recharge_pending_session_expiry` (`status`,`stripe_session_expires_at`,`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='SaaS recharge order';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2749,7 +2766,7 @@ CREATE TABLE `saas_recharge_order` (
 
 LOCK TABLES `saas_recharge_order` WRITE;
 /*!40000 ALTER TABLE `saas_recharge_order` DISABLE KEYS */;
-INSERT INTO `saas_recharge_order` VALUES (1,'RC202607173NFA8',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC202607173NFA8',3,NULL,'2026-07-17 16:45:25','2026-07-17 17:51:19',0),(2,'RC202607174M225',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC202607174M225',3,NULL,'2026-07-17 16:46:07','2026-07-17 17:51:12',0),(3,'RC20260717HUXNJ',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC20260717HUXNJ',2,'2026-07-17 16:51:36','2026-07-17 16:51:35','2026-07-17 16:51:36',0),(4,'RC20260717WRUZA',1,14,5000.00,'WECHAT','MOCK-WECHAT-RC20260717WRUZA',2,'2026-07-17 17:51:52','2026-07-17 17:51:51','2026-07-17 17:51:52',0),(5,'RC20260717PJQSL',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC20260717PJQSL',3,NULL,'2026-07-17 18:01:56','2026-07-17 18:02:01',0),(6,'RC2026071772PUX',1,1,7998.97,'WECHAT','MOCK-WECHAT-RC2026071772PUX',2,'2026-07-17 19:11:29','2026-07-17 19:11:28','2026-07-17 19:11:29',0),(7,'RC202607202AUDT',2,14,299.00,'WECHAT','MOCK-WECHAT-RC202607202AUDT',2,'2026-07-20 12:40:02','2026-07-20 12:40:01','2026-07-20 12:40:02',0),(8,'RC20260725LKSPW',1,1,100.00,'WECHAT','MOCK-WECHAT-RC20260725LKSPW',3,NULL,'2026-07-25 21:03:19','2026-07-25 21:03:22',0),(9,'RC202607259JGRZ',3,27,5000.00,'WECHAT','MOCK-WECHAT-RC202607259JGRZ',2,'2026-07-25 21:05:27','2026-07-25 21:05:26','2026-07-25 21:05:27',0),(10,'RC202608154Q2DB',1,1,1000.00,'WECHAT','MOCK-WECHAT-RC202608154Q2DB',2,'2026-08-15 22:24:15','2026-08-15 22:24:14','2026-08-15 22:24:15',0),(11,'RC202608162S3XN',1,1,500.00,'WECHAT','MOCK-WECHAT-RC202608162S3XN',2,'2026-08-16 12:36:02','2026-08-16 12:36:01','2026-08-16 12:36:02',0),(12,'RC20260821YDDBC',2,14,2999.00,'WECHAT','MOCK-WECHAT-RC20260821YDDBC',2,'2026-08-21 12:07:59','2026-08-21 12:07:58','2026-08-21 12:07:59',0);
+INSERT INTO `saas_recharge_order` VALUES (1,'RC202607173NFA8',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC202607173NFA8',NULL,NULL,NULL,NULL,3,NULL,'2026-07-17 16:45:25','2026-07-17 17:51:19',0),(2,'RC202607174M225',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC202607174M225',NULL,NULL,NULL,NULL,3,NULL,'2026-07-17 16:46:07','2026-07-17 17:51:12',0),(3,'RC20260717HUXNJ',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC20260717HUXNJ',NULL,NULL,NULL,NULL,2,'2026-07-17 16:51:36','2026-07-17 16:51:35','2026-07-17 16:51:36',0),(4,'RC20260717WRUZA',1,14,5000.00,'WECHAT','MOCK-WECHAT-RC20260717WRUZA',NULL,NULL,NULL,NULL,2,'2026-07-17 17:51:52','2026-07-17 17:51:51','2026-07-17 17:51:52',0),(5,'RC20260717PJQSL',1,1,5000.00,'WECHAT','MOCK-WECHAT-RC20260717PJQSL',NULL,NULL,NULL,NULL,3,NULL,'2026-07-17 18:01:56','2026-07-17 18:02:01',0),(6,'RC2026071772PUX',1,1,7998.97,'WECHAT','MOCK-WECHAT-RC2026071772PUX',NULL,NULL,NULL,NULL,2,'2026-07-17 19:11:29','2026-07-17 19:11:28','2026-07-17 19:11:29',0),(7,'RC202607202AUDT',2,14,299.00,'WECHAT','MOCK-WECHAT-RC202607202AUDT',NULL,NULL,NULL,NULL,2,'2026-07-20 12:40:02','2026-07-20 12:40:01','2026-07-20 12:40:02',0),(8,'RC20260725LKSPW',1,1,100.00,'WECHAT','MOCK-WECHAT-RC20260725LKSPW',NULL,NULL,NULL,NULL,3,NULL,'2026-07-25 21:03:19','2026-07-25 21:03:22',0),(9,'RC202607259JGRZ',3,27,5000.00,'WECHAT','MOCK-WECHAT-RC202607259JGRZ',NULL,NULL,NULL,NULL,2,'2026-07-25 21:05:27','2026-07-25 21:05:26','2026-07-25 21:05:27',0),(10,'RC202608154Q2DB',1,1,1000.00,'WECHAT','MOCK-WECHAT-RC202608154Q2DB',NULL,NULL,NULL,NULL,2,'2026-08-15 22:24:15','2026-08-15 22:24:14','2026-08-15 22:24:15',0),(11,'RC202608162S3XN',1,1,500.00,'WECHAT','MOCK-WECHAT-RC202608162S3XN',NULL,NULL,NULL,NULL,2,'2026-08-16 12:36:02','2026-08-16 12:36:01','2026-08-16 12:36:02',0),(12,'RC20260821YDDBC',2,14,2999.00,'WECHAT','MOCK-WECHAT-RC20260821YDDBC',NULL,NULL,NULL,NULL,2,'2026-08-21 12:07:59','2026-08-21 12:07:58','2026-08-21 12:07:59',0);
 /*!40000 ALTER TABLE `saas_recharge_order` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -2761,7 +2778,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_recharge_order_bi` BEFORE INSERT ON `saas_recharge_order` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_recharge_order_bi` BEFORE INSERT ON `saas_recharge_order` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2776,7 +2793,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_recharge_order_bu` BEFORE UPDATE ON `saas_recharge_order` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_recharge_order_bu` BEFORE UPDATE ON `saas_recharge_order` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2817,6 +2834,101 @@ LOCK TABLES `saas_recharge_order_archive` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `saas_stripe_billing_exception`
+--
+
+DROP TABLE IF EXISTS `saas_stripe_billing_exception`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `saas_stripe_billing_exception` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `enterprise_id` bigint NOT NULL COMMENT '企业 ID',
+  `stripe_subscription_id` varchar(255) NOT NULL COMMENT '发生异常的 Stripe Subscription',
+  `stripe_invoice_id` varchar(255) NOT NULL COMMENT '已付款但无法自动授予权益的 Invoice',
+  `amount_paid` decimal(12,2) NOT NULL COMMENT 'Stripe 实际已收金额',
+  `reason` varchar(64) NOT NULL COMMENT '例如 PAYMENT_METHOD_CHANGED',
+  `status` varchar(16) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING RESOLVED',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `resolved_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saas_stripe_billing_exception_invoice` (`stripe_invoice_id`),
+  KEY `idx_saas_stripe_billing_exception_pending` (`status`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='跨渠道竞态产生的 Stripe 已付账单人工核对队列';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `saas_stripe_billing_exception`
+--
+
+LOCK TABLES `saas_stripe_billing_exception` WRITE;
+/*!40000 ALTER TABLE `saas_stripe_billing_exception` DISABLE KEYS */;
+/*!40000 ALTER TABLE `saas_stripe_billing_exception` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `saas_stripe_subscription_link`
+--
+
+DROP TABLE IF EXISTS `saas_stripe_subscription_link`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `saas_stripe_subscription_link` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `enterprise_id` bigint NOT NULL COMMENT '企业 ID',
+  `subscription_id` bigint NOT NULL COMMENT '本地企业订阅 ID',
+  `stripe_customer_id` varchar(255) NOT NULL COMMENT 'Stripe Customer ID',
+  `stripe_subscription_id` varchar(255) DEFAULT NULL COMMENT 'Stripe Subscription ID',
+  `status` varchar(32) NOT NULL COMMENT 'SCHEDULED ACTIVE CANCELED FAILED',
+  `cancel_reason` varchar(32) DEFAULT NULL COMMENT 'USER_REQUEST METHOD_CHANGE GRACE_EXPIRED',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saas_stripe_link_subscription` (`stripe_subscription_id`),
+  KEY `idx_saas_stripe_link_enterprise` (`enterprise_id`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Stripe 套餐订阅历史关联';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `saas_stripe_subscription_link`
+--
+
+LOCK TABLES `saas_stripe_subscription_link` WRITE;
+/*!40000 ALTER TABLE `saas_stripe_subscription_link` DISABLE KEYS */;
+/*!40000 ALTER TABLE `saas_stripe_subscription_link` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `saas_stripe_webhook_event`
+--
+
+DROP TABLE IF EXISTS `saas_stripe_webhook_event`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `saas_stripe_webhook_event` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `event_id` varchar(255) NOT NULL COMMENT 'Stripe Event ID，用于回调幂等',
+  `event_type` varchar(100) NOT NULL COMMENT 'Stripe事件类型',
+  `checkout_session_id` varchar(255) DEFAULT NULL COMMENT '关联Checkout Session ID',
+  `payload_json` mediumtext NOT NULL COMMENT '验签后的原始事件负载，供审计排障',
+  `processed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '业务处理完成时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '接收时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saas_stripe_webhook_event_id` (`event_id`),
+  KEY `idx_saas_stripe_webhook_session` (`checkout_session_id`),
+  KEY `idx_saas_stripe_webhook_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Stripe Webhook幂等与审计事件';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `saas_stripe_webhook_event`
+--
+
+LOCK TABLES `saas_stripe_webhook_event` WRITE;
+/*!40000 ALTER TABLE `saas_stripe_webhook_event` DISABLE KEYS */;
+/*!40000 ALTER TABLE `saas_stripe_webhook_event` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `saas_subscription`
 --
 
@@ -2839,6 +2951,13 @@ CREATE TABLE `saas_subscription` (
   `start_at` datetime DEFAULT NULL COMMENT '生效时间',
   `end_at` datetime DEFAULT NULL COMMENT '到期时间',
   `auto_renew_enabled` tinyint NOT NULL DEFAULT '0' COMMENT 'auto renew enabled',
+  `renewal_method` varchar(16) DEFAULT NULL COMMENT 'WALLET 或 STRIPE；NULL 表示未开启自动续费',
+  `stripe_customer_id` varchar(255) DEFAULT NULL COMMENT '当前企业关联的 Stripe Customer',
+  `stripe_subscription_id` varchar(255) DEFAULT NULL COMMENT '当前 Stripe Subscription',
+  `stripe_subscription_status` varchar(32) DEFAULT NULL COMMENT 'Stripe 订阅原始状态',
+  `grace_until` datetime DEFAULT NULL COMMENT '续费账单未支付时允许访问的截止时间',
+  `stripe_setup_session_id` varchar(255) DEFAULT NULL COMMENT '开启 Stripe 自动续费时的授权 Checkout Session',
+  `stripe_renewal_amount` decimal(12,2) DEFAULT NULL COMMENT 'Stripe 已授权的每期续费价格快照',
   `auto_renew_plan_id` bigint DEFAULT NULL COMMENT 'auto renew plan id',
   `next_renew_at` datetime DEFAULT NULL COMMENT 'next renew time',
   `last_renew_order_id` bigint DEFAULT NULL COMMENT 'last renew order id',
@@ -2847,7 +2966,11 @@ CREATE TABLE `saas_subscription` (
   `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_saas_subscription_enterprise` (`enterprise_id`),
-  KEY `idx_saas_subscription_arrears` (`status`,`suspend_reason`,`end_at`,`enterprise_id`)
+  UNIQUE KEY `uk_saas_subscription_stripe_subscription` (`stripe_subscription_id`),
+  UNIQUE KEY `uk_saas_subscription_stripe_setup` (`stripe_setup_session_id`),
+  KEY `idx_saas_subscription_arrears` (`status`,`suspend_reason`,`end_at`,`enterprise_id`),
+  KEY `idx_saas_subscription_grace` (`renewal_method`,`grace_until`),
+  KEY `idx_saas_subscription_stripe_due` (`renewal_method`,`end_at`,`grace_until`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业订阅表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2857,7 +2980,7 @@ CREATE TABLE `saas_subscription` (
 
 LOCK TABLES `saas_subscription` WRITE;
 /*!40000 ALTER TABLE `saas_subscription` DISABLE KEYS */;
-INSERT INTO `saas_subscription` VALUES (1,1,50001,8,1,NULL,'2026-08-16 12:15:12','2026-08-16 12:36:02',5,1,0,0,'2026-08-15 22:27:50','2028-09-03 22:27:50',1,50001,'2028-09-03 22:27:50',8,NULL,'2026-07-17 11:44:46','2026-08-16 12:36:02'),(2,2,50002,9,1,NULL,NULL,NULL,30,5000,0,0,'2026-08-21 12:07:59','2027-08-21 12:07:59',1,50002,'2027-08-21 12:07:59',9,NULL,'2026-07-20 12:39:42','2026-08-21 12:07:59'),(3,3,50002,5,1,NULL,NULL,NULL,30,5000,0,0,'2026-07-25 21:05:35','2027-07-25 21:05:35',1,50002,'2027-07-25 21:05:35',5,NULL,'2026-07-25 21:05:04','2026-08-15 22:01:39');
+INSERT INTO `saas_subscription` VALUES (1,1,50001,8,1,NULL,'2026-08-16 12:15:12','2026-08-16 12:36:02',5,1,0,0,'2026-08-15 22:27:50','2028-09-03 22:27:50',1,'WALLET',NULL,NULL,NULL,NULL,NULL,NULL,50001,'2028-09-03 22:27:50',8,NULL,'2026-07-17 11:44:46','2026-09-27 18:30:38'),(2,2,50002,9,1,NULL,NULL,NULL,30,5000,0,0,'2026-08-21 12:07:59','2027-08-21 12:07:59',1,'WALLET',NULL,NULL,NULL,NULL,NULL,NULL,50002,'2027-08-21 12:07:59',9,NULL,'2026-07-20 12:39:42','2026-09-27 18:30:38'),(3,3,50002,5,1,NULL,NULL,NULL,30,5000,0,0,'2026-07-25 21:05:35','2027-07-25 21:05:35',1,'WALLET',NULL,NULL,NULL,NULL,NULL,NULL,50002,'2027-07-25 21:05:35',5,NULL,'2026-07-25 21:05:04','2026-09-27 18:30:38');
 /*!40000 ALTER TABLE `saas_subscription` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -2869,7 +2992,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_subscription_bi` BEFORE INSERT ON `saas_subscription` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_subscription_bi` BEFORE INSERT ON `saas_subscription` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2884,7 +3007,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_subscription_bu` BEFORE UPDATE ON `saas_subscription` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_subscription_bu` BEFORE UPDATE ON `saas_subscription` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2970,7 +3093,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_wallet_bi` BEFORE INSERT ON `saas_wallet` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_wallet_bi` BEFORE INSERT ON `saas_wallet` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -2985,7 +3108,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_saas_wallet_bu` BEFORE UPDATE ON `saas_wallet` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_saas_wallet_bu` BEFORE UPDATE ON `saas_wallet` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3102,7 +3225,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_sys_file_bi` BEFORE INSERT ON `sys_file` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_sys_file_bi` BEFORE INSERT ON `sys_file` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3117,7 +3240,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_sys_file_bu` BEFORE UPDATE ON `sys_file` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_sys_file_bu` BEFORE UPDATE ON `sys_file` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3208,7 +3331,7 @@ CREATE TABLE `sys_reminder_type` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_reminder_type_code` (`type_code`),
   KEY `idx_reminder_type_category` (`category_id`,`status`,`sort_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='提醒具体类型字典';
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='提醒具体类型字典';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3217,7 +3340,7 @@ CREATE TABLE `sys_reminder_type` (
 
 LOCK TABLES `sys_reminder_type` WRITE;
 /*!40000 ALTER TABLE `sys_reminder_type` DISABLE KEYS */;
-INSERT INTO `sys_reminder_type` VALUES (1,3,'WALLET_BALANCE_NEGATIVE','账户余额为负','企业钱包余额进入负数',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(2,3,'WALLET_BALANCE_NEAR_SUSPENSION','余额接近停服阈值','欠费接近套餐暂停阈值',1,20,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(3,4,'ENTERPRISE_DATA_DELETION_APPROACHING','企业数据即将清理','企业数据即将超过套餐结束后的保留期',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(4,1,'AUTO_RENEW_BALANCE_INSUFFICIENT','自动续费余额不足','自动续费前可用余额不足以支付续费金额',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(5,1,'SUBSCRIPTION_EXPIRING_NO_AUTO_RENEW','套餐即将到期','套餐临近到期且未开启自动续费',1,20,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(6,1,'SUBSCRIPTION_SUSPENDED_ARREARS','欠费导致套餐暂停','套餐已经因企业欠费暂停',1,30,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(7,2,'WORKORDER_QUOTA_NEAR_LIMIT','工单额度即将用尽','本周期工单使用量达到预警比例',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(8,2,'WORKORDER_QUOTA_REACHED','工单额度已用尽','本周期工单使用量达到或超过套餐额度',1,20,'2026-08-24 19:53:29','2026-08-24 19:53:29');
+INSERT INTO `sys_reminder_type` VALUES (1,3,'WALLET_BALANCE_NEGATIVE','账户余额为负','企业钱包余额进入负数',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(2,3,'WALLET_BALANCE_NEAR_SUSPENSION','余额接近停服阈值','欠费接近套餐暂停阈值',1,20,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(3,4,'ENTERPRISE_DATA_DELETION_APPROACHING','企业数据即将清理','企业数据即将超过套餐结束后的保留期',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(4,1,'AUTO_RENEW_BALANCE_INSUFFICIENT','自动续费余额不足','自动续费前可用余额不足以支付续费金额',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(5,1,'SUBSCRIPTION_EXPIRING_NO_AUTO_RENEW','套餐即将到期','套餐临近到期且未开启自动续费',1,20,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(6,1,'SUBSCRIPTION_SUSPENDED_ARREARS','欠费导致套餐暂停','套餐已经因企业欠费暂停',1,30,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(7,2,'WORKORDER_QUOTA_NEAR_LIMIT','工单额度即将用尽','本周期工单使用量达到预警比例',1,10,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(8,2,'WORKORDER_QUOTA_REACHED','工单额度已用尽','本周期工单使用量达到或超过套餐额度',1,20,'2026-08-24 19:53:29','2026-08-24 19:53:29'),(9,1,'STRIPE_RENEWAL_PAYMENT_FAILED','Stripe 自动续费扣款失败','Stripe 续费账单扣款失败且处于有限宽限期',1,40,'2026-09-27 18:30:39','2026-09-27 18:30:39');
 /*!40000 ALTER TABLE `sys_reminder_type` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -3266,7 +3389,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_enterprise_bi` BEFORE INSERT ON `tenant_enterprise` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_enterprise_bi` BEFORE INSERT ON `tenant_enterprise` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3281,7 +3404,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_enterprise_bu` BEFORE UPDATE ON `tenant_enterprise` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_enterprise_bu` BEFORE UPDATE ON `tenant_enterprise` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3365,7 +3488,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_invite_code_bi` BEFORE INSERT ON `tenant_invite_code` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_invite_code_bi` BEFORE INSERT ON `tenant_invite_code` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3380,7 +3503,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_invite_code_bu` BEFORE UPDATE ON `tenant_invite_code` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_invite_code_bu` BEFORE UPDATE ON `tenant_invite_code` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3463,7 +3586,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_member_bi` BEFORE INSERT ON `tenant_member` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_member_bi` BEFORE INSERT ON `tenant_member` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3478,7 +3601,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_member_bu` BEFORE UPDATE ON `tenant_member` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_member_bu` BEFORE UPDATE ON `tenant_member` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3586,7 +3709,7 @@ CREATE TABLE `tenant_user` (
 
 LOCK TABLES `tenant_user` WRITE;
 /*!40000 ALTER TABLE `tenant_user` DISABLE KEYS */;
-INSERT INTO `tenant_user` VALUES (1,'15762502276','15762502276','15762502276@163.com','$2a$10$6D.h8o3xb.7r812b6hl6beBVCo3UrmkUrzZkaJIMlZPYPvWDM/HKi','李鸣','370702200406192614',NULL,1,'2026-09-15 09:17:24','2026-01-10 19:00:33','2026-09-15 09:17:23',1,0),(14,'15965362512','15965362512',NULL,'$2a$10$dfUGw5p1P4aYZQdJWahyNeGU8smW9Y1pLUdu3pWNImfq6yz2D8Poq','李梅','370702200406192614',NULL,1,'2026-08-26 22:48:59','2026-03-22 11:18:16','2026-08-26 22:48:58',1,0),(15,'15965362513','15965362513',NULL,'$2a$10$51lA5IzCYPPGNsVD6ECXaOiBiV1yKJsnXqPq0Mh1kLJ.PvBdDPiTO','李李','370702200406192614',NULL,1,NULL,'2026-03-22 13:02:52','2026-03-22 13:02:52',NULL,0),(25,'15762502222','15762502222','3041811312@qq.com','$2a$10$9muE7X2pfuW7rVhh3UrCh.8u/r31fVY0TDxygLmBXGd6QF2WQpaPW','测试邮箱',NULL,NULL,1,NULL,'2026-04-01 21:27:06','2026-04-01 21:27:06',NULL,0),(26,'15720305981','15720305981','15763502276@163.com','$2a$10$s22y5h0plO3PDal68XU.lOMsRohl/SUqkjTdYTSG12jWc3EJePzhq','小王',NULL,NULL,1,NULL,'2026-04-01 21:30:08','2026-04-01 21:30:08',1,0),(27,'13345252983','13345252983',NULL,'$2a$10$Xr7O04liiu.JmWxBwXxJeueYKL8A6.x17LtCPyR7.F0/IboDlqx9W','lemon',NULL,NULL,1,'2026-07-25 21:04:40','2026-07-25 21:04:33','2026-07-25 21:04:39',NULL,0);
+INSERT INTO `tenant_user` VALUES (1,'15762502276','15762502276','15762502276@163.com','$2a$10$6D.h8o3xb.7r812b6hl6beBVCo3UrmkUrzZkaJIMlZPYPvWDM/HKi','李鸣','370702200406192614',NULL,1,'2026-09-25 15:35:25','2026-01-10 19:00:33','2026-09-25 15:35:24',1,0),(14,'15965362512','15965362512',NULL,'$2a$10$dfUGw5p1P4aYZQdJWahyNeGU8smW9Y1pLUdu3pWNImfq6yz2D8Poq','李梅','370702200406192614',NULL,1,'2026-08-26 22:48:59','2026-03-22 11:18:16','2026-08-26 22:48:58',1,0),(15,'15965362513','15965362513',NULL,'$2a$10$51lA5IzCYPPGNsVD6ECXaOiBiV1yKJsnXqPq0Mh1kLJ.PvBdDPiTO','李李','370702200406192614',NULL,1,NULL,'2026-03-22 13:02:52','2026-03-22 13:02:52',NULL,0),(25,'15762502222','15762502222','3041811312@qq.com','$2a$10$9muE7X2pfuW7rVhh3UrCh.8u/r31fVY0TDxygLmBXGd6QF2WQpaPW','测试邮箱',NULL,NULL,1,NULL,'2026-04-01 21:27:06','2026-04-01 21:27:06',NULL,0),(26,'15720305981','15720305981','15763502276@163.com','$2a$10$s22y5h0plO3PDal68XU.lOMsRohl/SUqkjTdYTSG12jWc3EJePzhq','小王',NULL,NULL,1,NULL,'2026-04-01 21:30:08','2026-04-01 21:30:08',1,0),(27,'13345252983','13345252983',NULL,'$2a$10$Xr7O04liiu.JmWxBwXxJeueYKL8A6.x17LtCPyR7.F0/IboDlqx9W','lemon',NULL,NULL,1,'2026-07-25 21:04:40','2026-07-25 21:04:33','2026-07-25 21:04:39',NULL,0);
 /*!40000 ALTER TABLE `tenant_user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -3598,7 +3721,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_user_bi` BEFORE INSERT ON `tenant_user` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_user_bi` BEFORE INSERT ON `tenant_user` FOR EACH ROW SET NEW.`created_at` = COALESCE(NEW.`created_at`, CURRENT_TIMESTAMP), NEW.`updated_at` = COALESCE(NEW.`updated_at`, CURRENT_TIMESTAMP) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3613,7 +3736,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_tenant_user_bu` BEFORE UPDATE ON `tenant_user` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_tenant_user_bu` BEFORE UPDATE ON `tenant_user` FOR EACH ROW SET NEW.`updated_at` = CURRENT_TIMESTAMP */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3692,7 +3815,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_test_before_insert` BEFORE INSERT ON `test` FOR EACH ROW BEGIN IF NEW.`create_time` IS NULL THEN SET NEW.`create_time` = UNIX_TIMESTAMP(); END IF; IF NEW.`update_time` IS NULL THEN SET NEW.`update_time` = UNIX_TIMESTAMP(); END IF; END */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_test_before_insert` BEFORE INSERT ON `test` FOR EACH ROW BEGIN IF NEW.`create_time` IS NULL THEN SET NEW.`create_time` = UNIX_TIMESTAMP(); END IF; IF NEW.`update_time` IS NULL THEN SET NEW.`update_time` = UNIX_TIMESTAMP(); END IF; END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3707,7 +3830,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50003 TRIGGER `trg_test_before_update` BEFORE UPDATE ON `test` FOR EACH ROW BEGIN SET NEW.`update_time` = UNIX_TIMESTAMP(); END */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_test_before_update` BEFORE UPDATE ON `test` FOR EACH ROW BEGIN SET NEW.`update_time` = UNIX_TIMESTAMP(); END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -3731,4 +3854,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-15  9:21:17
+-- Dump completed on 2026-09-28  8:20:11

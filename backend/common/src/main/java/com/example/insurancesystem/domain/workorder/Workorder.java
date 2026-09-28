@@ -303,13 +303,15 @@ public class Workorder {
     /**
      * 按配置比例计算单项上下游费用。computeType 为 1 时先从含税保费中按 1.06 去税再乘百分比，
      * 其他类型直接按原金额乘比例；金额或比例缺失时返回 null，保留“尚未配置”的业务语义。
+     * 去税计算先合并比例再除以 106，最终按费用字段的两位小数精度四舍五入，
+     * 避免除以 1.06 产生无限循环小数，也避免中间结果过早舍入。
      */
     private BigDecimal percentageCompute(BigDecimal amount, BigDecimal percentage, Integer computeType){
         if(amount == null || percentage == null){
             return null;
         }
         if(computeType == 1){
-            return amount.divide(new BigDecimal("1.06")).multiply(percentage.divide(new BigDecimal("100")));
+            return amount.multiply(percentage).divide(new BigDecimal("106"), 2, RoundingMode.HALF_UP);
         }
         return amount.multiply(percentage.divide(new BigDecimal("100")));
     }

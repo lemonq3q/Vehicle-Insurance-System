@@ -258,7 +258,8 @@ export default {
     /**
      * 响应分页页码变化并查询对应企业页。
      */
-    changePage(pageNo) {
+    changePage(pageNo, pageSize = this.query.pageSize) {
+      this.query.pageSize = pageSize;
       this.query.pageNo = pageNo;
       this.load();
     },

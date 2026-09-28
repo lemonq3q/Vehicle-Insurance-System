@@ -26,11 +26,12 @@ public class AccessDeniedHandlerImpl implements AccessDeniedHandler {
     @Override
     /**
      * 返回 403 业务响应，并使用项目主 ObjectMapper 保持字段和时间序列化规则一致；WebUtils 负责设置 JSON 编码并写出响应。
+     * 权限不足是正常的访问控制结果，不打印完整异常堆栈，避免无权限请求在生产日志中形成噪声。
      */
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e) throws IOException, ServletException {
-        e.printStackTrace();
         ResponseResult result = new ResponseResult(HttpStatus.FORBIDDEN.value(), "你没有权限访问此资源");
         String json = objectMapper.writeValueAsString(result);
+        response.setStatus(HttpStatus.FORBIDDEN.value());
         WebUtils.renderString(response, json);
     }
 }

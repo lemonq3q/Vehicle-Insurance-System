@@ -20,10 +20,10 @@ public interface MonitorReminderMapper {
     @Select("SELECT COUNT(1) FROM sys_reminder_type WHERE type_code=#{typeCode} AND status=1")
     int countEnabledType(@Param("typeCode") String typeCode);
 
-    @Select("SELECT id,stage_level,process_status FROM monitor_enterprise_reminder WHERE enterprise_id=#{enterpriseId} AND reminder_key=#{reminderKey} FOR UPDATE")
+    @Select("SELECT id,stage_level,process_status,is_active,lifecycle_version FROM monitor_enterprise_reminder WHERE enterprise_id=#{enterpriseId} AND reminder_key=#{reminderKey} FOR UPDATE")
     Map<String, Object> lock(@Param("enterpriseId") Long enterpriseId, @Param("reminderKey") String reminderKey);
 
-    @Insert("INSERT INTO monitor_enterprise_reminder(enterprise_id,enterprise_name_snapshot,reminder_type,reminder_key,reminder_stage,stage_level,severity,title,content,business_data_json,revision,trigger_count,first_triggered_at,last_triggered_at,process_status,created_at,updated_at) VALUES(#{enterpriseId},#{enterpriseName},#{reminderType},#{reminderKey},#{reminderStage},#{stageLevel},#{severity},#{title},#{content},#{businessDataJson},1,1,#{triggeredAt},#{triggeredAt},0,NOW(),NOW())")
+    @Insert("INSERT INTO monitor_enterprise_reminder(enterprise_id,enterprise_name_snapshot,reminder_type,reminder_key,reminder_stage,stage_level,severity,title,content,business_data_json,revision,trigger_count,first_triggered_at,last_triggered_at,process_status,is_active,lifecycle_version,invalidated_at,created_at,updated_at) VALUES(#{enterpriseId},#{enterpriseName},#{reminderType},#{reminderKey},#{reminderStage},#{stageLevel},#{severity},#{title},#{content},#{businessDataJson},1,1,#{triggeredAt},#{triggeredAt},0,#{isActive},COALESCE(#{lifecycleVersion},0),#{invalidatedAt},NOW(),NOW())")
     int insert(ReminderMergeRequest request);
 
     @Update("UPDATE monitor_enterprise_reminder SET enterprise_name_snapshot=#{request.enterpriseName},reminder_stage=#{request.reminderStage},stage_level=#{request.stageLevel},severity=#{request.severity},title=#{request.title},content=#{request.content},business_data_json=#{request.businessDataJson},revision=revision+1,trigger_count=trigger_count+1,last_triggered_at=#{request.triggeredAt},last_processed_at=processed_at,last_processed_by=processed_by,last_process_remark=process_remark,process_status=0,processed_at=NULL,processed_by=NULL,process_remark=NULL,updated_at=NOW() WHERE id=#{id} AND stage_level<#{request.stageLevel}")
@@ -42,7 +42,7 @@ public interface MonitorReminderMapper {
             "e.contact_name enterprise_contact_name,e.contact_phone enterprise_contact_phone,r.reminder_type," +
             "COALESCE(t.type_name,r.reminder_type) type_name,c.category_code,c.category_name," +
             "r.reminder_stage,r.stage_level,r.severity,r.title,r.content,r.revision,r.trigger_count," +
-            "r.first_triggered_at,r.last_triggered_at,r.process_status,r.processed_at,r.processed_by,r.process_remark " +
+            "r.is_active,r.invalidated_at,r.lifecycle_version,r.first_triggered_at,r.last_triggered_at,r.process_status,r.processed_at,r.processed_by,r.process_remark " +
             "FROM monitor_enterprise_reminder r LEFT JOIN tenant_enterprise e ON e.id=r.enterprise_id AND e.deleted=0 " +
             "LEFT JOIN sys_reminder_type t ON t.type_code=r.reminder_type " +
             "LEFT JOIN sys_reminder_category c ON c.id=t.category_id WHERE 1=1 " +
@@ -50,12 +50,13 @@ public interface MonitorReminderMapper {
             "<if test='categoryCode != null and categoryCode != &quot;&quot;'>AND c.category_code=#{categoryCode} </if>" +
             "<if test='typeCodes != null and typeCodes != &quot;&quot;'>AND FIND_IN_SET(r.reminder_type,#{typeCodes}) &gt; 0 </if>" +
             "<if test='enterpriseId != null'>AND r.enterprise_id=#{enterpriseId} </if>" +
+            "<if test='isActive != -1'>AND r.is_active=#{isActive} </if>" +
             "<if test='processStatus != null'>AND r.process_status=#{processStatus} </if>" +
             "ORDER BY CASE r.severity WHEN 'CRITICAL' THEN 3 WHEN 'WARNING' THEN 2 ELSE 1 END DESC,r.last_triggered_at DESC,r.id DESC " +
             "LIMIT #{offset},#{pageSize}</script>")
     List<Map<String, Object>> findPage(@Param("severity") String severity, @Param("categoryCode") String categoryCode,
             @Param("typeCodes") String typeCodes, @Param("enterpriseId") Long enterpriseId,
-            @Param("processStatus") Integer processStatus, @Param("offset") int offset, @Param("pageSize") int pageSize);
+            @Param("processStatus") Integer processStatus, @Param("isActive") int isActive, @Param("offset") int offset, @Param("pageSize") int pageSize);
 
     /** 使用与列表完全相同的条件统计总数，使分页元数据不会因字典关联或筛选条件产生偏差。 */
     @Select("<script>SELECT COUNT(1) FROM monitor_enterprise_reminder r " +
@@ -64,10 +65,11 @@ public interface MonitorReminderMapper {
             "<if test='categoryCode != null and categoryCode != &quot;&quot;'>AND c.category_code=#{categoryCode} </if>" +
             "<if test='typeCodes != null and typeCodes != &quot;&quot;'>AND FIND_IN_SET(r.reminder_type,#{typeCodes}) &gt; 0 </if>" +
             "<if test='enterpriseId != null'>AND r.enterprise_id=#{enterpriseId} </if>" +
+            "<if test='isActive != -1'>AND r.is_active=#{isActive} </if>" +
             "<if test='processStatus != null'>AND r.process_status=#{processStatus} </if></script>")
     long countPage(@Param("severity") String severity, @Param("categoryCode") String categoryCode,
             @Param("typeCodes") String typeCodes, @Param("enterpriseId") Long enterpriseId,
-            @Param("processStatus") Integer processStatus);
+            @Param("processStatus") Integer processStatus, @Param("isActive") int isActive);
 
     /** 一次查询返回启用的类别和具体类型；企业选项改由关键词接口按需获取，避免首屏拉取全部企业。 */
     @Select("SELECT 'TYPE' AS optionKind,c.category_code AS categoryCode,c.category_name AS categoryName," +
@@ -82,12 +84,12 @@ public interface MonitorReminderMapper {
             "ORDER BY CASE WHEN name LIKE CONCAT(#{keyword},'%') THEN 0 WHEN code LIKE CONCAT(#{keyword},'%') THEN 1 ELSE 2 END,name,id LIMIT 20")
     List<Map<String, Object>> searchEnterprises(@Param("keyword") String keyword);
 
-    @Select("SELECT id,enterprise_id,enterprise_name_snapshot,reminder_type,title,process_status,revision,process_remark " +
+    @Select("SELECT id,enterprise_id,enterprise_name_snapshot,reminder_type,title,process_status,is_active,revision,process_remark " +
             "FROM monitor_enterprise_reminder WHERE id=#{id} FOR UPDATE")
     Map<String, Object> lockForProcessing(@Param("id") Long id);
 
     /** 使用版本号完成处理，避免操作员确认弹窗停留期间被新的更高风险阶段覆盖后仍误标已处理。 */
-    @Update("UPDATE monitor_enterprise_reminder SET process_status=1,processed_at=NOW(),processed_by=#{userId},process_remark=#{remark},revision=revision+1,updated_at=NOW() WHERE id=#{id} AND revision=#{revision} AND process_status=0")
+    @Update("UPDATE monitor_enterprise_reminder SET process_status=1,processed_at=NOW(),processed_by=#{userId},process_remark=#{remark},revision=revision+1,updated_at=NOW() WHERE id=#{id} AND revision=#{revision} AND process_status=0 AND is_active=1")
     int markProcessed(@Param("id") Long id, @Param("revision") int revision, @Param("userId") Long userId, @Param("remark") String remark);
 
     /**
@@ -96,6 +98,24 @@ public interface MonitorReminderMapper {
      */
     @Update("UPDATE monitor_enterprise_reminder SET last_processed_at=processed_at,last_processed_by=processed_by," +
             "last_process_remark=process_remark,process_status=0,processed_at=NULL,processed_by=NULL,process_remark=NULL," +
-            "revision=revision+1,updated_at=NOW() WHERE id=#{id} AND revision=#{revision} AND process_status=1")
+            "revision=revision+1,updated_at=NOW() WHERE id=#{id} AND revision=#{revision} AND process_status=1 AND is_active=1")
     int restoreUnprocessed(@Param("id") Long id, @Param("revision") int revision);
+    /**
+     * 应用更高SaaS生命周期版本，人工处理信息仅在风险升级或重新生效时清空并保留最近快照。
+     * 失效不冒充已处理；独立版本及事务行锁共同阻止迟到同步覆盖新状态。
+     */
+    @Update("UPDATE monitor_enterprise_reminder SET "
+            + "last_processed_at=IF(#{reopen},processed_at,last_processed_at),"
+            + "last_processed_by=IF(#{reopen},processed_by,last_processed_by),"
+            + "last_process_remark=IF(#{reopen},process_remark,last_process_remark),"
+            + "processed_at=IF(#{reopen},NULL,processed_at),processed_by=IF(#{reopen},NULL,processed_by),"
+            + "process_remark=IF(#{reopen},NULL,process_remark),process_status=IF(#{reopen},0,process_status),"
+            + "trigger_count=trigger_count+IF(#{reopen},1,0),"
+            + "enterprise_name_snapshot=#{request.enterpriseName},reminder_stage=#{request.reminderStage},"
+            + "stage_level=#{request.stageLevel},severity=#{request.severity},title=#{request.title},content=#{request.content},"
+            + "business_data_json=#{request.businessDataJson},last_triggered_at=#{request.triggeredAt},"
+            + "is_active=#{request.isActive},invalidated_at=#{request.invalidatedAt},"
+            + "lifecycle_version=#{request.lifecycleVersion},revision=revision+1,updated_at=NOW() "
+            + "WHERE id=#{id} AND lifecycle_version<#{request.lifecycleVersion}")
+    int applyLifecycle(@Param("id") long id, @Param("request") ReminderMergeRequest request, @Param("reopen") boolean reopen);
 }

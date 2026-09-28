@@ -82,7 +82,8 @@ export default {
   top: 20px;
   left: 50%;
   display: grid;
-  width: min(420px, calc(100vw - 32px));
+  /* 外层只界定堆叠可用空间；每条通知按自身内容独立定宽并居中。 */
+  width: min(720px, calc(100vw - 32px));
   gap: 10px;
   pointer-events: none;
   transform: translateX(-50%);
@@ -90,6 +91,10 @@ export default {
 
 .notification-item {
   display: grid;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: center;
   grid-template-columns: 22px minmax(0, 1fr) 28px;
   align-items: center;
   gap: 10px;
@@ -153,12 +158,14 @@ export default {
 
 .notification-list-enter-active,
 .notification-list-leave-active {
-  transition: opacity 160ms ease, transform 160ms ease;
+  /* 淡入淡出仅改变透明度与位移，不动画化尺寸，避免影响通知堆叠布局。 */
+  /* 显式覆盖全局减少动态效果的时长规则，确保用户要求的通知动画始终生效。 */
+  transition: opacity 320ms ease-in-out, transform 320ms ease-in-out !important;
 }
 
 .notification-list-enter-from,
 .notification-list-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-12px);
 }
 </style>

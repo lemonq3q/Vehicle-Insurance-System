@@ -76,7 +76,7 @@
           <span>{{ remindersError }}</span>
           <button class="portal-btn portal-btn-primary" type="button" @click="loadRecentReminders">重新加载</button>
         </div>
-        <div v-else-if="!notices.length" class="timeline-empty">最近一个月暂无提醒</div>
+        <div v-else-if="!notices.length" class="timeline-empty">当前暂无生效提醒</div>
         <div v-else class="timeline">
           <div v-for="item in notices" :key="item.id" class="timeline-item" :class="`severity-${item.severity.toLowerCase()}`">
             <span></span>
@@ -150,14 +150,14 @@ export default {
         this.loadingStatistics = false;
       }
     },
-    /** 读取当前企业最近一个月提醒，保持原页面严重程度和时间排序展示。 */
+    /** 读取当前企业全部生效提醒，保持原页面严重程度和时间排序展示。 */
     async loadRecentReminders() {
       this.loadingReminders = true;
       this.remindersError = '';
       try {
         /*
          * 后端统一返回 {code,msg,data}，提醒列表必须读取 data 数组。接口成功但 data 缺失时按空列表
-         * 处理；若 data 类型异常则展示可重试错误，不能错误显示成“最近一个月暂无提醒”。
+         * 处理；若 data 类型异常则展示可重试错误，不能错误显示成“当前暂无生效提醒”。
          */
         const response = await getRecentReminders();
         if (response?.data != null && !Array.isArray(response.data)) {

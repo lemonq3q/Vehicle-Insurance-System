@@ -41,7 +41,8 @@
         <div class="stat-label">自动续费</div>
         <div class="stat-value">{{ overview.subscription?.autoRenewEnabled ? '已开启' : '未开启' }}</div>
         <div class="stat-note">
-          <button class="layui-btn layui-btn-xs layui-btn-primary layui-border-green" :disabled="!canUpdateAutoRenew" @click="toggleAutoRenew">
+          <!-- 关闭续费属于停止后续扣费的操作，用红色区分；开启续费仍保持原有绿色样式。 -->
+          <button class="layui-btn layui-btn-xs layui-btn-primary" :class="overview.subscription?.autoRenewEnabled ? 'layui-border-red' : 'layui-border-green'" :disabled="!canUpdateAutoRenew || updatingAutoRenew" @click="openAutoRenewDialog">
             {{ overview.subscription?.autoRenewEnabled ? '关闭' : '开启' }}
           </button>
         </div>
@@ -70,21 +71,28 @@
       </article>
     </div>
 
+    <ConfirmDialog :visible="autoRenewDialog" :title="autoRenewTarget ? '开启自动续费' : '关闭自动续费'" :message="autoRenewTarget ? '开启后，系统将在套餐到期时按续费设置自动创建续订订单，并使用企业余额支付。请确保账户余额充足。确认开启吗？' : '关闭后，系统将不再自动续订。当前套餐仍可使用至到期，到期后需要手动续订，否则可能影响服务使用。确认关闭吗？'" :confirm-text="autoRenewTarget ? '确认开启' : '确认关闭'" :confirm-type="autoRenewTarget ? 'primary' : 'danger'" :loading="updatingAutoRenew" @cancel="autoRenewDialog = false" @confirm="toggleAutoRenew" />
   </section>
 </template>
 
 <script>
 import { getFinanceOverview, getPlans, updateAutoRenew } from '@/api/portal';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { notifySuccess } from '@/utils/notification';
 
 export default {
   name: 'SubscriptionServicePage',
+  components: { ConfirmDialog },
   /**
    * 保存企业钱包、当前订阅快照和全部可售套餐，页面据此生成充值、续订或改订入口。
    */
   data() {
     return {
       overview: { wallet: {}, subscription: { status: 0, userLimit: 0, plan: {} } },
-      plans: []
+      plans: [],
+      autoRenewDialog: false,
+      autoRenewTarget: false,
+      updatingAutoRenew: false
     };
   },
   /**
@@ -201,12 +209,30 @@ export default {
       });
     },
     /**
-     * 反转当前订阅的自动续订设置，并重新加载服务端订阅快照确认最终状态。
+     * 根据当前订阅快照保存用户准备切换的目标状态并显示影响说明；此阶段不发起任何更新请求。
+     */
+    openAutoRenewDialog() {
+      if (!this.canUpdateAutoRenew || this.updatingAutoRenew) return;
+      this.autoRenewTarget = !this.overview.subscription?.autoRenewEnabled;
+      this.autoRenewDialog = true;
+    },
+    /**
+     * 用户确认后提交保存的目标状态，请求期间阻止重复提交与关闭弹窗。
+     * 成功后关闭弹窗并刷新订阅快照；失败由请求层提示，保留弹窗允许重试或取消。
      */
     async toggleAutoRenew() {
-      if (!this.canUpdateAutoRenew) return;
-      await updateAutoRenew({ autoRenewEnabled: !this.overview.subscription?.autoRenewEnabled });
-      await this.loadData();
+      if (!this.autoRenewDialog || !this.canUpdateAutoRenew || this.updatingAutoRenew) return;
+      this.updatingAutoRenew = true;
+      try {
+        await updateAutoRenew({ autoRenewEnabled: this.autoRenewTarget });
+        this.autoRenewDialog = false;
+        notifySuccess(this.autoRenewTarget ? '自动续费已开启' : '自动续费已关闭');
+        await this.loadData();
+      } catch (error) {
+        // 请求层展示错误，保留当前订阅快照和确认框供用户重试。
+      } finally {
+        this.updatingAutoRenew = false;
+      }
     }
   }
 };

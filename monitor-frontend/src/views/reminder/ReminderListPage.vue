@@ -17,6 +17,7 @@
           <ReminderCategoryPicker v-model="reminderPath" class="reminder-cascader" :categories="options.categories" />
           <div class="enterprise-combobox"><input id="enterprise" v-model="enterpriseKeyword" class="layui-input" type="text" autocomplete="off" placeholder="输入企业名称或编码" aria-label="所属企业" role="combobox" aria-autocomplete="list" :aria-expanded="enterpriseOpen" aria-controls="enterprise-options" @input="onEnterpriseInput" @focus="onEnterpriseFocus" @keydown.esc="enterpriseOpen=false"><i v-if="enterpriseSearching" class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" aria-hidden="true"></i><ul v-if="enterpriseOpen" id="enterprise-options" role="listbox"><li v-if="enterpriseSearching" class="option-state">正在搜索…</li><li v-else-if="!enterpriseOptions.length" class="option-state">没有匹配的企业</li><li v-for="item in enterpriseOptions" :key="item.id" role="option" tabindex="0" @mousedown.prevent="selectEnterprise(item)" @keydown.enter.prevent="selectEnterprise(item)"><strong>{{item.name}}</strong><small>{{item.code}}</small></li></ul></div>
           <select id="status" v-model="query.processStatus" class="layui-select" aria-label="处理状态"><option value="">全部状态</option><option value="0">待处理</option><option value="1">已处理</option></select>
+          <select id="active" v-model="query.isActive" class="layui-select" aria-label="是否生效"><option value="1">生效提醒</option><option value="0">失效提醒</option><option value="-1">全部生效状态</option></select>
           <button class="layui-btn monitor-primary" :disabled="loading">查询</button>
           <button class="layui-btn monitor-secondary" type="button" @click="reset">重置</button>
         </form>
@@ -24,7 +25,7 @@
       <div v-if="loading" class="loading-state">正在查询提醒…</div>
       <div v-else-if="!result.list.length" class="empty-state">没有符合条件的提醒，请调整筛选条件。</div>
       <template v-else>
-        <div class="table-wrap"><table class="layui-table monitor-table reminder-table"><thead><tr><th>提醒内容</th><th>类别 / 类型</th><th>所属企业</th><th>联系方式</th><th>等级</th><th>当前阶段</th><th>最近触发</th><th>处理状态</th><th>操作</th></tr></thead><tbody>
+        <div class="table-wrap"><table class="layui-table monitor-table reminder-table"><thead><tr><th>提醒内容</th><th>类别 / 类型</th><th>所属企业</th><th>联系方式</th><th>等级</th><th>当前阶段</th><th>最近触发</th><th>生效状态</th><th>处理状态</th><th>操作</th></tr></thead><tbody>
           <tr v-for="item in result.list" :key="item.id">
             <td class="reminder-content"><strong>{{item.title}}</strong><small :title="item.content">{{item.content}}</small></td>
             <td><span>{{item.categoryName || '未分类'}}</span><small>{{item.typeName}}</small></td>
@@ -33,8 +34,9 @@
             <td><span :class="['tag', severityMeta(item.severity).class]">{{severityMeta(item.severity).text}}</span></td>
             <td><strong>{{item.reminderStage}}</strong><small>第 {{item.revision}} 版</small></td>
             <td class="number">{{dateTime(item.lastTriggeredAt)}}</td>
+            <td><span :class="['tag', item.isActive === 1 ? 'success' : '']">{{item.isActive === 1 ? '生效' : '已失效'}}</span><small v-if="item.invalidatedAt">{{dateTime(item.invalidatedAt)}}</small></td>
             <td><span :class="['tag', Number(item.processStatus) === 1 ? 'success' : 'warning']">{{Number(item.processStatus) === 1 ? '已处理' : '待处理'}}</span></td>
-            <td><div class="row-actions"><router-link class="layui-btn monitor-secondary reminder-action" :to="`/enterprises/${item.enterpriseId}/overview`">企业详情</router-link><button v-if="item.processStatus===0" class="layui-btn monitor-primary reminder-action" type="button" @click="openConfirm(item)">处理</button><template v-else><button class="layui-btn reminder-action reminder-restore" type="button" @click="openRestore(item)">恢复未处理</button><span class="processed-note">{{dateTime(item.processedAt)}}</span></template></div></td>
+            <td><div class="row-actions"><router-link class="layui-btn monitor-secondary reminder-action" :to="`/enterprises/${item.enterpriseId}/overview`">企业详情</router-link><button v-if="item.isActive===1 && item.processStatus===0" class="layui-btn monitor-primary reminder-action" type="button" @click="openConfirm(item)">处理</button><template v-else-if="item.isActive===1"><button class="layui-btn reminder-action reminder-restore" type="button" @click="openRestore(item)">恢复未处理</button><span class="processed-note">{{dateTime(item.processedAt)}}</span></template></div></td>
           </tr>
         </tbody></table></div>
         <AppPagination :page-no="result.pageNo" :page-size="result.pageSize" :total="result.total" @change="changePage" />
@@ -66,7 +68,7 @@ import { reminderApi } from '@/api/monitor';
 export default {
   name: 'ReminderListPage', components: { PageHeader, AppPagination, AppModal, AppToast, ReminderCategoryPicker }, mixins: [feedback],
   /** 维护组合筛选、服务端分页和人工处理确认状态；页面不缓存提醒，处理成功后重新读取数据库事实。 */
-  data: () => ({ query: { severity: '', categoryCode: '', typeCodes: '', enterpriseId: '', processStatus: '0', pageNo: 1, pageSize: 10 }, options: { categories: [] }, enterpriseKeyword: '', enterpriseOptions: [], enterpriseSearching: false, enterpriseOpen: false, enterpriseSearchTimer: null, result: { list: [], pageNo: 1, pageSize: 10, total: 0 }, loading: true, submitting: false, confirmVisible: false, restoreVisible: false, selected: null, remark: '' }),
+  data: () => ({ query: { severity: '', categoryCode: '', typeCodes: '', enterpriseId: '', processStatus: '0', isActive: '1', pageNo: 1, pageSize: 10 }, options: { categories: [] }, enterpriseKeyword: '', enterpriseOptions: [], enterpriseSearching: false, enterpriseOpen: false, enterpriseSearchTimer: null, result: { list: [], pageNo: 1, pageSize: 10, total: 0 }, loading: true, submitting: false, confirmVisible: false, restoreVisible: false, selected: null, remark: '' }),
   computed: {
     /** 将后端类别与类型字典转换为 Element Plus 二级级联树。 */
     reminderCascaderOptions() { return this.options.categories.map(category => ({ value: category.code, label: category.name, children: category.types.map(type => ({ value: type.code, label: type.name })) })); },
@@ -103,7 +105,7 @@ export default {
      * 兼容尚未重启的旧后端所返回的下划线字段；企业 ID 保持十进制字符串，避免 Java Long 在浏览器中
      * 转换成 Number 后丢失精度，同时把待处理状态固定转换为数值，使按钮不受 JDBC Map 命名方式影响。
      */
-    normalizeReminder(item) { const enterpriseId = item.enterpriseId ?? item.enterprise_id; return { ...item, enterpriseId: enterpriseId == null ? null : String(enterpriseId), enterpriseNameSnapshot: item.enterpriseNameSnapshot ?? item.enterprise_name_snapshot, enterpriseCode: item.enterpriseCode ?? item.enterprise_code, enterpriseContactName: item.enterpriseContactName ?? item.enterprise_contact_name, enterpriseContactPhone: item.enterpriseContactPhone ?? item.enterprise_contact_phone, reminderType: item.reminderType ?? item.reminder_type, typeName: item.typeName ?? item.type_name, categoryCode: item.categoryCode ?? item.category_code, categoryName: item.categoryName ?? item.category_name, reminderStage: item.reminderStage ?? item.reminder_stage, stageLevel: item.stageLevel ?? item.stage_level, triggerCount: item.triggerCount ?? item.trigger_count, firstTriggeredAt: item.firstTriggeredAt ?? item.first_triggered_at, lastTriggeredAt: item.lastTriggeredAt ?? item.last_triggered_at, processStatus: Number(item.processStatus ?? item.process_status), processedAt: item.processedAt ?? item.processed_at, processedBy: item.processedBy ?? item.processed_by, processRemark: item.processRemark ?? item.process_remark }; },
+    normalizeReminder(item) { const enterpriseId = item.enterpriseId ?? item.enterprise_id; return { ...item, isActive: Number(item.isActive ?? item.is_active ?? 1), invalidatedAt: item.invalidatedAt ?? item.invalidated_at, enterpriseId: enterpriseId == null ? null : String(enterpriseId), enterpriseNameSnapshot: item.enterpriseNameSnapshot ?? item.enterprise_name_snapshot, enterpriseCode: item.enterpriseCode ?? item.enterprise_code, enterpriseContactName: item.enterpriseContactName ?? item.enterprise_contact_name, enterpriseContactPhone: item.enterpriseContactPhone ?? item.enterprise_contact_phone, reminderType: item.reminderType ?? item.reminder_type, typeName: item.typeName ?? item.type_name, categoryCode: item.categoryCode ?? item.category_code, categoryName: item.categoryName ?? item.category_name, reminderStage: item.reminderStage ?? item.reminder_stage, stageLevel: item.stageLevel ?? item.stage_level, triggerCount: item.triggerCount ?? item.trigger_count, firstTriggeredAt: item.firstTriggeredAt ?? item.first_triggered_at, lastTriggeredAt: item.lastTriggeredAt ?? item.last_triggered_at, processStatus: Number(item.processStatus ?? item.process_status), processedAt: item.processedAt ?? item.processed_at, processedBy: item.processedBy ?? item.processed_by, processRemark: item.processRemark ?? item.process_remark }; },
     /** 获取后端返回的级联提醒字典；企业选项仅在输入关键词后查询。 */
     async loadOptions() { try { this.options = await reminderApi.filterOptions(); } catch (error) { this.errorMessage(error); } },
     /** 输入变化立即清除旧企业 ID，并使用短防抖减少连续击键产生的数据库查询。 */
@@ -119,9 +121,13 @@ export default {
     /** 新筛选从第一页开始，保证用户不会停留在超出结果范围的旧页码。 */
     search() { this.query.pageNo = 1; this.load(); },
     /** 清除其他业务筛选并恢复第一页；处理状态回到页面默认的待处理队列。 */
-    reset() { Object.assign(this.query, { severity: '', categoryCode: '', typeCodes: '', enterpriseId: '', processStatus: '0', pageNo: 1 }); this.clearEnterprise(); this.load(); },
-    /** 应用分页组件返回的新页码并重新查询；每页数量沿用页面当前设置。 */
-    changePage(pageNo) { this.query.pageNo = pageNo; this.load(); },
+    reset() { Object.assign(this.query, { severity: '', categoryCode: '', typeCodes: '', enterpriseId: '', processStatus: '0', isActive: '1', pageNo: 1 }); this.clearEnterprise(); this.load(); },
+    /**
+     * 接收分页组件的页码和条数，保留筛选并重新查询；切换条数时组件传入第一页。
+     */
+    changePage(pageNo, pageSize = this.query.pageSize) {
+      this.query.pageSize = pageSize;
+      this.query.pageNo = pageNo; this.load(); },
     /** 打开高风险确认弹窗时保存提醒版本，最终提交依赖该版本进行并发校验。 */
     openConfirm(item) { this.selected = item; this.remark = ''; this.confirmVisible = true; },
     /** 打开恢复确认弹窗并保存页面所见版本，避免无确认直接改变待办队列。 */

@@ -507,6 +507,9 @@ Response data：
 | wallet | SaasWallet | 企业钱包 |
 | subscription | SaasSubscription | 企业唯一的当前订阅状态；未订阅时 `status=0`、额度为 0，生效时包含 plan |
 | currentMemberCount | number | 当前有效成员数 |
+| rechargeLimits.minimumAmount | number | 单笔充值最小金额，来自服务器实际生效的 `STRIPE_RECHARGE_MIN_AMOUNT` |
+| rechargeLimits.maximumAmount | number | 单笔充值最大金额，来自服务器实际生效的 `STRIPE_RECHARGE_MAX_AMOUNT` |
+| rechargeLimits.currency | string | Stripe 充值币种，例如 `cny` |
 
 ### 5.2 查询套餐
 
@@ -524,14 +527,21 @@ Body：
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| amount | number | 是 | 充值金额，必须大于 0 |
-| payChannel | string | 是 | WECHAT、ALIPAY、BANK |
+| amount | number | 是 | 充值金额，最多两位小数；生产上下限由 `STRIPE_RECHARGE_MIN_AMOUNT` 与 `STRIPE_RECHARGE_MAX_AMOUNT` 控制 |
 
 Response data：`SaasRechargeOrder`
 
-当前支付网关为 mock 实现：接口创建状态为待支付的充值订单并返回模拟第三方交易号，不会直接增加企业余额。接入真实支付平台后，由支付回调完成订单入账。
+接口只创建状态为待支付的本地订单，`payChannel` 固定为 `STRIPE`，不会增加企业余额。创建前服务端会校验金额最多保留两位小数，且必须位于 `STRIPE_RECHARGE_MIN_AMOUNT` 和 `STRIPE_RECHARGE_MAX_AMOUNT` 配置的闭区间内；超限返回 HTTP 400 且不创建订单。前端不提交支付渠道，Stripe Checkout 根据 Dashboard 配置、币种、地区和设备展示实际可用方式。
 
-从套餐订阅页面因余额不足进入充值时，前端会携带 `planId`、`periodCount` 和 `autoRenew` 订阅意图。模拟充值成功后，前端立即调用订阅订单创建接口，由服务端重新计算金额、扣减余额并更新当前套餐；若订阅提交失败，充值订单详情页保留继续完成套餐订阅入口。
+常见错误：
+
+| HTTP 状态 | 错误信息 | 触发条件 |
+| --- | --- | --- |
+| 400 | 充值金额最多保留两位小数 | `amount` 精度超过两位小数 |
+| 400 | 单笔充值金额不能低于 `{minimumAmount}` 元 | `amount` 小于服务器配置的最小值 |
+| 400 | 单笔充值金额不能超过 `{maximumAmount}` 元 | `amount` 大于服务器配置的最大值 |
+
+从套餐订阅页面因余额不足进入充值时，前端会携带 `planId`、`periodCount`、`autoRenew` 和展示用途的 `orderType` 订阅意图。前端按用户、企业和充值订单在当前标签页的 sessionStorage 中临时保存意图，仅供本次付款回跳恢复。Stripe 整页回跳携带 `payment_return=1` 时一次性消费缓存并移除 URL 的回跳及套餐参数；嵌入组件的完成回调也可以激活本次确认入口，但必须等待服务端订单状态为已支付才显示确认订阅、续订或改订按钮。离开页面、刷新付款结果页或普通访问历史已支付订单都不再恢复该入口。用户中途退出后，可直接在订阅服务页面重新选择套餐并使用已到账的余额支付，无需寻找原充值订单。套餐操作仍由用户确认后发起，服务端重新计算金额、校验权限、扣减余额并更新套餐；不新增自动订阅或后台套餐任务，不改变接口和数据结构。
 
 ### 5.3.1 查询充值订单详情
 
@@ -541,27 +551,100 @@ Response data：`SaasRechargeOrder`
 
 Response data：`SaasRechargeOrder`
 
-### 5.3.2 模拟完成充值
+### 5.3.2 创建 Stripe Embedded Checkout Session
 
-`POST /portal/finance/recharge-orders/complete`
+`POST /portal/payment/stripe/recharge-orders/{orderId}/checkout-session`
 
-作用：测试环境模拟支付成功。在同一事务中锁定充值订单和企业钱包，将待支付订单修改为已支付、增加钱包余额并创建 `RECHARGE` 入账流水。已支付订单重复调用时直接返回原订单，不会重复入账。
+作用：为当前企业的待支付充值单创建或复用 Stripe Checkout Session。新 Session 使用 `ui_mode=embedded_page`、`mode=payment` 和动态 `price_data`，前端通过 `createEmbeddedCheckoutPage` 挂载 Stripe Full embedded page，邮箱、支付方式和支付按钮均由 Stripe 渲染；不指定 `payment_method_types`。创建时显式设置 Session 在 30 分钟后过期，并将 Stripe 返回的过期时间保存到本地订单。同一订单重复请求只复用仍为 `open + unpaid` 的已绑定 Session，Stripe 创建请求同时使用业务单号作为幂等依据。接口返回 `uiMode`，前端保留对历史 `elements` Session 的兼容，避免替换正在支付的会话。
 
-权限：OWNER、ADMIN。
+权限：OWNER、ADMIN，且订单必须属于当前企业。
 
-Body：
+Path：
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| rechargeOrderId | number | 是 | 待支付充值订单 ID |
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| orderId | number | 本地充值订单 ID |
 
-Response data：`SaasRechargeOrder`，额外返回 `balanceAmount` 和 `transactionNo`。
+Response data：
 
-### 5.3.3 取消充值订单
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| orderId | number | 本地充值订单 ID |
+| sessionId | string | Stripe Checkout Session ID |
+| uiMode | string | Stripe Session UI 模式；新订单为 `embedded_page`，历史 Session 可能为 `elements` |
+| publishableKey | string | Stripe.js 初始化用可公开密钥 |
+| clientSecret | string | 当前嵌入式 Session 的客户端凭证，仅供 Stripe.js 使用 |
+
+常见错误：订单不存在返回 `404`，订单非待支付返回 `409`，Stripe 未启用或缺少配置返回 `503`，Stripe API 调用失败返回 `502`。
+
+Mock response：
+
+```json
+{
+  "code": 200,
+  "msg": "Stripe 结账会话已就绪",
+  "data": {
+    "orderId": 101,
+    "sessionId": "cs_test_123",
+    "publishableKey": "pk_test_123",
+    "clientSecret": "cs_test_123_secret_456"
+  }
+}
+```
+
+### 5.3.3 Stripe Webhook
+
+`POST /portal/payment/stripe/webhook`
+
+作用：接收 Stripe 服务端事件。该接口不使用门户 JWT，而是通过 `Stripe-Signature` 和 `STRIPE_WEBHOOK_SECRET` 验签。对于 `checkout.session.*` 事件，服务端还要求事件对象必须能反序列化为非空 Session，否则返回错误让 Stripe 重试。`checkout.session.completed` 或 `checkout.session.async_payment_succeeded` 仅在 `payment_status=paid`、Session 已绑定本地订单且金额/币种一致时入账；事件 ID 唯一索引、充值订单行锁和待支付/支付处理中状态条件共同保证重复通知不会重复增加余额。
+
+状态流转规则：
+
+- `checkout.session.completed` 且 `payment_status=paid`：更新为已支付并增加余额。
+- `checkout.session.completed` 且 `payment_status=unpaid`：更新为支付处理中，等待异步支付结果。
+- `checkout.session.async_payment_succeeded` 且 `payment_status=paid`：从待支付或支付处理中更新为已支付并增加余额。
+- `checkout.session.async_payment_failed`：更新为支付失败。
+- `checkout.session.expired`：更新为已过期。
+
+外部退款通知（不提供主动退款接口）：
+
+- Stripe 控制台为同一 Webhook 地址额外开启 `refund.created`、`refund.updated`、`refund.failed`，保留上述四个 Checkout 事件；测试与生产分别配置。
+- 退款事件对象必须为非空 Refund。验签并去重 `event.id` 后，按 `payment_intent` 匹配原充值企业，不信任 metadata 的企业或金额。原支付尚未入账时，查询 Stripe Checkout 补偿原充值，再处理退款；共享账号中非本系统充值付款仅审计，不操作余额。
+- 原充值锁内通过 `GET /v1/refunds/{id}` 查询最新状态，防止迟到事件覆盖新状态。`succeeded` 按单笔退款金额回撤企业余额，允许负余额；`pending`、`requires_action` 不按创建通知提前扣款。此前已回撤的退款变为非成功状态时按差额恢复余额，防止退款失败却继续占用资金。
+- 复用 `saas_stripe_webhook_event` 保存本地业务状态：`event_id=saas-refund-state:{refundId}`、`event_type=saas.refund.state`、`checkout_session_id=原Session`。`payload_json` 保存 `refundId`、`rechargeOrderId`、`paymentIntentId`、`currency`、`amount`、`appliedAmount`、`status`。真实 `evt_` 原始事件另行保存，不修改其负载。**不得把这些本地状态作为普通日志删除，否则会失去跨事件的退款幂等保障。** 不新增退款表，充值订单摘要不能代替 Refund 级别的幂等记录。
+- 充值订单增加 `refundAmount`（数据库 `refund_amount DECIMAL(12,2) NOT NULL DEFAULT 0`），表示累计已成功退款并实际回撤的金额。累计为0时状态为 `2 已支付`，大于0且小于充值额时为 `8 已部分退款`，等于充值额时为 `9 已完全退款`。退款失败补回时同步减少累计金额并恢复对应状态；2、8、9均视为原充值已入账，迟到付款通知不重复充值。退款回撤产生 `REFUND/OUT`，补回产生 `REFUND/IN`，与摘要、退款幂等记录及审计同一事务提交。迁移脚本 `backend/db/migration/V20260928_02_add_recharge_refund_summary.sql` 须审阅后执行，不新增表。
+- 后续正金额充值可以部分冲抵负余额，不必一次补足全部欠款；套餐购买仍不允许透支。余额变化沿用既有欠费暂停/恢复规则，不自动取消套餐。
+- **本接口仅处理退款，不处理银行卡争议或拒付（`charge.dispute.*`）。** 控制台直接退款不需要经过门户页面，但需配置这些退款事件后才能同步余额；本次不自动回填配置前已经发生的历史退款。
+
+退款事件负载示例（联调时用 Stripe CLI 或控制台真实事件签名发送，不走门户前端 mock）：
+
+```json
+{
+  "id": "evt_example",
+  "object": "event",
+  "type": "refund.updated",
+  "data": {
+    "object": {
+      "id": "re_example",
+      "object": "refund",
+      "payment_intent": "pi_example",
+      "amount": 10000,
+      "currency": "cny",
+      "status": "succeeded"
+    }
+  }
+}
+```
+
+退款查询需要服务端 `STRIPE_SECRET_KEY`（与Webhook测试/生产环境一致），沿用现有 `STRIPE_WEBHOOK_SECRET`。创建事件不一定代表退款成功，服务端以查询的最新状态记账。币种/金额/关联不一致返回409，解析失败或数据库错误返回500，Stripe查询故障返回502；均不提交余额变更。
+
+Header：`Stripe-Signature`（必填）。Body：Stripe 原始 JSON，不得由网关改写或重新序列化。成功或重复事件返回 HTTP 200；验签失败返回业务错误 `400`。
+
+### 5.3.4 取消充值订单
 
 `POST /portal/finance/recharge-orders/{id}/cancel`
 
-作用：取消当前企业的待支付充值订单。只有 `status=1` 的订单可以取消；已取消订单重复调用时按成功返回，不重复修改。
+作用：取消当前企业的待支付充值订单。只有 `status=1` 的订单可以取消；已取消订单重复调用时按成功返回，不重复修改。若订单已经绑定 Stripe Session，服务端先查询其远端状态：`open` 状态会调用 Stripe 的 Session Expire API 主动过期，确认远端已过期后才把本地订单更新为已取消；如果远端已完成，则拒绝取消，防止到账与取消并发造成状态冲突。
 
 权限：OWNER、ADMIN，且订单必须属于当前企业。
 
@@ -582,9 +665,35 @@ Query：
 | rechargeNo | string | 否 | 充值订单号 |
 | startTime | string | 否 | 创建时间起点，格式 `yyyy-MM-dd HH:mm:ss` |
 | endTime | string | 否 | 创建时间终点，格式 `yyyy-MM-dd HH:mm:ss` |
-| status | number | 否 | 1 待支付，2 已支付，3 已取消，4 支付失败 |
+| status | number | 否 | 1 待支付，2 已支付，3 已取消，4 支付失败，5 已过期，6 已关闭，7 支付处理中，8 已部分退款，9 已完全退款 |
 
 Response data：分页 `SaasRechargeOrder`
+
+充值创建、列表、详情共用如下新增响应字段，不接受客户端提交退款金额或状态：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| refundAmount | number | 累计实际回撤退款金额，与 amount 同币种，新建为0 |
+| status | number | 充值状态1至9，退款状态不允许发起付款或取消 |
+
+部分退款 mock 示例（统一响应外壳不变）：
+
+```json
+{"code":200,"msg":"操作成功","data":{"id":90006,"rechargeNo":"RC_REFUND_PARTIAL","enterpriseId":1,"amount":1000,"refundAmount":300,"status":8,"payChannel":"STRIPE"}}
+```
+
+前端完整列表样例位于 `systemportal/src/mock/portalMock.js`，包含部分退款及完全退款订单。迁移从现有本地退款记账记录回填历史摘要，不重新修改余额；未曾处理的 Stripe 历史退款不在回填范围内。
+
+### 5.4.1 充值订单超时补偿
+
+SaaS 服务每五分钟执行一次小批量补偿扫描，默认每轮最多处理 100 条：
+
+- 使用 `(status, stripe_checkout_session_id, created_at)` 复合索引，批量把未创建 Stripe Session 且创建超过 30 分钟的待支付订单更新为已过期。
+- 使用 `(status, stripe_session_expires_at, id)` 复合索引，只查询本地记录已到 Session 截止时间的待支付订单；逐笔确认 Stripe 远端状态，已过期则更新为已过期，已完成且未到账则更新为支付处理中，已到账则执行幂等入账。
+- 单批数量有上限、使用 `fixedDelay` 且单笔失败相互隔离，避免全表扫描、任务重叠或瞬间产生大量 Stripe API 请求。
+- `status=6`（已关闭）保留给管理端或后续风控流程主动终止订单使用，本次自动过期与用户取消不会写入该状态。
+
+可选环境变量：`STRIPE_RECONCILIATION_BATCH_SIZE`（默认 100）、`STRIPE_RECONCILIATION_INTERVAL_MS`（默认 300000）、`STRIPE_RECONCILIATION_INITIAL_DELAY_MS`（默认 60000）。
 
 ### 5.5 预览订阅订单
 
@@ -610,7 +719,7 @@ Response data：
 | orderType | string | BUY、RENEW、CHANGE_PLAN，由服务端根据当前订阅计算 |
 | periodCount | number | 本次选择的周期数 |
 | minimumPeriodCount | number | 允许提交的最小周期数；改订时向上取整以覆盖原有效期 |
-| remainingDays | number | 当前套餐剩余天数 |
+| remainingDays | number | 按 Asia/Shanghai 自然日计算的整数剩余天数；到期日期减当前日期，最低为 0 |
 | remainingPeriodCount | number | 当前套餐剩余周期数，可包含小数 |
 | priceAmount | number | 目标套餐单价乘以周期数 |
 | creditAmount | number | 原套餐剩余价值抵扣，仅改订时存在 |
@@ -630,7 +739,7 @@ Response data：
 计算规则：
 
 1. 改订最小周期数 = `ceil(当前订阅剩余天数 / 新套餐单周期天数)`。
-2. 原套餐剩余价值 = `(当前订阅剩余天数 / 原套餐单周期天数) * 原套餐单周期价格`。
+2. 原套餐剩余价值 = `原套餐单周期价格 * 整数剩余天数 / 原套餐单周期天数`，最终金额四舍五入到两位小数。剩余天数按 `Asia/Shanghai` 业务日期计算：`max(到期日期 - 当前日期, 0)`，忽略时分秒，到期当天计价天数为 0。预览与实际提交共用规则；同一天内，在套餐、余额、工单费用及订阅有效状态未变化的情况下金额保持一致，跨日重新计价。
 3. 新套餐金额 = `新套餐单周期价格 * periodCount`。
 4. 变更后工单额度低于当前套餐时，按录入时间和 ID 排序，剔除新额度内最早的工单；剩余工单只有在最近扣费日至变更日期已达到完整计费周期，或从未扣费时，才按全局单价计算超额费。
 5. 差额 = `新套餐金额 - 原套餐剩余价值 + 超额工单费`；差额为正计入 `payableAmount`，差额为负的绝对值计入 `refundAmount`。
@@ -648,7 +757,7 @@ Mock response：
     "orderType": "CHANGE_PLAN",
     "periodCount": 12,
     "minimumPeriodCount": 12,
-    "remainingDays": 351.5,
+    "remainingDays": 351,
     "remainingPeriodCount": 0.96,
     "priceAmount": 3588,
     "creditAmount": 2888.08,
@@ -970,4 +1079,4 @@ Response data：`TenantUser`
 | `suspendedAt` | string/null | 否 | 最近一次暂停时间，格式 `yyyy-MM-dd HH:mm:ss` | `2026-08-16 04:00:00` |
 | `resumedAt` | string/null | 否 | 最近一次欠费恢复时间 | `2026-08-16 09:30:00` |
 
-只有尚未到期且已经订阅套餐的企业参与余额联动。充值成功后如果余额严格大于恢复阈值，欠费暂停会在充值事务内即时恢复；前端无需调用额外恢复接口。
+只有尚未到期且已经订阅套餐的企业参与余额联动。充值成功后如果余额大于等于恢复阈值（默认0），欠费暂停会在充值事务内即时恢复；前端无需调用额外恢复接口。

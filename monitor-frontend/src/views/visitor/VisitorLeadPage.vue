@@ -44,8 +44,10 @@ export default {
     search() { this.appliedLeadNo = this.query.toUpperCase(); this.pageNo = 1; this.load(); },
     /** 清空唯一查询条件并重新读取最新提交。 */
     reset() { this.query = ''; this.appliedLeadNo = ''; this.pageNo = 1; this.load(); },
-    /** 切换分页并保留当前已应用编号。 */
-    changePage(page) { this.pageNo = page; this.load(); },
+    /**
+     * 使用组件返回的页码和条数查询，保留已应用编号；条数变化从第一页开始。
+     */
+    changePage(page, pageSize = this.pageSize) { this.pageNo = page; this.pageSize = pageSize; this.load(); },
     /** 将角色编码转换为官网表单使用的中文选项。 */
     roleLabel(code) { return { OPC_AGENT: 'OPC 个人代理', CAR_DEALER: '汽车经销商', INSURANCE_AGENCY: '保险代理机构', OTHER: '其他' }[code] || code || '—'; },
     /** 将合作诉求编码转换为可读标签。 */

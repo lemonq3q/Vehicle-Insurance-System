@@ -15,6 +15,11 @@
           <option value="2">已支付</option>
           <option value="3">已取消</option>
           <option value="4">支付失败</option>
+          <option value="5">已过期</option>
+          <option value="6">已关闭</option>
+          <option value="7">支付处理中</option>
+          <option value="8">已部分退款</option>
+          <option value="9">已完全退款</option>
         </select>
         <LayDatePicker v-model="query.dateRange" range placeholder="请选择创建时间范围" />
         <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
@@ -40,7 +45,7 @@
               <td>¥{{ item.amount }}</td>
               <td>{{ channelName(item.payChannel) }}</td>
               <td>{{ item.payTradeNo || '-' }}</td>
-              <td><span class="portal-tag" :class="{ warn: item.status === 1 }">{{ statusName('recharge', item.status) }}</span></td>
+              <td><span class="portal-tag" :class="{ warn: [1, 7, 8].includes(item.status), gray: [3, 4, 5, 6, 9].includes(item.status) }">{{ statusName('recharge', item.status) }}</span></td>
               <td>{{ item.paidAt || '-' }}</td>
               <td>{{ item.createdAt }}</td>
               <td>

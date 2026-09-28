@@ -9,19 +9,19 @@
       router
     >
       <p v-if="!collapsed" class="nav-caption">业务工作台</p>
-      <router-link to="/home/allWorkorder">
-        <el-menu-item index="/home/allWorkorder" v-if="isHasPerm('workorder:select')">
-          <el-icon><List /></el-icon>
-          <span>工单管理</span>
-        </el-menu-item>
-      </router-link>
+      <!--
+        菜单自身的 router 模式负责跳转，标题插槽负责折叠时隐藏文字并提供名称提示。
+        不额外包裹 router-link，避免破坏折叠菜单的图标布局与交互结构。
+      -->
+      <el-menu-item index="/home/allWorkorder" v-if="isHasPerm('workorder:select')" aria-label="工单管理">
+        <el-icon><List /></el-icon>
+        <template #title>工单管理</template>
+      </el-menu-item>
 
-      <router-link to="/home/renewWorkorder">
-        <el-menu-item index="/home/renewWorkorder" v-if="isHasPerm('workorder:select')">
-          <el-icon><Bell /></el-icon>
-          <span>工单续保</span>
-        </el-menu-item>
-      </router-link>
+      <el-menu-item index="/home/renewWorkorder" v-if="isHasPerm('workorder:select')" aria-label="工单续保">
+        <el-icon><Bell /></el-icon>
+        <template #title>工单续保</template>
+      </el-menu-item>
 
       <p class="nav-caption" v-if="!collapsed && isHasPerm('all')">渠道管理</p>
       <el-sub-menu index="5" v-if="isHasPerm('all')">
@@ -29,24 +29,15 @@
           <el-icon><Location /></el-icon>
           <span>上下游管理</span>
         </template>
-        <router-link to="/home/upstream">
-          <el-menu-item index="/home/upstream">上游管理</el-menu-item>
-        </router-link>
-        <router-link to="/home/downstreamMerchant">
-          <el-menu-item index="/home/downstreamMerchant">下游管理</el-menu-item>
-        </router-link>
-        <router-link to="/home/downstreamUser">
-          <el-menu-item index="/home/downstreamUser">商户管理</el-menu-item>
-        </router-link>
+        <el-menu-item index="/home/upstream">上游管理</el-menu-item>
+        <el-menu-item index="/home/downstreamMerchant">下游管理</el-menu-item>
+        <el-menu-item index="/home/downstreamUser">商户管理</el-menu-item>
       </el-sub-menu>
 
-      <p v-if="!collapsed" class="nav-caption">账户</p>
-      <router-link to="/home/personalCenter">
-        <el-menu-item index="/home/personalCenter">
-          <el-icon><HomeFilled /></el-icon>
-          <span>个人中心</span>
-        </el-menu-item>
-      </router-link>
+      <!--
+        车险工作台不再展示个人中心导航入口，同时移除仅属于该入口的账户分组标题。
+        保留个人中心页面和路由，隐藏菜单不改变原有访问权限或个人资料接口。
+      -->
 
 
     </el-menu>
@@ -64,7 +55,7 @@ import { isHasPerm } from '@/utils/authenticate';
 import { onMounted, watch, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import {
-  List, Location, HomeFilled, Bell
+  List, Location, Bell
 } from '@element-plus/icons-vue';
 
 // 获取当前路由实例
@@ -128,6 +119,18 @@ watch(
 .menu_container :deep(.el-menu--collapse .el-menu-item),
 .menu_container :deep(.el-menu--collapse .el-sub-menu__title) {
   display: flex;
+  justify-content: center;
+  padding: 0 !important;
+}
+/*
+ * 折叠后图标独立居中，清除展开状态为文字预留的右侧间距。
+ * 菜单项标题的隐藏和悬浮提示继续由 Element Plus 的标题插槽处理。
+ */
+.menu_container :deep(.el-menu--collapse .el-icon) {
+  margin-right: 0;
+  flex-shrink: 0;
+}
+.menu_container :deep(.el-menu--collapse .el-menu-tooltip__trigger) {
   justify-content: center;
   padding: 0 !important;
 }

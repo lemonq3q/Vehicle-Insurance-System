@@ -69,7 +69,7 @@ public class WalletBalanceServiceImpl implements WalletBalanceService {
 
   /**
    * 仅在套餐标识存在且结束时间晚于当前时间时执行状态切换。
-   * 正常订阅余额严格低于停止阈值时标记为欠费暂停；只有欠费暂停且余额严格高于恢复阈值时恢复，
+   * 正常订阅余额严格低于停止阈值时标记为欠费暂停；只有欠费暂停且余额不低于恢复阈值时恢复，
    * 从而保护其他暂停原因并落实双阈值缓冲规则。
    */
   private void reconcileLockedSubscription(Map<String, Object> subscription, BigDecimal balance) {
@@ -84,7 +84,7 @@ public class WalletBalanceServiceImpl implements WalletBalanceService {
             InsuranceSessionInvalidationEvent.enterprise(number(subscription.get("enterpriseId"))));
     } else if (status == ARREARS_SUSPENDED
         && ARREARS.equals(reason)
-        && balance.compareTo(properties.getRestoreThreshold()) > 0) {
+        && balance.compareTo(properties.getRestoreThreshold()) >= 0) {
       mapper.restoreArrearsSubscription(subscriptionId, ARREARS);
     }
   }

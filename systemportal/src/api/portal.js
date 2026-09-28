@@ -139,7 +139,7 @@ export const createVisitorLead = data => request.post('/portal/visitor-leads', d
   skipErrorNotification: true
 });
 /**
- * 创建指定金额和支付渠道的余额充值订单。
+ * 创建指定金额的余额充值订单；实际支付方式由 Stripe Checkout 决定。
  */
 export const createRechargeOrder = data => post('/portal/finance/recharge-orders', data);
 /**
@@ -147,15 +147,15 @@ export const createRechargeOrder = data => post('/portal/finance/recharge-orders
  */
 export const getRechargeOrder = id => get(`/portal/finance/recharge-orders/${id}`);
 /**
- * 模拟或确认充值支付完成，并将金额记入企业钱包。
+ * 创建或复用充值订单对应的 Stripe Embedded Checkout Session。
  */
-export const completeRechargeOrder = data => post('/portal/finance/recharge-orders/complete', data);
+export const createStripeRechargeCheckoutSession = id => post(`/portal/payment/stripe/recharge-orders/${id}/checkout-session`, {});
 /**
  * 取消仍处于待支付状态的充值订单。
  */
 export const cancelRechargeOrder = id => post(`/portal/finance/recharge-orders/${id}/cancel`, {});
 /**
- * 按时间、渠道和状态分页查询充值订单。
+ * 按时间和状态分页查询充值订单。
  */
 export const getRechargeOrders = params => get('/portal/finance/recharge-orders', params);
 /**

@@ -44,7 +44,7 @@ public class MonitorDashboardService {
             "FROM monitor_enterprise_daily_usage WHERE stat_date>=? AND stat_date<?) u CROSS JOIN " +
             "(SELECT COALESCE(SUM(CASE WHEN paid_at>=? AND paid_at<? THEN amount ELSE 0 END),0) current_recharge," +
             "COALESCE(SUM(CASE WHEN paid_at>=? AND paid_at<? THEN amount ELSE 0 END),0) previous_recharge " +
-            "FROM saas_recharge_order WHERE deleted=0 AND status=2 AND paid_at>=? AND paid_at<?) r";
+            "FROM saas_recharge_order WHERE deleted=0 AND status IN (2,8,9) AND paid_at>=? AND paid_at<?) r";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -96,7 +96,7 @@ public class MonitorDashboardService {
         LocalDate end = endMonth.plusMonths(1).atDay(1);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "SELECT DATE_FORMAT(paid_at,'%Y-%m') bucket,COALESCE(SUM(amount),0) value " +
-                "FROM saas_recharge_order WHERE deleted=0 AND status=2 AND paid_at>=? AND paid_at<? " +
+                "FROM saas_recharge_order WHERE deleted=0 AND status IN (2,8,9) AND paid_at>=? AND paid_at<? " +
                 "GROUP BY DATE_FORMAT(paid_at,'%Y-%m') ORDER BY bucket",
                 Date.valueOf(start), Date.valueOf(end));
         Map<String, BigDecimal> values = new LinkedHashMap<>();

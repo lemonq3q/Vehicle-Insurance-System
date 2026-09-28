@@ -236,7 +236,8 @@ export default {
     /**
      * 响应分页变化并读取对应账号页。
      */
-    changePage(pageNo) {
+    changePage(pageNo, pageSize = this.query.pageSize) {
+      this.query.pageSize = pageSize;
       this.query.pageNo = pageNo;
       this.load();
     },

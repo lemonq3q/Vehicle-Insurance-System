@@ -54,11 +54,13 @@ function handleUnauthorized() {
 
 /**
 
- * * 优先读取统一业务响应 code，缺失时回退 HTTP 状态，形成后续异常处理的统一数字口径。
+ * * HTTP503优先返回服务不可用，其他错误优先读取失败业务码；响应体成功码不能掩盖HTTP失败。
 
  */
 function responseStatus(payload, response) {
-  return Number(payload?.code || response?.status || 0);
+  if (response?.status === 503) return 503;
+  const businessCode = Number(payload?.code);
+  return businessCode >= 400 ? businessCode : Number(response?.status || businessCode || 0);
 }
 
 /**
@@ -67,7 +69,7 @@ function responseStatus(payload, response) {
 
  */
 function responseMessage(payload, status) {
-  const message = String(payload?.msg || '').trim();
+  const message = String(payload?.msg || payload?.message || '').trim();
   if (message) return message;
   return status >= 500 ? '请求错误' : '请求异常';
 }
@@ -84,16 +86,25 @@ function notifyRequestError(status, message) {
 
 /**
 
- * * 把统一响应中的非成功 code 转换为可被页面 catch 的 Error，同时保留业务 code、data 和原响应。
+ * * 将业务错误和HTTP错误转换为同一异常结构并统一通知，保留code、data和原响应。
 
  */
-function createBusinessError(payload, response) {
+function rejectResponse(response, originalError) {
+  const payload = normalizeDateTimes(response?.data);
   const status = responseStatus(payload, response);
-  const error = new Error(responseMessage(payload, status));
-  error.code = payload.code;
-  error.data = payload.data;
+  const error = originalError || new Error();
+  error.message = status >= 400 ? responseMessage(payload, status) : '请求错误';
+  if (status === 503 || response?.status === 503) error.message = '系统维护中，服务不可用';
+  error.code = status;
+  error.data = payload?.data;
   error.response = response;
-  return error;
+  const config = response?.config || originalError?.config;
+  if (status === 401 && !isPublicRequest(config?.url)) handleUnauthorized();
+  if (!config?.skipErrorNotification) {
+    if (status >= 400) notifyRequestError(status, error.message);
+    else notifyError(error.message);
+  }
+  return Promise.reject(error);
 }
 
 /**
@@ -134,33 +145,15 @@ request.interceptors.response.use(response => {
   }
 
   const payload = normalizeDateTimes(response.data);
+  if (response.status >= 400) return rejectResponse(response);
   if (payload && typeof payload === 'object' && 'code' in payload) {
-    if (Number(payload.code) === 401 && !isPublicRequest(response.config?.url)) {
-      handleUnauthorized();
-    }
     if (Number(payload.code) >= 400) {
-      const businessError = createBusinessError(payload, response);
-      if (!response.config?.skipErrorNotification) {
-        notifyRequestError(Number(payload.code), businessError.message);
-      }
-      return Promise.reject(businessError);
+      return rejectResponse(response);
     }
   }
   return payload;
 }, error => {
-  const payload = error.response?.data;
-  const status = responseStatus(payload, error.response);
-  if (status === 401 && !isPublicRequest(error.config?.url)) handleUnauthorized();
-
-  if (status >= 400) {
-    error.message = responseMessage(payload, status);
-    error.code = payload?.code || status;
-    if (!error.config?.skipErrorNotification) notifyRequestError(status, error.message);
-  } else {
-    error.message = '请求错误';
-    if (!error.config?.skipErrorNotification) notifyError(error.message);
-  }
-  return Promise.reject(error);
+  return rejectResponse(error.response, error);
 });
 
 export default request;

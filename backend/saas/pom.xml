@@ -31,7 +31,21 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>druid-spring-boot-starter</artifactId>
-            <version>1.1.23</version>
+        </dependency>
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>33.4.2</version>
+        </dependency>
+        <!--
+            Stripe Java 33.4.2 在运行时使用 Gson 2.10.1 的 ReflectionAccessFilter。
+            Spring Boot 2.5.0 默认管理为 Gson 2.8.6，因此必须显式锁定版本，避免
+            创建 Checkout Session 时因缺少该类而抛出 NoClassDefFoundError。
+        -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

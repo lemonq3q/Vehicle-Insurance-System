@@ -360,7 +360,7 @@ public class MonitorEnterpriseService {
         LocalDate monthStart = YearMonth.now(BUSINESS_ZONE).atDay(1);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT COALESCE((SELECT w.balance_amount FROM saas_wallet w WHERE w.enterprise_id=? AND w.deleted=0 LIMIT 1),0) balance," +
-                "COALESCE((SELECT SUM(r.amount) FROM saas_recharge_order r WHERE r.enterprise_id=? AND r.deleted=0 AND r.status=2),0) totalRecharge," +
+                "COALESCE((SELECT SUM(r.amount) FROM saas_recharge_order r WHERE r.enterprise_id=? AND r.deleted=0 AND r.status IN (2,8,9)),0) totalRecharge," +
                 "COALESCE((SELECT SUM(COALESCE(o.paid_amount,o.payable_amount,o.amount,0)) FROM saas_order o WHERE o.enterprise_id=? AND o.deleted=0 AND o.status=2),0) totalSubscriptionExpense," +
                 "(SELECT COUNT(1) FROM saas_wallet_transaction t WHERE t.enterprise_id=? AND t.created_at>=? AND t.created_at<?) monthTransactionCount",
                 enterpriseId, enterpriseId, enterpriseId, enterpriseId,
@@ -510,16 +510,19 @@ public class MonitorEnterpriseService {
     /**
      * 将固定资源代码映射为受控表名、编号列和返回字段，避免任何客户端字符串参与 SQL 结构拼接。
      * 订阅套餐名称优先读取订单快照，钱包流水通过关联主键还原对应充值单号或订阅单号。
+     * 充值金额保持原始入账金额，refundAmount 独立返回实际累计回撤额，供监控识别部分或完全退款。
+     * 监控明细沿用门户的金额口径：订阅应付与实付分开，流水金额为绝对值，收支由方向表达。
+     * 周期只使用下单快照计算，不以当前套餐价格或时长覆盖历史订单。
      */
     private FinanceResource financeResource(String resource) {
         if ("recharge-orders".equals(resource)) return new FinanceResource(
-                "SELECT r.id,r.enterprise_id enterpriseId,r.recharge_no orderNo,r.amount,r.pay_channel channel,r.status,r.paid_at paidAt,r.created_at createdAt",
+                "SELECT r.id,r.enterprise_id enterpriseId,r.recharge_no orderNo,r.amount,r.refund_amount refundAmount,r.pay_channel channel,r.pay_trade_no payTradeNo,r.status,r.paid_at paidAt,r.created_at createdAt",
                 "FROM saas_recharge_order r", "recharge_no", true);
         if ("subscription-orders".equals(resource)) return new FinanceResource(
-                "SELECT r.id,r.enterprise_id enterpriseId,r.order_no orderNo,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.plan_snapshot_json,'$.name')),p.name) planName,COALESCE(r.paid_amount,r.payable_amount,r.amount,0) amount,r.status,DATE(r.paid_at) startedAt,DATE(DATE_ADD(r.paid_at,INTERVAL COALESCE(r.buy_duration_days,0) DAY)) endedAt,r.created_at createdAt",
+                "SELECT r.id,r.enterprise_id enterpriseId,r.order_no orderNo,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.plan_snapshot_json,'$.name')),p.name) planName,COALESCE(r.paid_amount,r.payable_amount,r.amount,0) amount,r.order_type orderType,r.price_amount priceAmount,r.credit_amount creditAmount,r.refund_amount refundAmount,r.workorder_overage_count workorderOverageCount,r.workorder_overage_amount workorderOverageAmount,r.payable_amount payableAmount,r.paid_amount paidAmount,r.auto_renew autoRenew,r.failure_reason failureReason,CASE WHEN CAST(JSON_UNQUOTE(JSON_EXTRACT(r.plan_snapshot_json,'$.durationDays')) AS SIGNED)>0 THEN FLOOR(r.buy_duration_days/CAST(JSON_UNQUOTE(JSON_EXTRACT(r.plan_snapshot_json,'$.durationDays')) AS SIGNED)) ELSE 1 END periodCount,r.status,DATE(r.paid_at) startedAt,DATE(DATE_ADD(r.paid_at,INTERVAL COALESCE(r.buy_duration_days,0) DAY)) endedAt,r.created_at createdAt",
                 "FROM saas_order r LEFT JOIN saas_plan p ON p.id=r.plan_id", "order_no", true);
         if ("wallet-transactions".equals(resource)) return new FinanceResource(
-                "SELECT r.id,r.enterprise_id enterpriseId,r.transaction_no transactionNo,r.transaction_type type,CASE WHEN r.direction='OUT' THEN -ABS(r.amount) ELSE r.amount END amount,r.balance_after balanceAfter,COALESCE(o.order_no,ro.recharge_no) referenceNo,r.remark,r.created_at createdAt",
+                "SELECT r.id,r.enterprise_id enterpriseId,r.transaction_no transactionNo,r.transaction_type type,r.transaction_type transactionType,r.direction,ABS(r.amount) amount,r.balance_before balanceBefore,r.balance_after balanceAfter,COALESCE(o.order_no,ro.recharge_no) referenceNo,r.remark,r.created_at createdAt",
                 "FROM saas_wallet_transaction r LEFT JOIN saas_order o ON o.id=r.related_order_id LEFT JOIN saas_recharge_order ro ON ro.id=r.related_recharge_order_id",
                 "transaction_no", false);
         throw new BusinessException(400, "不支持的财务资源类型");

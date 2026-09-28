@@ -25,7 +25,7 @@
 余额变化统一通过后端 `WalletBalanceService` 完成。该服务在余额写入后即时处理尚未到期的当前套餐：
 
 - 正常套餐余额严格小于 `saas.billing.balance-access.suspend-threshold` 时，订阅改为 `status=3`、`suspend_reason=ARREARS`。
-- 欠费暂停套餐余额严格大于 `saas.billing.balance-access.restore-threshold` 时，订阅恢复为 `status=1` 并清除暂停原因。
+- 欠费暂停套餐余额大于等于 `saas.billing.balance-access.restore-threshold` 时，订阅恢复为 `status=1` 并清除暂停原因；默认阈值为0，即还清欠费即可恢复。
 - 未订阅、已到期、人工暂停和风控暂停不参与自动暂停或恢复。
 - 默认停止阈值为 `-100.00` 元，默认恢复阈值为 `0.00` 元，可分别通过 `BALANCE_SUSPEND_THRESHOLD`、`BALANCE_RESTORE_THRESHOLD` 配置。
 

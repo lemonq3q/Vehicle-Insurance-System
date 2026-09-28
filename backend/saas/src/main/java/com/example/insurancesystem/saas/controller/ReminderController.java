@@ -13,7 +13,10 @@ public class ReminderController {
     private final ReminderService service;
     public ReminderController(ReminderService service) { this.service = service; }
 
-    /** 返回当前企业最近一个自然月、未失效的提醒，严重程度优先且同级最新在前。 */
+    /**
+     * 返回当前企业全部生效提醒，不以年龄隐藏未解决风险；严重程度优先且同级最新在前。
+     * 原recent路径保持兼容，失效状态由后台业务条件复核维护。
+     */
     @GetMapping("/recent")
     public ResponseResult<?> recent() {
         return new ResponseResult<>(200, "操作成功", service.recent());

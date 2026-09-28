@@ -265,27 +265,6 @@ let subscription = {
   plan: plans[1]
 };
 
-/**
- * 模拟统一余额服务对有效套餐执行的欠费状态联动。
- * Mock 使用与后端默认配置相同的停止阈值 -100 元和恢复阈值 0 元，并采用严格小于/大于判断；
- * 未订阅或已到期套餐以及非欠费暂停都不会被余额变化改写。
- */
-function reconcileMockSubscriptionAccess() {
-  if (!subscription?.planId || parseDateTime(subscription.endAt) <= MOCK_NOW) return;
-  if (subscription.status === 1 && Number(wallet.balanceAmount) < -100) {
-    subscription.status = 3;
-    subscription.suspendReason = 'ARREARS';
-    subscription.suspendedAt = formatDateTime(MOCK_NOW);
-    subscription.resumedAt = null;
-  } else if (subscription.status === 3
-      && subscription.suspendReason === 'ARREARS'
-      && Number(wallet.balanceAmount) > 0) {
-    subscription.status = 1;
-    subscription.suspendReason = null;
-    subscription.resumedAt = formatDateTime(MOCK_NOW);
-  }
-}
-
 let rechargeOrders = [
   {
     id: 90001,
@@ -293,6 +272,7 @@ let rechargeOrders = [
     enterpriseId: 20001,
     userId: 10001,
     amount: 10000,
+    refundAmount: 0,
     payChannel: 'BANK',
     payTradeNo: 'BANK202607010998',
     status: 2,
@@ -305,11 +285,64 @@ let rechargeOrders = [
     enterpriseId: 20001,
     userId: 10002,
     amount: 5000,
+    refundAmount: 0,
     payChannel: 'ALIPAY',
     payTradeNo: 'ALI202607050221',
     status: 2,
     paidAt: '2026-07-05 16:28:00',
     createdAt: '2026-07-05 16:21:00'
+  },
+  {
+    id: 90003,
+    rechargeNo: 'RC202607060004',
+    enterpriseId: 20001,
+    userId: 10001,
+    amount: 800,
+    refundAmount: 0,
+    payChannel: 'STRIPE',
+    payTradeNo: '',
+    status: 5,
+    paymentFailureReason: 'Stripe 结账会话已过期',
+    paidAt: null,
+    createdAt: '2026-07-06 09:00:00'
+  },
+  {
+    id: 90004,
+    rechargeNo: 'RC202607060005',
+    enterpriseId: 20001,
+    userId: 10001,
+    amount: 1200,
+    refundAmount: 0,
+    payChannel: 'STRIPE',
+    payTradeNo: '',
+    status: 6,
+    paymentFailureReason: '订单已由管理员关闭',
+    paidAt: null,
+    createdAt: '2026-07-06 10:00:00'
+  },
+  {
+    id: 90005,
+    rechargeNo: 'RC202607060006',
+    enterpriseId: 20001,
+    userId: 10001,
+    amount: 2000,
+    refundAmount: 0,
+    payChannel: 'STRIPE',
+    payTradeNo: '',
+    status: 7,
+    paymentFailureReason: null,
+    paidAt: null,
+    createdAt: '2026-07-06 11:00:00'
+  },
+  {
+    id: 90006, rechargeNo: 'RC202607060007', enterpriseId: 20001, userId: 10001,
+    amount: 1000, refundAmount: 300, payChannel: 'STRIPE', payTradeNo: 'pi_mock_partial',
+    status: 8, paidAt: '2026-07-06 12:05:00', createdAt: '2026-07-06 12:00:00'
+  },
+  {
+    id: 90007, rechargeNo: 'RC202607060008', enterpriseId: 20001, userId: 10001,
+    amount: 1000, refundAmount: 1000, payChannel: 'STRIPE', payTradeNo: 'pi_mock_full',
+    status: 9, paidAt: '2026-07-06 13:05:00', createdAt: '2026-07-06 13:00:00'
   }
 ];
 
@@ -558,7 +591,7 @@ function calculateSubscriptionOrder(planId, periodCount) {
     : null;
   const currentPlan = activeSubscription?.plan || null;
   const remainingDays = activeSubscription
-    ? Math.max(0, (parseDateTime(activeSubscription.endAt) - MOCK_NOW) / 86400000)
+    ? Math.max(0, (Date.parse(String(activeSubscription.endAt).slice(0, 10)) - Date.parse(formatDateTime(MOCK_NOW).slice(0, 10))) / 86400000)
     : 0;
   const orderType = !activeSubscription ? 'BUY' : activeSubscription.planId === plan.id ? 'RENEW' : 'CHANGE_PLAN';
   const minimumPeriodCount = orderType === 'CHANGE_PLAN'
@@ -705,10 +738,8 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   }
   if (url === '/portal/reminders/recent' && method === 'GET') {
     const severityOrder = { CRITICAL: 3, WARNING: 2, NOTICE: 1 };
-    const monthAgo = new Date(MOCK_NOW);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
     return ok(recentReminders
-      .filter(item => parseDateTime(item.occurredAt) >= monthAgo)
+      .filter(item => Number(item.isActive ?? 1) === 1)
       .sort((left, right) => severityOrder[right.severity] - severityOrder[left.severity]
         || String(right.occurredAt).localeCompare(String(left.occurredAt))));
   }
@@ -736,6 +767,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       id: 30999,
       enterpriseId: enterprise.id,
       userId: currentUser.id,
+      payChannel: 'STRIPE',
       username: currentUser.username,
       realName: currentUser.realName,
       phone: currentUser.phone,
@@ -953,7 +985,12 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     return ok(true, '已退出企业');
   }
   if (url === '/portal/finance/overview') {
-    return ok({ wallet, subscription, currentMemberCount: members.length });
+    return ok({
+      wallet,
+      subscription,
+      currentMemberCount: members.length,
+      rechargeLimits: { minimumAmount: 1, maximumAmount: 50000, currency: 'cny' }
+    });
   }
   if (url === '/portal/finance/plans') {
     return ok(plans);
@@ -966,6 +1003,9 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     return ok(paginate(filtered, params));
   }
   if (url === '/portal/finance/recharge-orders' && method === 'POST') {
+    const rechargeAmount = Number(data.amount);
+    if (!Number.isFinite(rechargeAmount) || rechargeAmount < 1) return fail('单笔充值金额不能低于 1.00 元');
+    if (rechargeAmount > 50000) return fail('单笔充值金额不能超过 50000.00 元');
     const order = {
       id: Date.now(),
       rechargeNo: createOrderNo('RC'),
@@ -977,39 +1017,15 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       createdAt: '2026-07-07 19:00:00',
       ...data
     };
+    /* 新建充值尚未退款，退款摘要只能由支付回调推进。 */
+    order.refundAmount = 0;
+    order.status = 1;
     rechargeOrders.unshift(order);
     return ok(order, '充值订单已创建');
   }
   if (/^\/portal\/finance\/recharge-orders\/\d+$/.test(url) && method === 'GET') {
     const order = rechargeOrders.find(item => item.id === Number(url.split('/').pop()));
     return order ? ok(order) : fail('充值订单不存在', 404);
-  }
-  if (url === '/portal/finance/recharge-orders/complete' && method === 'POST') {
-    const order = rechargeOrders.find(item => item.id === Number(data.rechargeOrderId));
-    if (!order) return fail('充值订单不存在', 404);
-    if (order.status !== 2) {
-      const balanceBefore = Number(wallet.balanceAmount || 0);
-      wallet.balanceAmount = roundMoney(balanceBefore + Number(order.amount || 0));
-      reconcileMockSubscriptionAccess();
-      order.status = 2;
-      order.paidAt = formatDateTime(MOCK_NOW);
-      transactions.unshift({
-        id: Date.now(),
-        enterpriseId: currentEnterpriseId,
-        walletId: wallet.id,
-        userId: currentUser.id,
-        transactionNo: createOrderNo('TX'),
-        direction: 'IN',
-        transactionType: 'RECHARGE',
-        amount: Number(order.amount || 0),
-        balanceBefore,
-        balanceAfter: wallet.balanceAmount,
-        relatedRechargeOrderId: order.id,
-        remark: `余额充值 ${order.rechargeNo}`,
-        createdAt: formatDateTime(MOCK_NOW)
-      });
-    }
-    return ok({ ...order, balanceAmount: wallet.balanceAmount }, '模拟支付成功，余额已到账');
   }
   if (/^\/portal\/finance\/recharge-orders\/\d+\/cancel$/.test(url) && method === 'POST') {
     const orderId = Number(url.split('/').slice(-2)[0]);

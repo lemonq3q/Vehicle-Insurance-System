@@ -31,14 +31,35 @@ public class MonitorReminderService {
     @Transactional
     public String merge(ReminderMergeRequest request) {
         validate(request);
-        if (mapper.countEnabledType(request.reminderType) == 0) {
+        Map<String, Object> existing = mapper.lock(request.enterpriseId, request.reminderKey);
+        if ((existing == null || request.isActive == 1) && mapper.countEnabledType(request.reminderType) == 0) {
             throw new BusinessException(400, "提醒类型尚未注册或已停用: " + request.reminderType);
         }
-        Map<String, Object> existing = mapper.lock(request.enterpriseId, request.reminderKey);
         if (existing == null) {
             mapper.insert(request);
             return "CREATED";
         }
+        /*
+         * 新生产端携带持久化生命周期版本。失效保留客服处理记录，重新生效或更高阶段才重新打开。
+         * 生命周期版本独立于人工revision，客服已处理不会使后续失效同步被错误当作旧版本忽略。
+         */
+        if (request.lifecycleVersion != null) {
+            Object storedVersion = value(existing, "lifecycleVersion", "lifecycle_version");
+            long version = storedVersion instanceof Number ? ((Number) storedVersion).longValue() : 0;
+            if (request.lifecycleVersion <= version) return "IGNORED";
+            Object storedActive = value(existing, "isActive", "is_active");
+            boolean wasActive = storedActive == null || ((Number) storedActive).intValue() == 1;
+            int currentStage = number(existing, "stageLevel", "stage_level").intValue();
+            boolean reopen = request.isActive == 1 && (!wasActive || request.stageLevel > currentStage);
+            int changed = mapper.applyLifecycle(number(existing, "id", "id").longValue(), request, reopen);
+            if (changed != 1) return "IGNORED";
+            return request.isActive == 0 ? "INACTIVATED" : !wasActive ? "REACTIVATED" : "UPDATED";
+        }
+        /*
+         * 兼容尚未升级的生产端，但旧请求不能覆盖已经由新版管理的生命周期状态。
+         */
+        Object version = value(existing, "lifecycleVersion", "lifecycle_version");
+        if (version instanceof Number && ((Number) version).longValue() > 0) return "IGNORED";
         int currentLevel = ((Number) existing.get("stageLevel")).intValue();
         if (request.stageLevel <= currentLevel) return "IGNORED";
         return mapper.upgrade(((Number) existing.get("id")).longValue(), request) == 1 ? "UPDATED" : "IGNORED";
@@ -62,16 +83,17 @@ public class MonitorReminderService {
      * 返回固定分页外壳供前端筛选、翻页和处理后原位刷新。
      */
     public Map<String, Object> page(String severity, String categoryCode, String typeCodes, Long enterpriseId,
-            Integer processStatus, int pageNo, int pageSize) {
+            Integer processStatus, int isActive, int pageNo, int pageSize) {
+        if (isActive != -1 && isActive != 0 && isActive != 1) throw new BusinessException(400, "生效状态不合法");
         if (pageNo < 1 || pageSize < 1 || pageSize > 100) throw new BusinessException(400, "分页参数不合法");
         if (severity != null && !severity.isBlank() && !List.of("NOTICE", "WARNING", "CRITICAL").contains(severity))
             throw new BusinessException(400, "严重等级不合法");
         if (processStatus != null && processStatus != 0 && processStatus != 1)
             throw new BusinessException(400, "处理状态不合法");
         if (typeCodes != null && typeCodes.length() > 2000) throw new BusinessException(400, "提醒类型筛选参数过长");
-        long total = mapper.countPage(severity, categoryCode, typeCodes, enterpriseId, processStatus);
+        long total = mapper.countPage(severity, categoryCode, typeCodes, enterpriseId, processStatus, isActive);
         List<Map<String, Object>> list = total == 0 ? List.of() : mapper.findPage(severity, categoryCode, typeCodes,
-                enterpriseId, processStatus, (pageNo - 1) * pageSize, pageSize);
+                enterpriseId, processStatus, isActive, (pageNo - 1) * pageSize, pageSize);
         list.forEach(this::normalizeReminderRow);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("list", list); result.put("pageNo", pageNo); result.put("pageSize", pageSize); result.put("total", total);
@@ -135,6 +157,13 @@ public class MonitorReminderService {
         if (id == null || id <= 0 || revision == null || revision <= 0) throw new BusinessException(400, "提醒处理参数不完整");
         Map<String, Object> current = mapper.lockForProcessing(id);
         if (current == null) throw new BusinessException(404, "提醒不存在");
+        /*
+         * 生效与人工处理是独立维度，历史失效提醒不再提供待办处理或恢复入口。
+         * Mapper同时限制is_active，避免校验后生命周期被并发失效时仍提交成功。
+         */
+        Object active = value(current, "isActive", "is_active");
+        if (active instanceof Number && ((Number) active).intValue() == 0)
+            throw new BusinessException(409, "提醒已失效，不能修改处理状态");
         if (number(current, "processStatus", "process_status").intValue() == 1) throw new BusinessException(409, "该提醒已被处理，请刷新列表");
         if (number(current, "revision", "revision").intValue() != revision) throw new BusinessException(409, "提醒状态已更新，请刷新后重新确认");
         if (mapper.markProcessed(id, revision, userId, remark == null ? null : remark.trim()) != 1)
@@ -160,6 +189,13 @@ public class MonitorReminderService {
         if (id == null || id <= 0 || revision == null || revision <= 0) throw new BusinessException(400, "提醒恢复参数不完整");
         Map<String, Object> current = mapper.lockForProcessing(id);
         if (current == null) throw new BusinessException(404, "提醒不存在");
+        /*
+         * 生效与人工处理是独立维度，历史失效提醒不再提供待办处理或恢复入口。
+         * Mapper同时限制is_active，避免校验后生命周期被并发失效时仍提交成功。
+         */
+        Object active = value(current, "isActive", "is_active");
+        if (active instanceof Number && ((Number) active).intValue() == 0)
+            throw new BusinessException(409, "提醒已失效，不能修改处理状态");
         if (number(current, "processStatus", "process_status").intValue() == 0) throw new BusinessException(409, "该提醒已是待处理状态，请刷新列表");
         if (number(current, "revision", "revision").intValue() != revision) throw new BusinessException(409, "提醒状态已更新，请刷新后重新确认");
         if (mapper.restoreUnprocessed(id, revision) != 1) throw new BusinessException(409, "提醒状态已变化，请刷新列表");
@@ -191,7 +227,8 @@ public class MonitorReminderService {
                 {"triggerCount", "trigger_count"}, {"firstTriggeredAt", "first_triggered_at"},
                 {"lastTriggeredAt", "last_triggered_at"}, {"processStatus", "process_status"},
                 {"processedAt", "processed_at"}, {"processedBy", "processed_by"},
-                {"processRemark", "process_remark"}
+                {"processRemark", "process_remark"},
+                {"isActive", "is_active"}, {"invalidatedAt", "invalidated_at"}, {"lifecycleVersion", "lifecycle_version"}
         };
         for (String[] field : fields) {
             Object fieldValue = value(row, field[0], field[1]);
@@ -216,6 +253,10 @@ public class MonitorReminderService {
                 || request.triggeredAt == null) {
             throw new BusinessException(400, "提醒合并参数不完整");
         }
+        if (request.isActive == null || (request.isActive != 0 && request.isActive != 1)
+                || (request.lifecycleVersion != null && request.lifecycleVersion <= 0)
+                || (request.isActive == 0 && (request.lifecycleVersion == null || request.invalidatedAt == null)))
+            throw new BusinessException(400, "提醒生命周期参数不合法");
     }
 
     private boolean blank(String value) { return value == null || value.trim().isEmpty(); }

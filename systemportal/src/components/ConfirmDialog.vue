@@ -18,10 +18,10 @@
       </div>
 
       <div class="confirm-dialog__actions">
-        <button class="layui-btn layui-btn-primary" type="button" :disabled="loading" @click="cancel">
+        <button v-if="showCancel" class="layui-btn layui-btn-primary" type="button" :disabled="loading" @click="cancel">
           {{ cancelText }}
         </button>
-        <button class="layui-btn layui-btn-danger" type="button" :disabled="loading" @click="$emit('confirm')">
+        <button class="layui-btn" :class="{ 'layui-btn-danger': confirmType === 'danger' }" type="button" :disabled="loading" @click="$emit('confirm')">
           {{ loading ? '处理中...' : confirmText }}
         </button>
       </div>
@@ -33,6 +33,8 @@
 export default {
   name: 'ConfirmDialog',
   props: {
+    showCancel: { type: Boolean, default: true },
+    confirmType: { type: String, default: 'danger' },
     visible: {
       type: Boolean,
       default: false

@@ -91,15 +91,17 @@
     </div>
 
     <div v-else class="empty-state">未找到对应套餐，请返回订阅服务重新选择。</div>
+    <ConfirmDialog :visible="resultDialog.visible" :title="resultDialog.title" :message="resultDialog.message" :show-cancel="false" confirm-type="primary" confirm-text="知道了" @confirm="closeResultDialog" @cancel="closeResultDialog" />
   </section>
 </template>
 
 <script>
 import { createSubscriptionOrder, getFinanceOverview, getPlans, getSubscriptionOrderPreview } from '@/api/portal';
-import { notifyWarning } from '@/utils/notification';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 export default {
   name: 'SubscriptionOrderDetailPage',
+  components: { ConfirmDialog },
   /**
    * 保存目标套餐、企业财务概览、服务端试算结果和用户选择的订阅周期。试算结果是金额及可订阅性的唯一依据，
    * 页面不自行复制后端的套餐变更、抵扣或超额工单计费规则。
@@ -108,6 +110,7 @@ export default {
     return {
       loading: true,
       submitting: false,
+      resultDialog: { visible: false, title: '', message: '', destination: null },
       plan: null,
       overview: { wallet: {}, subscription: {} },
       preview: null,
@@ -224,19 +227,22 @@ export default {
           shortfallAmount: this.shortfallAmount,
           planId: this.plan.id,
           periodCount: this.form.periodCount,
-          autoRenew: this.form.autoRenew
+          autoRenew: this.form.autoRenew,
+          orderType: this.preview.orderType
         }
       });
     },
     /**
      * 提交前再次规范周期并检查后端试算资格。余额不足时转入充值流程；余额足够则创建套餐订单，
-     * 成功后回到套餐服务页展示订单号。并发余额变化导致的 409 同样转入充值，其余错误由请求层统一提示。
+     * 成功或失败先展示结果弹窗，用户确认后再跳转；并发余额变化导致的 409 在确认后转入充值。
      */
     async submitOrder() {
-      if (!this.canManageFinance) return;
+      if (!this.canManageFinance || this.submitting || this.resultDialog.visible) return;
+      this.submitting = true;
+      try {
       await this.normalizePeriod();
       if (!this.preview.eligible) {
-        notifyWarning(this.preview.validationMessage || '请求异常');
+        this.resultDialog = { visible: true, title: `${this.orderTypeName}失败`, message: this.preview.validationMessage || '当前套餐无法提交，请重新选择。', destination: null };
         return;
       }
       if (this.isBalanceInsufficient) {
@@ -244,26 +250,31 @@ export default {
         return;
       }
 
-      this.submitting = true;
-      try {
         const response = await createSubscriptionOrder({
           planId: this.plan.id,
           periodCount: this.form.periodCount,
           autoRenew: this.form.autoRenew
         });
-        await this.$router.push({
-          name: 'finance-subscription',
-          query: { orderNo: response.data.orderNo }
-        });
+        this.resultDialog = { visible: true, title: `${this.orderTypeName}成功`, message: `套餐已生效，订单号：${response.data.orderNo}。`, destination: { name: 'finance-subscription', query: { orderNo: response.data.orderNo } } };
       } catch (error) {
         if (Number(error.code) === 409) {
-          this.goToRecharge();
+          this.resultDialog = { visible: true, title: `${this.orderTypeName}失败`, message: error.message || '企业余额已变化，请充值后重试。', destination: 'recharge' };
           return;
         }
-        // Request errors are displayed by the Axios interceptor.
+        this.resultDialog = { visible: true, title: `${this.orderTypeName}失败`, message: error.message || '提交失败，请稍后重试。', destination: null };
       } finally {
         this.submitting = false;
       }
+    },
+    /**
+     * 用户确认提交结果后执行成功跳转或余额不足引导。
+     * 失败时停留当前页面，保留套餐和周期，避免在用户阅读结果前切走页面。
+     */
+    async closeResultDialog() {
+      const destination = this.resultDialog.destination;
+      this.resultDialog.visible = false;
+      if (destination === 'recharge') this.goToRecharge();
+      else if (destination) await this.$router.push(destination);
     }
   }
 };
@@ -279,7 +290,7 @@ export default {
 .order-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
-  align-items: start;
+  align-items: stretch;
   gap: 18px;
 }
 
@@ -428,8 +439,7 @@ export default {
 }
 
 .amount-panel {
-  position: sticky;
-  top: 0;
+  position: static;
 }
 
 .amount-panel h2 {

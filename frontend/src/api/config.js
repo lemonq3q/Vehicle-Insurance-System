@@ -46,53 +46,48 @@ axios.interceptors.request.use(function (config) {
 });
 
 /**
- * 统一处理车险后端响应：接收后端滚动刷新后的令牌、执行 Excel 下载，并识别统一响应中的业务错误。
- * 401 会清除已失效的本地会话并回到登录页；其他业务错误只展示提示，原始响应仍返回给调用页面，
- * 以便页面依据接口数据继续处理自己的加载态和交互状态。
+ * 统一处理两种错误传输方式：业务code>=400或HTTP失败均拒绝Promise并保留code、data和response。
+ * 401清理会话，4xx警告、5xx错误；业务错误不再作为成功响应进入页面后续流程。
+ * 网络故障没有HTTP状态，按错误提示；调用方仍可在catch中处理自己的加载状态。
+ * HTTP503优先按服务不可用处理并固定维护文案，避免错误body导致误清理登录态。
+ */
+function rejectResponse(response, originalError) {
+  const payload = response?.data;
+  const businessCode = Number(payload?.code);
+  const code = response?.status === 503 ? 503 : businessCode >= 400 ? businessCode : Number(response?.status || 0);
+  const error = originalError || new Error();
+  error.message = payload?.msg || payload?.message || (code >= 500 || code === 0 ? '请求错误' : '请求异常');
+  if (code === 503 || response?.status === 503) error.message = '系统维护中，服务不可用';
+  Object.assign(error, { code, data: payload?.data, response });
+  if (code === 401) {
+    Storage.remove('token');
+    Storage.remove('userInfo');
+    router.push('/login');
+  } else if (code >= 500 || code === 0) {
+    Message.error(error.message);
+  } else {
+    Message.warning(error.message);
+  }
+  return Promise.reject(error);
+}
+
+/**
+ * 成功响应继续保持Axios原始响应和Excel下载契约；先检查JSON业务错误，再判断是否需要下载，
+ * 避免导出请求返回错误JSON时被误当成Excel保存；刷新令牌仍使用原有滚动会话规则。
  */
 axios.interceptors.response.use(function (response) {
   const refreshedToken = response.headers[REFRESHED_TOKEN_HEADER];
-  if (refreshedToken) {
-    Storage.set('token', refreshedToken, 60 * 60 * 24);
-  }
-
-  const isExcelResponse = 
-    response.config.isExcelRequest || 
-    response.headers['content-type']?.includes(EXCEL_MIME_TYPE);
-
+  if (refreshedToken) Storage.set('token', refreshedToken, 60 * 60 * 24);
+  if (Number(response.data?.code) >= 400 || response.status >= 400) return rejectResponse(response);
+  const isExcelResponse = response.config.isExcelRequest
+    || response.headers['content-type']?.includes(EXCEL_MIME_TYPE);
   if (isExcelResponse) {
     handleExcelDownload(response);
     return Promise.resolve();
   }
-
-  // 先判断response.data是否为JSON，避免非JSON响应报错
-  if (response.data && typeof response.data === 'object' && 'code' in response.data) {
-    if (response.data.code === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem('userInfo');
-      router.push('/login');
-    }
-    else if (response.data.code >= 400) {
-      Message.warning(response.data.msg);
-    }
-  }
   return response;
 }, function (error) {
-  // 异常拦截：区分Excel请求的异常
-  const isExcelRequest = error.config?.isExcelRequest;
-  if (isExcelRequest) {
-    Message.error("Excel下载异常");
-  } else {
-    const status = Number(error.response?.status || 0);
-    const message = error.response?.data?.msg
-      || (status >= 500 ? "请求错误" : "请求异常");
-    if (status >= 500 || status === 0) {
-      Message.error(message);
-    } else {
-      Message.warning(message);
-    }
-  }
-  return Promise.reject(error);
+  return rejectResponse(error.response, error);
 });
 
 /**

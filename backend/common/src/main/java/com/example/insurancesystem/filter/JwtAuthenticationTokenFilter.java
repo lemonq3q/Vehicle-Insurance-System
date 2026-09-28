@@ -35,14 +35,15 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     private AuthenticationEntryPoint authenticationEntryPoint;
 
     /**
-     * 游客线索新增是官网匿名入口，其安全边界由来源白名单和提交频率保护组件负责。
-     * 明确跳过 JWT 解析可避免浏览器残留的过期令牌把本应公开的提交错误转换为 401；
-     * 这里只豁免固定路径的 POST，请求该资源的其他方法仍由 Spring Security 路由规则处理。
+     * 游客线索和 Stripe Webhook 都有独立的真实性校验机制，因此跳过 JWT 解析。
+     * 仅放行精确 POST 路径，其他门户支付接口仍必须携带有效登录令牌。
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return "POST".equalsIgnoreCase(request.getMethod())
-                && "/portal/visitor-leads".equals(request.getServletPath());
+        if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
+        String path = request.getServletPath();
+        return "/portal/visitor-leads".equals(path)
+                || "/portal/payment/stripe/webhook".equals(path);
     }
 
     @Override

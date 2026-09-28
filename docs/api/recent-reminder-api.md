@@ -1,10 +1,10 @@
 # 近期提醒 API
 
-## 门户查询最近一个月提醒
+## 门户查询全部生效提醒
 
 ### `GET /portal/reminders/recent`
 
-查询当前登录成员所属企业最近一个月内且尚未失效的提醒。服务端固定按严重程度 `CRITICAL > WARNING > NOTICE` 降序，同级按 `lastTriggeredAt DESC, id DESC` 排序；客户端不传时间和排序参数。
+查询当前登录成员所属企业全部 `is_active=1` 提醒，不再限制一个月，也不依据旧 `expires_at` 隐藏。每日维护先复核失效，再新增、恢复或升降阶段，最后同步监控，保留历史记录；无独立5分钟扫描。服务端固定按严重程度 `CRITICAL > WARNING > NOTICE` 降序，同级按 `lastTriggeredAt DESC, id DESC` 排序；客户端不传时间和排序参数。
 
 成功响应：
 
@@ -36,7 +36,7 @@
 
 ### `POST /internal/reminders/merge`
 
-由 SaaS 维护任务调用。Header `X-Maintenance-Secret` 必填并必须与监控系统配置一致。相同 `enterpriseId + reminderKey` 首次插入；只有更高 `stageLevel` 才更新。更新后客服处理状态自动恢复为待处理，并保留最近一次处理快照。
+由 SaaS 维护任务及周期复核调用。Header `X-Maintenance-Secret` 必填并必须与监控系统配置一致。新版按 `lifecycleVersion` 接收完整生效状态快照；失效保留人工处理记录，风险升级或重新生效恢复待处理。字段和补偿规则参见 [提醒生命周期契约](reminder-lifecycle-api.md)。
 
 请求示例：
 

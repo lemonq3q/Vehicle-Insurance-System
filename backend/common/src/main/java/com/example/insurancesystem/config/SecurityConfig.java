@@ -96,8 +96,8 @@ public class SecurityConfig {
                         "/internal/maintenance/enterprise-data/purge",
                         "/internal/maintenance/**",
                         "/internal/reminders/**",
-                        "/auth/sso/exchange", "/portal/finance/plans"
-                        , "/portal/visitor-leads"
+                        "/auth/sso/exchange", "/portal/finance/plans",
+                        "/portal/visitor-leads", "/portal/payment/stripe/webhook"
                 ).permitAll()
                 .anyRequest().authenticated();
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

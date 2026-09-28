@@ -166,7 +166,8 @@ export default {
     /**
      * 响应分页组件页码变化并加载对应成员页。
      */
-    changePage(pageNo) {
+    changePage(pageNo, pageSize = this.query.pageSize) {
+      this.query.pageSize = pageSize;
       this.query.pageNo = pageNo;
       this.load();
     },
