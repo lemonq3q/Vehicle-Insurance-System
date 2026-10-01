@@ -128,7 +128,4 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sso-spinner { animation: none; }
-}
 </style>

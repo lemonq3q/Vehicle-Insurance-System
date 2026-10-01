@@ -100,7 +100,9 @@ function rejectResponse(response, originalError) {
   error.response = response;
   const config = response?.config || originalError?.config;
   if (status === 401 && !isPublicRequest(config?.url)) handleUnauthorized();
-  if (!config?.skipErrorNotification) {
+  /* 自动会话恢复的认证拒绝不弹通知；仍拒绝 Promise、清理失效会话，维护及业务错误照常提示。 */
+  const silentAuthFailure = config?.silentAuthFailure && [400, 401, 403].includes(status);
+  if (!config?.skipErrorNotification && !silentAuthFailure) {
     if (status >= 400) notifyRequestError(status, error.message);
     else notifyError(error.message);
   }

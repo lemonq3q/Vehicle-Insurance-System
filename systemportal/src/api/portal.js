@@ -40,7 +40,7 @@ export const forgetPassword = data => post('/portal/auth/forget-password', data)
 /**
  * 查询当前用户、企业列表、当前企业和成员角色上下文。
  */
-export const getAccountContext = () => get('/portal/account/context');
+export const getAccountContext = (config = {}) => request.get('/portal/account/context', config);
 /**
  * 查询当前企业仪表盘经营指标，包含本月工单、续保提醒、新增客户、盈利及环比。
  */
@@ -52,7 +52,7 @@ export const createInsuranceAuthorization = () => post('/portal/sso/authorize', 
 /**
  * 使用车险系统返回的一次性 code 恢复门户会话。
  */
-export const exchangePortalSsoCode = code => post('/portal/sso/exchange', { code });
+export const exchangePortalSsoCode = code => request.post('/portal/sso/exchange', { code }, { silentAuthFailure: true });
 
 /**
 

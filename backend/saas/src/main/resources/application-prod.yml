@@ -32,7 +32,7 @@ saas:
       publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
       currency: ${STRIPE_RECHARGE_CURRENCY:cny}
-      minimum-amount: ${STRIPE_RECHARGE_MIN_AMOUNT:1.00}
+      minimum-amount: ${STRIPE_RECHARGE_MIN_AMOUNT:5.00}
       maximum-amount: ${STRIPE_RECHARGE_MAX_AMOUNT:50000.00}
       return-url: ${STRIPE_RECHARGE_RETURN_URL:https://www.idatag.com/saas/portal/finance/recharges/{orderId}?payment_return=1}
       reconciliation-batch-size: ${STRIPE_RECONCILIATION_BATCH_SIZE:100}

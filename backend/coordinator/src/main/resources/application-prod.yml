@@ -23,3 +23,6 @@ maintenance:
         base-url: ${SAAS_MAINTENANCE_BASE_URL:https://www.idatag.com/saasback}
       - service-id: insurance-backend
         base-url: ${INSURANCE_MAINTENANCE_BASE_URL:https://www.idatag.com/insuranceback}
+      # 生产列表会覆盖默认列表，必须保留提醒同步依赖的监控服务。
+      - service-id: monitor-backend
+        base-url: ${MONITOR_MAINTENANCE_BASE_URL:http://localhost:8083}

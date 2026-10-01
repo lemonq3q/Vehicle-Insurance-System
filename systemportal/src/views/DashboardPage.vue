@@ -226,7 +226,6 @@ export default {
 .skeleton-card strong { width: 50%; height: 34px; margin-top: 12px; }
 .skeleton-card small { width: 72%; height: 16px; margin-top: 14px; }
 @keyframes shimmer { to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { .skeleton-card span, .skeleton-card strong, .skeleton-card small { animation: none; } }
 @media (max-width: 980px) { .dashboard-grid { grid-template-columns: 1fr; } }
 @media (max-width: 680px) {
   .statistics-error { align-items: stretch; flex-direction: column; }

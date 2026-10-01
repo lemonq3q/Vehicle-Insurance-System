@@ -52,18 +52,33 @@
 import { createRechargeOrder, getFinanceOverview } from '@/api/portal';
 import { notifyWarning } from '@/utils/notification';
 import { rechargeContextKey, normalizeRechargeContext, saveRechargeContext } from '@/utils/rechargeSubscriptionContext';
+import { normalizeRechargeReturnPath } from '@/utils/rechargeReturnPath';
 
 export default {
   name: 'RechargePlaceholderPage',
+  /**
+   * 创建页是充值流程中间步骤，捕获真正业务入口并随订单传递。
+   * 刷新时复用当前 URL；直接进入创建页默认回到订阅服务，不依赖浏览器后退栈。
+   */
+  beforeRouteEnter(to, from, next) {
+    next(vm => {
+      vm.rechargeReturnPath = normalizeRechargeReturnPath(
+        from.matched.length ? from.fullPath : to.query.returnTo || '/portal/finance/subscription', vm.$router);
+      if (to.query.returnTo !== vm.rechargeReturnPath) {
+        vm.$router.replace({ path: to.path, query: { ...to.query, returnTo: vm.rechargeReturnPath } });
+      }
+    });
+  },
   /**
    * 保存充值表单、快捷金额、当前待处理订单和钱包余额。路由查询参数承担套餐订单与充值流程之间的上下文传递。
    */
   data() {
     return {
       form: { amount: '' },
+      rechargeReturnPath: '/portal/finance/subscription',
       quickAmounts: [100, 500, 1000, 5000],
       balanceAmount: 0,
-      minimumRechargeAmount: 1,
+      minimumRechargeAmount: 5,
       maximumRechargeAmount: 50000,
       submitting: false
     };
@@ -114,7 +129,7 @@ export default {
   async created() {
     const response = await getFinanceOverview();
     this.balanceAmount = Number(response.data.wallet?.balanceAmount || 0);
-    this.minimumRechargeAmount = Number(response.data.rechargeLimits?.minimumAmount || 1);
+    this.minimumRechargeAmount = Number(response.data.rechargeLimits?.minimumAmount || 5);
     this.maximumRechargeAmount = Number(response.data.rechargeLimits?.maximumAmount || 50000);
     if (this.hasOrderContext) this.form.amount = this.money(Math.max(this.shortfallAmount, this.minimumRechargeAmount));
   },
@@ -164,7 +179,7 @@ export default {
         await this.$router.push({
           name: 'finance-recharge-detail',
           params: { id: response.data.id },
-          query: { ...this.$route.query }
+          query: { ...this.$route.query, returnTo: this.rechargeReturnPath }
         });
       } finally {
         this.submitting = false;

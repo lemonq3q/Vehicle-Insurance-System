@@ -54,9 +54,17 @@ maintenance:
                 depends-on: [saas-workorder-overage]
                 required-services: [saas-backend]
                 timeout-seconds: 600
-              - task-id: insurance-archive
+              - task-id: insurance-enterprise-daily-statistics
                 target-service: insurance-backend
                 depends-on: [insurance-renewal-status]
+                required-services: [insurance-backend]
+                timeout-seconds: 1200
+          # 统计失败时跳过归档，保留终算所需业务数据；依赖任务不能放在同一并行组。
+          - group: insurance-archive
+            tasks:
+              - task-id: insurance-archive
+                target-service: insurance-backend
+                depends-on: [insurance-enterprise-daily-statistics]
                 required-services: [insurance-backend]
                 timeout-seconds: 1200
       - stage: 3

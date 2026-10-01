@@ -507,7 +507,7 @@ Response data：
 | wallet | SaasWallet | 企业钱包 |
 | subscription | SaasSubscription | 企业唯一的当前订阅状态；未订阅时 `status=0`、额度为 0，生效时包含 plan |
 | currentMemberCount | number | 当前有效成员数 |
-| rechargeLimits.minimumAmount | number | 单笔充值最小金额，来自服务器实际生效的 `STRIPE_RECHARGE_MIN_AMOUNT` |
+| rechargeLimits.minimumAmount | number | 单笔充值最小金额，来自服务器实际生效的 `STRIPE_RECHARGE_MIN_AMOUNT`，默认5元；部署时旧配置也需调整为5.00 |
 | rechargeLimits.maximumAmount | number | 单笔充值最大金额，来自服务器实际生效的 `STRIPE_RECHARGE_MAX_AMOUNT` |
 | rechargeLimits.currency | string | Stripe 充值币种，例如 `cny` |
 

@@ -305,8 +305,17 @@ public class FinanceServiceImpl implements FinanceService {
   @SuppressWarnings("unchecked")
   private Map<String, Object> parseRefundState(String payload) {
     try {
-      return objectMapper.readValue(payload, Map.class);
-    } catch (JsonProcessingException exception) {
+      Map<String, Object> state = objectMapper.readValue(payload, Map.class);
+      /*
+       * 公共 Jackson 配置可能把 Long 订单 ID 写成字符串，历史记录也可能保存数字。
+       * 在读取边界统一为 Long，精确转换防止小数或溢出 ID 被截断后关联到错误订单；
+       * 无效快照中止事务，保留通知重试机会，不能误当首次退款重复扣款。
+       */
+      long orderId = new BigDecimal(String.valueOf(state.get("rechargeOrderId"))).longValueExact();
+      if (orderId <= 0) throw new IllegalArgumentException("Invalid recharge order ID");
+      state.put("rechargeOrderId", orderId);
+      return state;
+    } catch (JsonProcessingException | IllegalArgumentException | ArithmeticException exception) {
       throw new BusinessException(500, "Stripe 退款记账记录损坏");
     }
   }

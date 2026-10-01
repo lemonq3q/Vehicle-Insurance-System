@@ -53,6 +53,40 @@ public class MaintenanceCoordinatorService {
      */
     public boolean runNow() {
         if (!properties.isEnabled() || !running.compareAndSet(false, true)) return false;
+        return executeReservedRun();
+    }
+
+    /**
+     * 手动请求先占用与定时任务共享的单实例锁，再校验计划并异步执行完整维护。
+     * 返回 true 表示已接受启动，false 表示已有周期；配置禁用或计划无效时抛出异常。
+     * 校验及提交失败释放锁，避免请求等待长时间维护或多个请求排队重复启动。
+     */
+    public boolean startManualRun() {
+        if (!properties.isEnabled()) throw new IllegalStateException("maintenance coordinator disabled");
+        if (!running.compareAndSet(false, true)) return false;
+        try {
+            validatePlan();
+            phase = "STARTING";
+            executor.execute(() -> {
+                try { executeReservedRun(); }
+                catch (RuntimeException exception) {
+                    log.error("Manual maintenance failed", exception);
+                    running.set(false);
+                }
+            });
+            return true;
+        } catch (RuntimeException exception) {
+            running.set(false);
+            phase = "IDLE";
+            throw exception;
+        }
+    }
+
+    /**
+     * 执行已持有运行锁的维护周期，供定时同步入口与手动异步入口复用。
+     * 保持原有准备、任务执行及退出协议，结束后释放共享锁；不得不加锁直接调用。
+     */
+    private boolean executeReservedRun() {
         try {
             validatePlan();
         } catch (RuntimeException exception) {

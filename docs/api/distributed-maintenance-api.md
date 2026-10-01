@@ -121,14 +121,27 @@
 
 ### 手工触发维护
 
-- 方法与路径：`POST /internal/coordinator/run`
-- 作用：使用当前配置立即执行一次维护；已有周期运行时返回 `accepted=false`。
+- 方法与路径：`GET /internal/coordinator/run?secret=内部密钥`（替代原 POST）。
+- 鉴权：无需用户登录；必填 query 参数 `secret`（string），值为 `MAINTENANCE_INTERNAL_SECRET`，此入口不使用密钥请求头。
+- 作用：与定时任务共用单实例原子锁，校验后异步启动完整维护，HTTP 请求立即返回；已有周期不排队、不重复启动。
+- HTTP 200：已接受启动或已有维护；400：缺少参数；403：密钥错误；503：禁用或维护计划无效。
+- 返回 `Cache-Control: no-store`；密钥可能出现在浏览器历史及代理访问日志，只允许受限运维访问，勿公开链接。
+- 返回表示启动已接受，不代表各维护任务已成功；通过状态接口及日志检查执行结果。
 
 ```json
-{ "accepted": true }
+{ "accepted": true, "message": "维护已启动" }
 ```
 
+重复请求示例：`{ "accepted": false, "message": "维护正在进行中" }`。
+
 ## 环境参数
+
+### 车险日统计任务顺序
+
+协调计划在续保状态重置后执行 `insurance-enterprise-daily-statistics`，归档任务
+`insurance-archive` 依赖该任务成功。统计失败时不归档，保留终算源数据。
+统计日期直接使用维护上下文的 `businessDate`；联机及单机入口已将该日期设为维护当天的前一自然日。
+例如 2026-09-29 维护统计 2026-09-28，不再额外减一天。
 
 开发环境默认：
 

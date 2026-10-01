@@ -4,6 +4,7 @@ import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.utils.WebUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -21,11 +22,12 @@ import java.io.IOException;
 public class AccessDeniedHandlerImpl implements AccessDeniedHandler {
 
     @Autowired
+    @Qualifier("apiObjectMapper")
     private ObjectMapper objectMapper;
 
     @Override
     /**
-     * 返回 403 业务响应，并使用项目主 ObjectMapper 保持字段和时间序列化规则一致；WebUtils 负责设置 JSON 编码并写出响应。
+     * 返回 403 业务响应，并显式使用 API ObjectMapper 保持接口字段和时间规则一致；WebUtils 负责设置 JSON 编码并写出响应。
      * 权限不足是正常的访问控制结果，不打印完整异常堆栈，避免无权限请求在生产日志中形成噪声。
      */
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e) throws IOException, ServletException {

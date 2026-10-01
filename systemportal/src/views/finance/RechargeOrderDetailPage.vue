@@ -61,12 +61,13 @@ import { cancelRechargeOrder, createStripeRechargeCheckoutSession, createSubscri
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { getStatusName } from '@/utils/portalLabels';
 import { rechargeContextKey, normalizeRechargeContext, saveRechargeContext, readRechargeContext, consumeRechargeContext } from '@/utils/rechargeSubscriptionContext';
+import { normalizeRechargeReturnPath } from '@/utils/rechargeReturnPath';
 
 export default {
   name: 'RechargeOrderDetailPage',
   components: { ConfirmDialog },
   /**
-   * 按订单保存站内来源的完整路径，保留查询条件和套餐上下文。
+   * 按订单保存业务入口路径，跳过订单创建和试算中间页面，保留入口查询条件。
    * 刷新及 Stripe 回跳时复用当前标签页的记录；首次直接访问且没有记录时返回充值订单列表。
    * 仅记录已匹配的门户页面，避免返回支付外站、登录页或详情页自身。
    */
@@ -75,7 +76,7 @@ export default {
     let source = '/portal/finance/recharges';
     try {
       if (from.matched.length && from.path.startsWith('/portal/') && from.name !== 'finance-recharge-detail') {
-        source = from.fullPath;
+        source = from.name === 'finance-recharge' ? to.query.returnTo || from.fullPath : from.fullPath;
         window.sessionStorage.setItem(key, source);
       } else {
         source = window.sessionStorage.getItem(key) || source;
@@ -83,7 +84,11 @@ export default {
     } catch (error) {
       // 存储受限时仍可在本次页面访问中返回已捕获的来源。
     }
-    next(vm => { vm.returnPath = source; });
+    next(vm => {
+      vm.returnPath = normalizeRechargeReturnPath(source, vm.$router);
+      try { window.sessionStorage.setItem(key, vm.returnPath); }
+      catch (error) { /* 存储不可用时，本次访问仍使用内存中的业务入口。 */ }
+    });
   },
   /**
    * 维护本地充值订单、Stripe Embedded Checkout 生命周期及回调确认状态。
@@ -153,14 +158,11 @@ export default {
   },
   methods: {
     /**
-     * 返回本订单进入时的站内来源。校验存储路径及路由匹配，防止无效记录或外部地址影响导航。
+     * 返回充值流程的业务入口，兼容旧来源记录，防止返回创建页或支付详情循环。
      * 使用 replace 避免返回后浏览器后退再次进入当前支付详情。
      */
     returnToSource() {
-      const destination = this.returnPath;
-      const valid = destination.startsWith('/portal/') && this.$router.resolve(destination).matched.length
-        && this.$router.resolve(destination).name !== 'finance-recharge-detail';
-      this.$router.replace(valid ? destination : '/portal/finance/recharges');
+      this.$router.replace(normalizeRechargeReturnPath(this.returnPath, this.$router));
     },
     statusName: getStatusName,
     /** 将订单金额统一显示为两位小数。 */
@@ -360,7 +362,6 @@ export default {
 .subscription-resume { justify-content: space-between; }
 .subscription-resume .layui-btn { margin: 0; white-space: nowrap; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .checkout-spinner { animation: none; } }
 @media (max-width: 1080px) { .recharge-detail-page { height: auto; min-height: 100%; overflow: visible; } .checkout-layout { flex: none; grid-template-columns: 1fr; } .summary-panel, .stripe-panel { height: auto; } .stripe-content-scroll { overflow: visible; padding-right: 0; } }
 @media (max-width: 680px) { .summary-only-layout .detail-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .summary-panel, .stripe-panel { padding: 18px; } .detail-heading, .stripe-heading, .subscription-resume { align-items: stretch; flex-direction: column; } }

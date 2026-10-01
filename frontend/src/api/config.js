@@ -59,10 +59,15 @@ function rejectResponse(response, originalError) {
   error.message = payload?.msg || payload?.message || (code >= 500 || code === 0 ? '请求错误' : '请求异常');
   if (code === 503 || response?.status === 503) error.message = '系统维护中，服务不可用';
   Object.assign(error, { code, data: payload?.data, response });
+  /* SSO 自动换票失败由回调页显示恢复入口，不重复弹全局警告；其他业务错误不静默。 */
+  const config = response?.config || originalError?.config;
+  const silentAuthFailure = config?.silentAuthFailure && [400, 401, 403].includes(code);
   if (code === 401) {
     Storage.remove('token');
     Storage.remove('userInfo');
     router.push('/login');
+  } else if (silentAuthFailure) {
+    return Promise.reject(error);
   } else if (code >= 500 || code === 0) {
     Message.error(error.message);
   } else {

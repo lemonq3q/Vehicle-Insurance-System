@@ -2154,7 +2154,7 @@ const collapseTransitionHooks = {
   },
   onEnter(element, done) {
     const targetHeight = element.scrollHeight;
-    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280;
+    const duration = 280;
     const animation = element.animate(
       [{ height: '0px', opacity: 0 }, { height: `${targetHeight}px`, opacity: 1 }],
       { duration, easing: 'ease-in-out', fill: 'forwards' }
@@ -2176,7 +2176,7 @@ const collapseTransitionHooks = {
   onLeave(element, done) {
     const startHeight = element.getBoundingClientRect().height;
     const style = window.getComputedStyle(element);
-    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280;
+    const duration = 280;
     const animation = element.animate(
       [
         {

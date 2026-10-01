@@ -168,7 +168,11 @@ export default {
 .order-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
-  align-items: start;
+  /*
+   * 同一行的权益与金额卡片共享行高，按内容较高的一侧自然撑开。
+   * 不固定视口高度，窄屏单列时每张卡片仍按自身内容确定高度。
+   */
+  align-items: stretch;
   gap: 18px;
 }
 

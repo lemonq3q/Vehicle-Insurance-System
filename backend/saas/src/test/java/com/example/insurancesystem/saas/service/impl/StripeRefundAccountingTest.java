@@ -11,7 +11,6 @@ import com.example.insurancesystem.saas.payment.StripePaymentProperties;
 import com.example.insurancesystem.saas.service.*;
 import com.example.insurancesystem.saas.service.WalletBalanceService.BalanceChangeResult;
 import com.example.insurancesystem.saas.support.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +42,7 @@ class StripeRefundAccountingTest {
     BusinessCodeGenerator codes = mock(BusinessCodeGenerator.class);
     when(codes.transactionNo()).thenReturn("TX_REFUND_TEST");
     service = new FinanceServiceImpl(mapper, mock(EnterpriseMapper.class), mock(PortalContextService.class),
-        codes, new ObjectMapper(), mock(MemberSeatService.class), mock(WorkorderOverageBillingMapper.class),
+        codes, new com.example.insurancesystem.config.JacksonConfig().persistenceObjectMapper(), mock(MemberSeatService.class), mock(WorkorderOverageBillingMapper.class),
         new WorkorderOverageBillingProperties(), balances, properties);
     order = new LinkedHashMap<>(Map.of(
         "id", 1L, "enterpriseId", 9L, "status", 2, "amount", new BigDecimal("100.00"),
@@ -78,6 +77,7 @@ class StripeRefundAccountingTest {
   @Test
   void successfulRefundIsAppliedOnceAndMayMakeBalanceNegative() {
     service.reconcileStripeRefund("re_a", "pi_test", "cny", 10000, "succeeded");
+    assertTrue(states.get("saas-refund-state:re_a").contains("\"rechargeOrderId\":1"));
     service.reconcileStripeRefund("re_a", "pi_test", "cny", 10000, "succeeded");
     assertEquals(new BigDecimal("-80.00"), balance);
     assertEquals(1, transactions.size());
@@ -87,6 +87,32 @@ class StripeRefundAccountingTest {
     assertEquals(new BigDecimal("100.00"), order.get("refundAmount"));
     service.completeStripeRecharge("cs_test", "pi_test");
     verify(balances, times(1)).changeBalance(eq(9L), any(), isNull(), eq(true));
+  }
+
+  /**
+   * 模拟生产环境保存字符串订单 ID 的处理中退款，随后成功通知应完成余额回撤。
+   * 同一退款重复成功通知只生成一次流水，兼容历史数字 ID 的现有测试保持不变。
+   */
+  @Test
+  void stringOrderIdFromPendingRefundCanBeCompletedExactlyOnce() {
+    states.put("saas-refund-state:re_a", "{\"rechargeOrderId\":\"1\",\"paymentIntentId\":\"pi_test\","
+        + "\"currency\":\"cny\",\"amount\":30.00,\"appliedAmount\":0,\"status\":\"pending\"}");
+    service.reconcileStripeRefund("re_a", "pi_test", "cny", 3000, "succeeded");
+    service.reconcileStripeRefund("re_a", "pi_test", "cny", 3000, "succeeded");
+    assertEquals(new BigDecimal("-10.00"), balance);
+    assertEquals(1, transactions.size());
+    assertEquals(8, order.get("status"));
+  }
+
+  /** 损坏的订单 ID 不允许截断转换或触发钱包扣减，等待修复后重试通知。 */
+  @Test
+  void invalidStoredOrderIdDoesNotDebitBalance() {
+    for (String id : List.of("1.5", "9223372036854775808", "invalid")) {
+      states.put("saas-refund-state:re_a", "{\"rechargeOrderId\":\"" + id + "\"}");
+      assertThrows(BusinessException.class,
+          () -> service.reconcileStripeRefund("re_a", "pi_test", "cny", 3000, "succeeded"));
+    }
+    verifyNoInteractions(balances);
   }
 
   /** 创建但未成功的退款只记录状态，不扣余额；失败通知也不凭空补钱。 */

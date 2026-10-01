@@ -17,7 +17,7 @@ public class StripePaymentProperties {
   private String publishableKey;
   private String webhookSecret;
   private String currency = "cny";
-  private BigDecimal minimumAmount = new BigDecimal("1.00");
+  private BigDecimal minimumAmount = new BigDecimal("5.00");
   private BigDecimal maximumAmount = new BigDecimal("50000.00");
   private String returnUrl;
   private long reconciliationIntervalMs = 300000L;

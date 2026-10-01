@@ -15,7 +15,28 @@ import org.junit.jupiter.api.Test;
  */
 class SafeLongIdSerializerTest {
   private static final long LARGE_ID = 2090661322625298433L;
-  private final ObjectMapper objectMapper = new JacksonConfig().objectMapper();
+  private final ObjectMapper objectMapper = new JacksonConfig().apiObjectMapper();
+
+  /** 内部快照保持数字 ID；接口 Mapper 的创建与使用不得改变默认实例的规则。 */
+  @Test
+  void persistenceMapperShouldKeepNumericIds() {
+    JacksonConfig config = new JacksonConfig();
+    ObjectMapper persistence = config.persistenceObjectMapper();
+    config.apiObjectMapper();
+    JsonNode json = persistence.valueToTree(Map.of("rechargeOrderId", LARGE_ID));
+    assertTrue(json.path("rechargeOrderId").isIntegralNumber());
+    assertEquals(LARGE_ID, json.path("rechargeOrderId").longValue());
+  }
+
+  /** MVC 必须覆盖自动选择的默认 Mapper，保证 Controller 无需添加限定注解。 */
+  @Test
+  void mvcConverterShouldUseApiRules() {
+    JacksonConfig config = new JacksonConfig();
+    org.springframework.http.converter.json.MappingJackson2HttpMessageConverter converter =
+        new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(config.persistenceObjectMapper());
+    config.apiJsonWebMvcConfigurer().extendMessageConverters(new java.util.ArrayList<>(List.of(converter)));
+    assertTrue(converter.getObjectMapper().valueToTree(Map.of("id", LARGE_ID)).path("id").isTextual());
+  }
 
   /** JavaBean 中的主键和关联主键应为字符串，而分页总数、时间戳和政策数值仍必须是数字节点。 */
   @Test

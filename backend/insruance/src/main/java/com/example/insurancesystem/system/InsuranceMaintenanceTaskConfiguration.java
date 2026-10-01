@@ -21,11 +21,12 @@ public class InsuranceMaintenanceTaskConfiguration {
     /**
      * 在业务归档前终算已经结束的前一自然日，保证被清理或归档的数据仍能进入最终统计。
      * 任务采用绝对值覆盖和 Redis 延迟清理，协调器重试不会重复累计。
+     * 联机和单机上下文 businessDate 已是前一自然日，直接使用，不能再次减一天。
      */
     @Bean
     public MaintenanceTask enterpriseDailyStatisticsTask(EnterpriseDailyStatisticsService service) {
         return new SimpleMaintenanceTask("insurance-enterprise-daily-statistics", 150, true,
-                context -> service.finalizeDay(context.getBusinessDate().minusDays(1)));
+                context -> service.finalizeDay(context.getBusinessDate()));
     }
 
     @Bean

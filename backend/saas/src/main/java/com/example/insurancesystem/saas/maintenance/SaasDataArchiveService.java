@@ -23,13 +23,18 @@ public class SaasDataArchiveService {
     return archived;
   }
 
+  /**
+   * 查找当前库中含逻辑删除字段且存在对应归档表的源表，不扫描归档表本身。
+   * 使用字面后缀判断，避免 Java/MySQL 双重反斜杠转义及 SQL 模式影响查询。
+   * @return 按表名排序的待归档源表名称；本步骤仅查询元数据，不搬移数据
+   */
   private List<String> archiveSources() {
     return jdbcTemplate.queryForList(
         "SELECT DISTINCT source.table_name FROM information_schema.columns source "
             + "JOIN information_schema.tables archive_table ON archive_table.table_schema=source.table_schema "
             + "AND archive_table.table_name=CONCAT(source.table_name,'_archive') "
             + "WHERE source.table_schema=DATABASE() AND source.column_name='deleted' "
-            + "AND source.table_name NOT LIKE '%\\_archive' ESCAPE '\\' ORDER BY source.table_name",
+            + "AND RIGHT(source.table_name,8)<>'_archive' ORDER BY source.table_name",
         String.class);
   }
 

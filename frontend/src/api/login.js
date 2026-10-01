@@ -53,7 +53,7 @@ export function getSmsCode(email){
  * code 只能在回调页消费一次，失败时不得沿用浏览器中可能残留的旧车险会话。
  */
 export function exchangeSsoCode(code) {
-  return axios.post(`${rootUrl}/sso/exchange`, { code });
+  return axios.post(`${rootUrl}/sso/exchange`, { code }, { silentAuthFailure: true });
 }
 
 /**

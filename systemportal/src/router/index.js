@@ -96,7 +96,14 @@ router.beforeEach(async (to, from, next) => {
     return;
   }
   if (to.meta.requiresAuth && store.getters.isLogin && !store.state.contextLoaded) {
-    await store.dispatch('loadContext');
+    /* 自动恢复旧会话失败时回登录页，不将后台认证探测作为用户操作警告。 */
+    try {
+      await store.dispatch('loadContext', { silentAuthFailure: true });
+    } catch (error) {
+      if (Number(error.code) === 401) { next('/login'); return; }
+      next(false);
+      return;
+    }
   }
   if (to.meta.requiresEnterprise && !store.state.currentEnterprise) {
     next({ name: 'enterprise-required', query: { redirect: to.fullPath } });

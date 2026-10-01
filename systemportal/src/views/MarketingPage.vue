@@ -318,24 +318,22 @@ export default {
       this.navScrolled = window.scrollY > 20;
     },
     /**
-     * 平滑滚动到官网指定业务区块，并同步更新地址栏锚点；系统偏好减少动画时改用即时滚动。
+     * 平滑滚动到官网指定业务区块，并同步更新地址栏锚点；统一保留页面滚动动画。
      */
     scrollToSection(id) {
       const section = document.getElementById(id);
       if (!section) return;
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
       window.history.replaceState(null, '', `#${id}`);
     },
     /**
-     * 为尚未展示的 data-reveal 元素创建一次性可视区域观察。低性能兼容环境或减少动画偏好下直接显示；
+     * 为尚未展示的 data-reveal 元素创建一次性可视区域观察。不支持观察器的兼容环境直接显示；
      * 正常情况下按元素顺序设置小幅错峰延迟，进入视口后取消单项观察以减少持续开销。
      */
     setupRevealAnimations() {
       this.revealObserver?.disconnect();
       const elements = this.$el.querySelectorAll('[data-reveal]:not(.is-visible)');
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!('IntersectionObserver' in window) || reduceMotion) {
+      if (!('IntersectionObserver' in window)) {
         elements.forEach((element) => element.classList.add('is-visible'));
         return;
       }
@@ -539,7 +537,6 @@ export default {
 [data-reveal="left"] { transform: translateX(-28px); }
 [data-reveal="right"] { transform: translateX(28px); }
 [data-reveal].is-visible { opacity: 1; transform: translate(0, 0); }
-@media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; } }
 @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
 @media (max-width: 1100px) { .marketing-nav nav { gap: 18px; }.marketing-nav nav a:not(.nav-login):not(.nav-cta) { display: none; }.product-scene { left: 66%; opacity: .54; }.hero-content { width: 68%; }.workflow-grid { grid-template-columns: repeat(2, 1fr); }.workflow-item:nth-child(2) { border-right: 0; }.workflow-item:first-child { padding-left: 24px; }.workflow-item:nth-child(-n+2) { border-bottom: 1px solid #cad8d0; }.operations-section { gap: 54px; }.teams-grid article { padding: 28px; } }
 @media (max-width: 1280px) { .security-points { margin-left: -80px; } }
@@ -547,5 +544,4 @@ export default {
 @media (max-width: 800px) { .brand-product, .brand-divider, .nav-login:not(.nav-contact) { display: none; }.marketing-nav { height: 68px; padding: 0 20px; }.hero { height: auto; min-height: 760px; padding: 112px 24px 70px; align-items: flex-start; }.hero-content { width: 100%; }.hero h1 { font-size: 48px; }.hero-desc { font-size: 16px; }.hero-facts { flex-wrap: wrap; gap: 20px; }.hero-facts div { min-width: 120px; margin: 0; padding: 0 20px 0 0; }.product-scene { top: auto; bottom: -215px; left: 26%; width: 760px; opacity: .24; transform: rotate(-2deg); }.scene-note { display: none; }.trust-strip { justify-content: flex-start; }.trust-strip p { width: 100%; }.operations-section, .security-section { grid-template-columns: 1fr; }.security-points { margin-left: 0; }.teams-grid, .plan-grid { grid-template-columns: 1fr; }.teams-grid article, .plan-card { min-height: auto; padding: 30px 0; border-right: 0; border-bottom: 1px solid var(--line); }.plan-grid { padding: 0 24px; }.plan-card.featured { margin: 0 -24px; padding: 38px 24px; }.plans-heading { display: block; }.marketing-footer { grid-template-columns: 1fr; }.marketing-footer > p { justify-self: start; white-space: normal; }.marketing-footer small { grid-column: 1; justify-self: start; } }
 @media (max-width: 560px) { .nav-cta { padding: 0 13px; }.brand { gap: 8px; }.brand-name { font-size: 17px; }.hero h1 { font-size: 40px; }.hero-actions { align-items: stretch; flex-direction: column; gap: 10px; }.hero-primary { text-align: center; }.hero-facts dd { font-size: 11px; }.section { padding: 76px 20px; }.workflow-grid { grid-template-columns: 1fr; }.workflow-item, .workflow-item:first-child { padding: 28px 0; border-right: 0; border-bottom: 1px solid #cad8d0; }.workflow-item .step-number, .workflow-item:first-child .step-number { left: 0; }.workflow-item > p { min-height: auto; }.operations-section { padding: 76px 20px; }.operation-list p { flex-direction: column; }.operation-list small { margin-top: 4px; }.ledger-panel { padding: 22px; box-shadow: 10px 10px 0 #1b4035; }.ledger-total strong { font-size: 30px; }.security-section { padding: 70px 20px; }.security-points p { grid-template-columns: 1fr; gap: 6px; }.marketing-footer nav { flex-wrap: wrap; }.marketing-footer > p { font-size: 13px; } }
 @media (max-width: 620px) { .contact-mask{padding:0}.contact-dialog{width:100%;max-height:100dvh;min-height:100dvh;border-radius:0}.contact-dialog>header,.contact-form{padding-left:20px;padding-right:20px}.contact-dialog header h2{padding-right:42px;font-size:22px}.contact-form-grid{grid-template-columns:1fr}.intent-fieldset{grid-template-columns:1fr}.contact-actions{position:sticky;bottom:0;padding-top:12px;background:#fff}.contact-actions button{flex:1}.contact-success{right:12px;bottom:12px;left:12px;flex-wrap:wrap}.contact-success button{margin-left:auto} }
-@media (prefers-reduced-motion: reduce) { .plan-skeleton { animation: none; } }
 </style>

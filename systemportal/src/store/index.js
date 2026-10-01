@@ -116,8 +116,8 @@ const store = createStore({
     /**
      * * 从后端重新加载当前账号及企业成员上下文，作为刷新页面和权限判断的权威数据。
      */
-    async loadContext({ commit }) {
-      const response = await getAccountContext();
+    async loadContext({ commit }, options = {}) {
+      const response = await getAccountContext({ silentAuthFailure: Boolean(options.silentAuthFailure) });
       commit('setContext', response.data);
       return response;
     },

@@ -989,7 +989,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       wallet,
       subscription,
       currentMemberCount: members.length,
-      rechargeLimits: { minimumAmount: 1, maximumAmount: 50000, currency: 'cny' }
+      rechargeLimits: { minimumAmount: 5, maximumAmount: 50000, currency: 'cny' }
     });
   }
   if (url === '/portal/finance/plans') {
@@ -1004,7 +1004,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   }
   if (url === '/portal/finance/recharge-orders' && method === 'POST') {
     const rechargeAmount = Number(data.amount);
-    if (!Number.isFinite(rechargeAmount) || rechargeAmount < 1) return fail('单笔充值金额不能低于 1.00 元');
+    if (!Number.isFinite(rechargeAmount) || rechargeAmount < 5) return fail('单笔充值金额不能低于 5.00 元');
     if (rechargeAmount > 50000) return fail('单笔充值金额不能超过 50000.00 元');
     const order = {
       id: Date.now(),

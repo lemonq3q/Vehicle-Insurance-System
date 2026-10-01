@@ -62,5 +62,4 @@ export default {
 .sso-spinner { width: 42px; height: 42px; margin: auto; border: 4px solid #dcfce7; border-top-color: #16a34a; border-radius: 50%; animation: spin 700ms linear infinite; }
 .retry-button { display: inline-block; min-width: 132px; min-height: 44px; margin-top: 24px; padding: 0 20px; border-radius: 6px; background: #16a34a; color: #fff; line-height: 44px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .sso-spinner { animation: none; } }
 </style>

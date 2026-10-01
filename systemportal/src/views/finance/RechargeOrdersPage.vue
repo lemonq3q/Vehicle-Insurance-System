@@ -45,11 +45,11 @@
               <td>¥{{ item.amount }}</td>
               <td>{{ channelName(item.payChannel) }}</td>
               <td>{{ item.payTradeNo || '-' }}</td>
-              <td><span class="portal-tag" :class="{ warn: [1, 7, 8].includes(item.status), gray: [3, 4, 5, 6, 9].includes(item.status) }">{{ statusName('recharge', item.status) }}</span></td>
+              <td><span class="portal-tag recharge-status" :class="`recharge-status-${item.status}`">{{ statusName('recharge', item.status) }}</span></td>
               <td>{{ item.paidAt || '-' }}</td>
               <td>{{ item.createdAt }}</td>
               <td>
-                <router-link class="layui-btn layui-btn-xs layui-btn-primary layui-border-green" :to="{ name: 'finance-recharge-detail', params: { id: item.id } }">
+                <router-link class="layui-btn layui-btn-xs layui-btn-primary recharge-action" :class="item.status === 1 ? 'recharge-status-1' : 'layui-border-green'" :to="{ name: 'finance-recharge-detail', params: { id: item.id } }">
                   {{ item.status === 1 ? '继续支付' : '查看详情' }}
                 </router-link>
               </td>
@@ -159,4 +159,30 @@ export default {
   border: 1px solid var(--portal-border);
   border-radius: 4px;
 }
+
+/*
+ * 充值状态分别表达付款进度、终止原因和退款结果，不能把失败和退款统一当作灰色状态。
+ * 独立的状态色只作用于本表格，保留文字标识，避免影响订阅订单及详情页的现有标签。
+ */
+.recharge-status { color: #475569; background: #f1f5f9; }
+.recharge-status-1 { color: #92400e; background: #fef3c7; }
+.recharge-status-2 { color: #166534; background: #dcfce7; }
+.recharge-status-3 { color: #475569; background: #f1f5f9; }
+.recharge-status-4 { color: #b91c1c; background: #fee2e2; }
+.recharge-status-5 { color: #9a3412; background: #ffedd5; }
+.recharge-status-6 { color: #374151; background: #e5e7eb; }
+.recharge-status-7 { color: #1e40af; background: #dbeafe; }
+.recharge-status-8 { color: #6b21a8; background: #f3e8ff; }
+.recharge-status-9 { color: #9d174d; background: #fce7f3; }
+
+/*
+ * 继续支付使用黄色突出待支付动作，查看详情统一沿用原绿色边框样式。
+ * 保留悬停和键盘焦点反馈，不将订单状态配色扩散到详情入口。
+ */
+.recharge-action {
+  border-color: currentColor;
+  transition: filter 160ms ease;
+}
+.recharge-action:hover { filter: brightness(.94); }
+.recharge-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 </style>

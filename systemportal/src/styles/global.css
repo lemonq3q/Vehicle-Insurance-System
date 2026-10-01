@@ -269,15 +269,6 @@ a:focus-visible {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-  }
-}
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 76px;

@@ -29,11 +29,22 @@ public class MaintenanceCoordinatorController {
         return service.status();
     }
 
-    @PostMapping("/run")
-    public Map<String, Object> run(@RequestHeader("X-Maintenance-Secret") String secret) {
+    /**
+     * 无需用户登录，使用查询密钥接受手动维护请求并立即返回启动或重复提示。
+     * GET 会产生维护副作用，仅限运维调用；密钥不得写入日志或公开链接。
+     * 禁用或计划错误返回真实 503，不把拒绝启动误报为正在维护。
+     */
+    @GetMapping("/run")
+    public Map<String, Object> run(@RequestParam("secret") String secret,
+                                  javax.servlet.http.HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store");
         authenticate(secret);
-        boolean accepted = service.runNow();
-        return Map.of("accepted", accepted);
+        try {
+            boolean accepted = service.startManualRun();
+            return Map.of("accepted", accepted, "message", accepted ? "维护已启动" : "维护正在进行中");
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "维护无法启动，请检查协调器配置", exception);
+        }
     }
 
     private void authenticate(String secret) {

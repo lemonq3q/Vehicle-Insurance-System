@@ -141,6 +141,3 @@ body { background: var(--insurance-bg); color: var(--insurance-text); }
 .home .el-cascader:focus-visible,
 .home .el-date-editor:focus-visible { outline: none !important; }
 
-@media (prefers-reduced-motion: reduce) {
-  .home *, .home *::before, .home *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
-}
