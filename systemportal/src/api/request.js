@@ -9,7 +9,7 @@ const REFRESHED_TOKEN_HEADER = 'new-token';
 const PUBLIC_REQUESTS = [
   '/portal/auth/login',
   '/portal/auth/register',
-  '/portal/auth/sms-code',
+  '/portal/auth/email-code',
   '/portal/auth/forget-password',
   '/portal/sso/exchange',
   '/portal/finance/plans',

@@ -56,6 +56,28 @@ class SsoServiceImplTest {
   }
 
   @Test
+  void prioritizesMissingSubscriptionOverDisabledMember() {
+    stubDisabledIdentity();
+    when(finance.findSubscription(20L)).thenReturn(subscription(0, null));
+
+    BusinessException exception = assertThrows(BusinessException.class, service::authorize);
+
+    assertEquals("企业当前没有生效中的套餐，请先前往订阅服务开通套餐", exception.getMsg());
+    verifyNoInteractions(redis);
+  }
+
+  @Test
+  void guidesDisabledMemberToAdministratorAfterSubscriptionCheck() {
+    stubDisabledIdentity();
+    when(finance.findSubscription(20L)).thenReturn(subscription(1, null));
+
+    BusinessException exception = assertThrows(BusinessException.class, service::authorize);
+
+    assertEquals("当前账号尚未启用，请联系企业管理员启用后再进入车险系统", exception.getMsg());
+    verifyNoInteractions(redis);
+  }
+
+  @Test
   void issuesCodeOnlyForEnabledIdentityWithActiveUnexpiredPlan() {
     stubEnabledIdentity();
     when(finance.findSubscription(20L)).thenReturn(subscription(1, null));
@@ -86,6 +108,12 @@ class SsoServiceImplTest {
   private void stubEnabledIdentity() {
     when(enterprises.findCurrentMember(9L)).thenReturn(Map.of(
         "id", 8L, "enterprise_id", 20L, "user_id", 9L, "status", 1, "user_status", 1));
+    when(enterprises.findEnterprise(20L)).thenReturn(Map.of("id", 20L, "status", 1));
+  }
+
+  private void stubDisabledIdentity() {
+    when(enterprises.findCurrentMember(9L)).thenReturn(Map.of(
+        "id", 8L, "enterprise_id", 20L, "user_id", 9L, "status", 0, "user_status", 1));
     when(enterprises.findEnterprise(20L)).thenReturn(Map.of("id", 20L, "status", 1));
   }
 

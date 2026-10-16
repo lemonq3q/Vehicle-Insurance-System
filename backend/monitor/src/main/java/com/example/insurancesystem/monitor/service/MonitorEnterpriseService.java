@@ -200,12 +200,12 @@ public class MonitorEnterpriseService {
     }
 
     /**
-     * 分页读取指定企业的成员身份和账号快照。成员表决定企业角色与启停状态，用户表提供姓名、账号、手机号和最后登录时间；
-     * 手机号在 SQL 返回阶段统一脱敏，监控平台不获得完整号码。关键字支持姓名、账号和原始手机号包含匹配，
+     * 分页读取指定企业的成员身份和账号快照。成员表决定企业角色与启停状态，用户表提供姓名、内部标识、邮箱和最后登录时间；
+     * 页面使用邮箱展示 SaaS 登录身份，不返回手机号。关键字支持姓名和邮箱包含匹配，
      * 角色文案先映射到固定角色代码，所有筛选值均通过命名参数绑定。
      *
      * @param enterpriseId 当前查看的企业主键
-     * @param keyword 姓名、登录账号或手机号关键词
+     * @param keyword 姓名或邮箱关键词
      * @param roleName 拥有者、管理员或出单员
      * @param status 成员状态，0 停用、1 启用
      * @param pageNo 页码，从 1 开始
@@ -226,7 +226,7 @@ public class MonitorEnterpriseService {
         if (keyword != null && !keyword.isBlank()) {
             String value = keyword.trim();
             if (value.length() > 100) throw new BusinessException(400, "成员关键词不能超过 100 个字符");
-            where.append(" AND (u.real_name LIKE :keyword OR u.username LIKE :keyword OR u.phone LIKE :keyword)");
+            where.append(" AND (u.real_name LIKE :keyword OR u.email LIKE :keyword)");
             parameters.addValue("keyword", "%" + value + "%");
         }
         if (roleName != null && !roleName.isBlank()) {
@@ -241,9 +241,7 @@ public class MonitorEnterpriseService {
         String from = " FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id";
         long total = namedJdbc.queryForObject("SELECT COUNT(1)" + from + where, parameters, Long.class);
         parameters.addValue("offset", (pageNo - 1) * pageSize).addValue("pageSize", pageSize);
-        String sql = "SELECT m.id,m.enterprise_id enterpriseId,u.real_name realName,u.username," +
-                "CASE WHEN u.phone IS NULL OR u.phone='' THEN '-' WHEN CHAR_LENGTH(u.phone)>=7 " +
-                "THEN CONCAT(LEFT(u.phone,3),'****',RIGHT(u.phone,4)) ELSE u.phone END phone," +
+        String sql = "SELECT m.id,m.enterprise_id enterpriseId,u.real_name realName,u.username,u.email," +
                 "CASE m.role_code WHEN 'OWNER' THEN '拥有者' WHEN 'ADMIN' THEN '管理员' WHEN 'ISSUER' THEN '出单员' ELSE m.role_code END roleName," +
                 "m.status,m.joined_at joinedAt,u.last_login_time lastLoginAt" + from + where +
                 " ORDER BY FIELD(m.role_code,'OWNER','ADMIN','ISSUER'),m.joined_at,m.id LIMIT :offset,:pageSize";

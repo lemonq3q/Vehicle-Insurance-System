@@ -97,3 +97,17 @@ saas:
       suspend-threshold: ${BALANCE_SUSPEND_THRESHOLD:-100.00}
       # 欠费暂停企业余额大于等于该值时恢复；与停止阈值之间保留缓冲区避免反复切换。
       restore-threshold: ${BALANCE_RESTORE_THRESHOLD:0.00}
+
+# 与车险端使用相同邮件渠道；验证码由当前应用缓存隔离，不使用短信 mock。
+insurance:
+  email:
+    account-enabled: true
+    provider: ${EMAIL_PROVIDER:qq}
+    qq:
+      user: ${QQ_EMAIL_USER:}
+      password: ${QQ_EMAIL_AUTH_CODE:}
+    gmail:
+      client-id: ${GMAIL_CLIENT_ID:}
+      client-secret: ${GMAIL_CLIENT_SECRET:}
+      refresh-token: ${GMAIL_REFRESH_TOKEN:}
+      from: ${GMAIL_FROM:}

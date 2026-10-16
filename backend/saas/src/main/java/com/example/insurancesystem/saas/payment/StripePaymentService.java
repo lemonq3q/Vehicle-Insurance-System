@@ -7,7 +7,6 @@ import com.example.insurancesystem.saas.service.FinanceService;
 import com.example.insurancesystem.saas.support.PortalContextService;
 import com.example.insurancesystem.saas.support.PortalMaps;
 import com.example.insurancesystem.saas.support.RechargeOrderStatus;
-import com.stripe.StripeClient;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.Refund;
@@ -73,7 +72,6 @@ public class StripePaymentService {
     String rechargeNo = String.valueOf(order.get("rechargeNo"));
 
     try {
-      StripeClient client = new StripeClient(properties.getSecretKey());
       Object existingSessionId = order.get("stripeCheckoutSessionId");
       Session session;
       if (existingSessionId != null && !existingSessionId.toString().isBlank()) {
@@ -85,6 +83,11 @@ public class StripePaymentService {
             SessionCreateParams.builder()
                 .setUiMode(SessionCreateParams.UiMode.EMBEDDED_PAGE)
                 .setMode(SessionCreateParams.Mode.PAYMENT)
+                /*
+                 * 从当前账号读取真实邮箱，空邮箱不设置，保留手动填写入口。
+                 * 客户端不能提交其他账号的邮箱作为该会话的默认值。
+                 */
+                .setCustomerEmail(checkoutEmail())
                 .setReturnUrl(properties.getReturnUrl().replace("{orderId}", orderId.toString()))
                 .setExpiresAt(expiresAt)
                 .setClientReferenceId(rechargeNo)
@@ -109,7 +112,7 @@ public class StripePaymentService {
                 .build();
         RequestOptions requestOptions =
             RequestOptions.builder().setIdempotencyKey("saas-recharge-" + rechargeNo).build();
-        session = client.v1().checkout().sessions().create(params, requestOptions);
+        session = checkoutClient.create(params, requestOptions);
         if (mapper.bindCheckoutSession(orderId, enterpriseId, session.getId(), session.getExpiresAt()) == 0)
           throw new BusinessException(409, "充值订单状态已变化，请刷新后重试");
       }
@@ -122,12 +125,24 @@ public class StripePaymentService {
       result.put("uiMode", session.getUiMode());
       result.put("publishableKey", properties.getPublishableKey());
       result.put("clientSecret", session.getClientSecret());
+      result.put("email", session.getCustomerEmail());
       return result;
     } catch (BusinessException exception) {
       throw exception;
     } catch (Exception exception) {
       throw new BusinessException(502, "Stripe 结账会话创建失败，请稍后重试");
     }
+  }
+
+  /**
+   * 读取当前账号可用于付款的邮箱；历史无邮箱或格式不合法时返回 null，避免阻断支付。
+   * 只在创建新的 Stripe Session 时预填，复用已有会话时保留原付款资料。
+   */
+  private String checkoutEmail() {
+    String email = mapper.findUserEmail(context.userId());
+    if (email == null) return null;
+    email = email.trim().toLowerCase(Locale.ROOT);
+    return email.length() <= 100 && email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") ? email : null;
   }
 
   /**

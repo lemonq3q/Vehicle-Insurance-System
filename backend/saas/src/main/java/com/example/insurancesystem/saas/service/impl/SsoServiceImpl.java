@@ -54,15 +54,18 @@ public class SsoServiceImpl implements SsoService {
     this.codeTtlSeconds = codeTtlSeconds;
   }
 
+  /**
+   * 为当前门户成员签发进入车险系统的一次性授权码。先核验企业订阅，再核验个人账号与成员状态，
+   * 使未订阅企业得到可操作的订阅提示；所有校验通过后才写入短期有效的 Redis 授权码。
+   *
+   * @return 包含跳转地址和授权码有效期的响应
+   * @throws BusinessException 企业、订阅或成员不符合进入条件时抛出，且不签发授权码
+   */
   @Override
   public Map<String, Object> authorize() {
     Long userId = context.userId();
     Map<String, Object> member = PortalMaps.camel(enterpriseMapper.findCurrentMember(userId));
     if (member == null) throw new BusinessException(403, "请先创建或加入企业");
-    if (((Number) member.get("userStatus")).intValue() != 1)
-      throw new BusinessException(403, "当前用户账号未启用");
-    if (((Number) member.get("status")).intValue() != 1)
-      throw new BusinessException(403, "当前企业成员状态不可用");
 
     Long enterpriseId = ((Number) member.get("enterpriseId")).longValue();
     Map<String, Object> enterprise = PortalMaps.camel(enterpriseMapper.findEnterprise(enterpriseId));
@@ -74,8 +77,11 @@ public class SsoServiceImpl implements SsoService {
           && ((Number) subscription.get("status")).intValue() == 3
           && "ARREARS".equals(subscription.get("suspendReason")))
         throw new BusinessException(403, "企业套餐因余额欠费已暂停，请先充值后再进入车险系统");
-      throw new BusinessException(403, "企业当前没有正常生效的套餐，暂时无法进入车险系统");
+      throw new BusinessException(403, "企业当前没有生效中的套餐，请先前往订阅服务开通套餐");
     }
+    if (((Number) member.get("userStatus")).intValue() != 1
+        || ((Number) member.get("status")).intValue() != 1)
+      throw new BusinessException(403, "当前账号尚未启用，请联系企业管理员启用后再进入车险系统");
 
     String code = java.util.UUID.randomUUID().toString().replace("-", "")
         + java.util.UUID.randomUUID().toString().replace("-", "");

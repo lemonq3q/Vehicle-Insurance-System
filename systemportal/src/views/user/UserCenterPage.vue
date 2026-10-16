@@ -10,7 +10,7 @@
       <div class="profile-aside">
         <div class="avatar">{{ avatarText }}</div>
         <h2>{{ profile.realName || '未命名用户' }}</h2>
-        <p>{{ profile.username }}</p>
+        <p>{{ profile.email || '未绑定邮箱' }}</p>
         <span class="portal-tag">账号启用</span>
       </div>
 
@@ -27,9 +27,8 @@
         </div>
 
         <dl v-if="!isEditing" class="profile-info-grid">
-          <div><dt>登录账号</dt><dd>{{ profile.username || '-' }}</dd></div>
+          <div><dt>登录邮箱</dt><dd>{{ profile.email || '未绑定' }}</dd></div>
           <div><dt>姓名</dt><dd>{{ profile.realName || '-' }}</dd></div>
-          <div><dt>手机号</dt><dd>{{ profile.phone || '-' }}</dd></div>
           <div><dt>证件号</dt><dd>{{ maskedIdNum }}</dd></div>
           <div><dt>账号状态</dt><dd><span class="status-dot"></span>正常</dd></div>
           <div><dt>上次登录</dt><dd>{{ profile.lastLoginTime || '-' }}</dd></div>
@@ -37,16 +36,12 @@
 
         <form v-else class="form-grid profile-form" @submit.prevent="saveProfile">
           <div class="form-field">
-            <label for="username">登录账号</label>
-            <input id="username" v-model="form.username" class="layui-input" />
-          </div>
-          <div class="form-field">
             <label for="realName">姓名</label>
             <input id="realName" v-model="form.realName" class="layui-input" />
           </div>
           <div class="form-field">
-            <label for="phone">手机号</label>
-            <input id="phone" v-model="form.phone" class="layui-input" autocomplete="tel" />
+            <label for="profileEmail">登录邮箱</label>
+            <input id="profileEmail" :value="profile.email || '未绑定'" class="layui-input" type="text" disabled />
           </div>
           <div class="form-field full">
             <label for="idNum">证件号</label>
@@ -59,21 +54,25 @@
         </form>
       </div>
     </article>
+    <EmailBindingForm v-if="profileLoaded && !profile.email" @bound="handleEmailBound" />
 
   </section>
 </template>
 
 <script>
 import { getProfile, updateProfile } from '@/api/portal';
+import EmailBindingForm from '@/components/EmailBindingForm.vue';
 
 export default {
   name: 'UserCenterPage',
+  components: { EmailBindingForm },
   /**
    * 分离服务端个人资料快照与编辑表单副本，使取消编辑可以无损恢复已保存数据。
    */
   data() {
     return {
       profile: {},
+      profileLoaded: false,
       form: {},
       isEditing: false
     };
@@ -83,7 +82,7 @@ export default {
      * 优先取真实姓名首字符作为头像，回退到登录账号和默认字符。
      */
     avatarText() {
-      return (this.profile.realName || this.profile.username || '用').slice(0, 1);
+      return (this.profile.realName || this.profile.email || '用').slice(0, 1);
     },
     /**
      * 证件号展示时仅保留前后各四位；较短证件号不强行遮盖，空值显示占位符。
@@ -101,9 +100,18 @@ export default {
   async created() {
     const response = await getProfile();
     this.profile = response.data;
+    this.profileLoaded = true;
     this.form = { ...response.data };
   },
   methods: {
+    /**
+     * 邮箱绑定成功后替换资料快照并刷新账号上下文，使其他页面及时取得邮箱。
+     */
+    async handleEmailBound(profile) {
+      this.profile = profile;
+      this.form = { ...profile };
+      await this.$store.dispatch('loadContext');
+    },
     /**
      * 使用最新已保存资料重建表单并进入编辑态，防止沿用上次取消的字段。
      */

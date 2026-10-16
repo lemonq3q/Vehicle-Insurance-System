@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.insurancesystem.monitor.domain.ReminderMergeRequest;
 import com.example.insurancesystem.monitor.mapper.MonitorReminderMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.List;
@@ -28,6 +29,16 @@ class MonitorReminderServiceTest {
         service = new MonitorReminderService(mapper, systemLog);
         /* 所有合并用例都使用已注册的内置类型，字典合法性不是这些阶段覆盖测试的变量。 */
         when(mapper.countEnabledType("SUBSCRIPTION_EXPIRING_NO_AUTO_RENEW")).thenReturn(1);
+    }
+
+    /** 旧版 SaaS 携带本地审计列时，监控端仍能解析业务快照并继续校验必填字段。 */
+    @Test
+    void acceptsLegacyReminderPayloadWithPersistenceFields() throws Exception {
+        String payload = "{\"enterpriseId\":1,\"reminderKey\":\"WALLET_BALANCE_NEGATIVE:1\","
+                + "\"createdAt\":\"2026-10-03 04:00:00\",\"syncPending\":1}";
+        ReminderMergeRequest request = new ObjectMapper().readValue(payload, ReminderMergeRequest.class);
+        assertEquals(1L, request.enterpriseId);
+        assertEquals("WALLET_BALANCE_NEGATIVE:1", request.reminderKey);
     }
 
     /** 同一合并键不存在时创建提醒，不执行升级 SQL。 */

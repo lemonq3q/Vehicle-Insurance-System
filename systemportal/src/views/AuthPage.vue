@@ -9,7 +9,7 @@
       <div class="auth-copy">
         <p>企业门户登录</p>
         <h1>从账号进入你的企业工作台</h1>
-        <span>使用手机号或账号登录，统一管理企业成员、订阅服务与资金记录。</span>
+        <span>使用邮箱登录，统一管理企业成员、订阅服务与资金记录。</span>
       </div>
 
       <div class="auth-card">
@@ -21,8 +21,8 @@
 
         <form v-if="mode === 'login'" @submit.prevent="submitLogin">
           <div class="form-field">
-            <label for="loginUser">登录账号</label>
-            <input id="loginUser" v-model="loginForm.username" class="layui-input" autocomplete="username" />
+            <label for="loginUser">邮箱</label>
+            <input id="loginUser" v-model.trim="loginForm.email" class="layui-input" type="email" maxlength="100" autocomplete="username" />
           </div>
           <div class="form-field">
             <label for="loginPassword">密码</label>
@@ -35,14 +35,14 @@
 
         <form v-else-if="mode === 'register'" @submit.prevent="submitRegister">
           <div class="form-field">
-            <label for="regPhone">手机号</label>
-            <input id="regPhone" v-model.trim="registerForm.phone" class="layui-input" type="tel" inputmode="numeric" maxlength="11" autocomplete="tel" />
+            <label for="regEmail">邮箱</label>
+            <input id="regEmail" v-model.trim="registerForm.email" class="layui-input" type="email" maxlength="100" autocomplete="email" />
           </div>
           <div class="form-field">
-            <label for="regCode">短信验证码</label>
+            <label for="regCode">邮箱验证码</label>
             <div class="verification-row">
-              <input id="regCode" v-model.trim="registerForm.smsCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-              <button type="button" class="code-button" :disabled="isSmsDisabled('register')" @click="sendCode('REGISTER', registerForm.phone, 'register')">
+              <input id="regCode" v-model.trim="registerForm.emailCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+              <button type="button" class="code-button" :disabled="isEmailDisabled('register')" @click="sendCode('REGISTER', registerForm.email, 'register')">
                 {{ codeButtonText('register') }}
               </button>
             </div>
@@ -62,14 +62,14 @@
 
         <form v-else @submit.prevent="submitForgot">
           <div class="form-field">
-            <label for="forgotPhone">手机号</label>
-            <input id="forgotPhone" v-model.trim="forgotForm.phone" class="layui-input" type="tel" inputmode="numeric" maxlength="11" autocomplete="tel" />
+            <label for="forgotEmail">邮箱</label>
+            <input id="forgotEmail" v-model.trim="forgotForm.email" class="layui-input" type="email" maxlength="100" autocomplete="email" />
           </div>
           <div class="form-field">
-            <label for="forgotCode">短信验证码</label>
+            <label for="forgotCode">邮箱验证码</label>
             <div class="verification-row">
-              <input id="forgotCode" v-model.trim="forgotForm.smsCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-              <button type="button" class="code-button" :disabled="isSmsDisabled('forgot')" @click="sendCode('RESET_PASSWORD', forgotForm.phone, 'forgot')">
+              <input id="forgotCode" v-model.trim="forgotForm.emailCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+              <button type="button" class="code-button" :disabled="isEmailDisabled('forgot')" @click="sendCode('RESET_PASSWORD', forgotForm.email, 'forgot')">
                 {{ codeButtonText('forgot') }}
               </button>
             </div>
@@ -89,37 +89,37 @@
 </template>
 
 <script>
-import { forgetPassword, register, sendSmsCode } from '@/api/portal';
+import { forgetPassword, register, sendEmailCode } from '@/api/portal';
 import { notifySuccess, notifyWarning } from '@/utils/notification';
 import PasswordField from '@/components/PasswordField.vue';
 
-const PHONE_PATTERN = /^1[3-9]\d{9}$/;
-const SMS_CODE_PATTERN = /^\d{6}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_CODE_PATTERN = /^\d{6}$/;
 
 export default {
   name: 'AuthPage',
   components: { PasswordField },
   /**
-   * 初始化登录、注册、找回密码三组表单，以及注册和找回场景彼此独立的短信发送与倒计时状态。
+   * 初始化登录、注册、找回密码三组表单，以及注册和找回场景彼此独立的邮箱发送与倒计时状态。
    */
   data() {
     return {
       mode: 'login',
-      loginForm: { username: '', password: '' },
-      registerForm: { phone: '', smsCode: '', realName: '', password: '' },
-      forgotForm: { phone: '', smsCode: '', password: '' },
+      loginForm: { email: '', password: '' },
+      registerForm: { email: '', emailCode: '', realName: '', password: '' },
+      forgotForm: { email: '', emailCode: '', password: '' },
       submitting: { login: false, register: false, forgot: false },
-      smsState: {
+      emailState: {
         register: { sending: false, seconds: 0, timer: null },
         forgot: { sending: false, seconds: 0, timer: null }
       }
     };
   },
   /**
-   * 页面卸载时清理所有短信倒计时，避免离开认证页后定时器继续修改已销毁组件。
+   * 页面卸载时清理所有邮箱倒计时，避免离开认证页后定时器继续修改已销毁组件。
    */
   beforeUnmount() {
-    Object.values(this.smsState).forEach(state => window.clearInterval(state.timer));
+    Object.values(this.emailState).forEach(state => window.clearInterval(state.timer));
   },
   methods: {
     /**
@@ -129,32 +129,32 @@ export default {
       this.mode = mode;
     },
     /**
-     * 判断手机号是否符合大陆 11 位有效号段格式，供发送验证码和提交校验共用。
+     * 判断邮箱是否符合邮箱地址格式，供发送验证码和提交校验共用。
      */
-    isPhoneValid(phone) {
-      return PHONE_PATTERN.test(phone || '');
+    isEmailValid(email) {
+      return String(email || '').trim().length <= 100 && EMAIL_PATTERN.test(String(email || '').trim());
     },
     /**
-     * 短信正在发送或处于冷却倒计时时禁用对应场景按钮。
+     * 邮箱正在发送或处于冷却倒计时时禁用对应场景按钮。
      */
-    isSmsDisabled(key) {
-      const state = this.smsState[key];
+    isEmailDisabled(key) {
+      const state = this.emailState[key];
       return state.sending || state.seconds > 0;
     },
     /**
-     * 根据发送中、倒计时或可发送状态生成短信按钮文案。
+     * 根据发送中、倒计时或可发送状态生成邮箱按钮文案。
      */
     codeButtonText(key) {
-      const state = this.smsState[key];
+      const state = this.emailState[key];
       if (state.sending) return '发送中...';
       if (state.seconds > 0) return `${state.seconds}s 后重发`;
-      return '获取验证码';
+      return '获取邮箱验证码';
     },
     /**
-     * 为指定短信场景启动后端建议时长的重发倒计时，启动前先清理旧计时器避免重复递减。
+     * 为指定邮箱场景启动后端建议时长的重发倒计时，启动前先清理旧计时器避免重复递减。
      */
     startCountdown(key, seconds) {
-      const state = this.smsState[key];
+      const state = this.emailState[key];
       window.clearInterval(state.timer);
       state.seconds = Number(seconds) || 60;
       state.timer = window.setInterval(() => {
@@ -166,21 +166,22 @@ export default {
       }, 1000);
     },
     /**
-     * 校验手机号后按注册或找回场景申请短信验证码；成功才启动冷却倒计时，失败由请求层统一提示。
+     * 校验邮箱后按注册或找回场景申请邮箱验证码；成功才启动冷却倒计时，失败由请求层统一提示。
      */
-    async sendCode(scene, phone, key) {
-      if (!phone) {
-        notifyWarning('请输入手机号');
+    async sendCode(scene, email, key) {
+      if (!email) {
+        notifyWarning('请输入邮箱');
         return;
       }
-      if (!this.isPhoneValid(phone)) {
-        notifyWarning('请输入正确的 11 位手机号');
+      if (!this.isEmailValid(email)) {
+        notifyWarning('请输入有效的邮箱地址');
         return;
       }
-      const state = this.smsState[key];
+      const state = this.emailState[key];
+      if (state.sending || state.seconds > 0) return;
       state.sending = true;
       try {
-        const response = await sendSmsCode({ phone, scene });
+        const response = await sendEmailCode({ email, scene });
         notifySuccess(response.msg || '验证码已发送');
         this.startCountdown(key, response.data.retryAfterSeconds);
       } catch {
@@ -190,24 +191,24 @@ export default {
       }
     },
     /**
-     * 按短信业务统一校验手机号、六位验证码和至少八位密码；注册场景额外要求真实姓名。
+     * 按邮箱业务统一校验邮箱、六位验证码和至少八位密码；注册场景额外要求真实姓名。
      * 返回首个错误文案，空串表示可以提交。
      */
-    validateSmsForm(form, requireName = false) {
-      if (!form.phone) return '请输入手机号';
-      if (!this.isPhoneValid(form.phone)) return '请输入正确的 11 位手机号';
-      if (!form.smsCode) return '请输入短信验证码';
-      if (!SMS_CODE_PATTERN.test(form.smsCode || '')) return '请输入 6 位短信验证码';
+    validateEmailForm(form, requireName = false) {
+      if (!form.email) return '请输入邮箱';
+      if (!this.isEmailValid(form.email)) return '请输入有效的邮箱地址';
+      if (!form.emailCode) return '请输入邮箱验证码';
+      if (!EMAIL_CODE_PATTERN.test(form.emailCode || '')) return '请输入 6 位邮箱验证码';
       if (requireName && !form.realName) return '请输入姓名';
       if (!form.password) return requireName ? '请输入密码' : '请输入新密码';
-      if (form.password.length < 8) return '密码长度不能少于 8 位';
+      if (form.password.length < 8 || form.password.length > 64 || new TextEncoder().encode(form.password).length > 72) return '密码需为 8 至 64 位，且编码长度不超过 72 字节';
       return '';
     },
     /**
-     * 校验门户登录账号和密码是否已填写，具体凭据正确性由后端认证。
+     * 校验门户邮箱和密码是否已填写，具体凭据正确性由后端认证。
      */
     validateLoginForm() {
-      if (!String(this.loginForm.username || '').trim()) return '请输入登录账号';
+      if (!this.isEmailValid(this.loginForm.email)) return '请输入有效的邮箱地址';
       if (!this.loginForm.password) return '请输入密码';
       return '';
     },
@@ -231,10 +232,10 @@ export default {
       }
     },
     /**
-     * 提交短信验证后的注册资料，成功时切回登录面板并自动带入新手机号。
+     * 提交邮箱验证后的注册资料，成功时切回登录面板并自动带入新邮箱。
      */
     async submitRegister() {
-      const validationMessage = this.validateSmsForm(this.registerForm, true);
+      const validationMessage = this.validateEmailForm(this.registerForm, true);
       if (validationMessage) {
         notifyWarning(validationMessage);
         return;
@@ -244,7 +245,9 @@ export default {
         const response = await register(this.registerForm);
         notifySuccess(response.msg || '注册成功');
         this.mode = 'login';
-        this.loginForm.username = this.registerForm.phone;
+        this.loginForm.email = this.registerForm.email;
+        this.registerForm.password = '';
+        this.registerForm.emailCode = '';
       } catch {
         // Request errors are displayed by the Axios interceptor.
       } finally {
@@ -252,10 +255,10 @@ export default {
       }
     },
     /**
-     * 使用短信验证码重置门户密码，成功后返回登录面板并回填手机号。
+     * 使用邮箱验证码重置门户密码，成功后返回登录面板并回填邮箱。
      */
     async submitForgot() {
-      const validationMessage = this.validateSmsForm(this.forgotForm);
+      const validationMessage = this.validateEmailForm(this.forgotForm);
       if (validationMessage) {
         notifyWarning(validationMessage);
         return;
@@ -265,7 +268,9 @@ export default {
         const response = await forgetPassword(this.forgotForm);
         notifySuccess(response.msg || '密码已重置');
         this.mode = 'login';
-        this.loginForm.username = this.forgotForm.phone;
+        this.loginForm.email = this.forgotForm.email;
+        this.forgotForm.password = '';
+        this.forgotForm.emailCode = '';
       } catch {
         // Request errors are displayed by the Axios interceptor.
       } finally {

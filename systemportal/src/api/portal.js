@@ -1,9 +1,7 @@
 import request from '@/api/request';
 
 /**
-
  * 使用门户请求实例发送带查询参数的 GET 请求，并直接返回已规范化的业务响应。
-
  */
 const get = (url, params) => request.get(url, { params });
 /**
@@ -20,15 +18,13 @@ const put = (url, data) => request.put(url, data);
 const del = (url, data) => request.delete(url, { data });
 
 /**
-
  * 使用账号密码或验证码登录门户并获取 token 与账号上下文。
-
  */
 export const login = data => post('/portal/auth/login', data);
 /**
- * 为注册或找回密码手机号发送一次性短信验证码。
+ * 为注册或找回密码邮箱发送真实的一次性验证码。
  */
-export const sendSmsCode = data => post('/portal/auth/sms-code', data);
+export const sendEmailCode = data => post('/portal/auth/email-code', data);
 /**
  * 提交门户账号注册资料并建立用户。
  */
@@ -55,9 +51,7 @@ export const createInsuranceAuthorization = () => post('/portal/sso/authorize', 
 export const exchangePortalSsoCode = code => request.post('/portal/sso/exchange', { code }, { silentAuthFailure: true });
 
 /**
-
  * 查询当前企业及其订阅、钱包等门户概览资料。
-
  */
 export const getEnterpriseCurrent = () => get('/portal/enterprise/current');
 /**
@@ -119,9 +113,7 @@ export const getMemberChangeLogs = params => get('/portal/enterprise/member-chan
 export const exitEnterprise = () => post('/portal/enterprise/members/exit', {});
 
 /**
-
  * 查询当前企业钱包、订阅和成员占用等财务概览。
-
  */
 export const getFinanceOverview = () => get('/portal/finance/overview');
 /**
@@ -134,7 +126,9 @@ export const getPlans = () => get('/portal/finance/plans');
 export const getMarketingPlans = () => request.get('/portal/finance/plans', {
   skipErrorNotification: true
 });
-/** 官网游客提交联系资料；来源由浏览器标准头和服务端白名单验证。 */
+/**
+ * 官网游客提交联系资料；来源由浏览器标准头和服务端白名单验证。
+ */
 export const createVisitorLead = data => request.post('/portal/visitor-leads', data, {
   skipErrorNotification: true
 });
@@ -184,12 +178,19 @@ export const getSubscriptionOrder = id => get(`/portal/finance/subscription-orde
 export const getWalletTransactions = params => get('/portal/finance/wallet-transactions', params);
 
 /**
-
  * 查询当前门户用户的个人资料。
-
  */
 export const getProfile = () => get('/portal/user/profile');
 /**
  * 更新当前用户允许修改的个人资料字段。
  */
 export const updateProfile = data => put('/portal/user/profile', data);
+
+/**
+ * 为当前已登录且未绑定邮箱的账号发送绑定验证码，服务端从会话确定账号归属。
+ */
+export const sendBindingEmailCode = data => post('/portal/user/profile/email-code', data);
+/**
+ * 验证邮箱所有权并为当前账号设置邮箱及登录密码，不允许覆盖已有绑定。
+ */
+export const bindEmail = data => post('/portal/user/profile/bind-email', data);

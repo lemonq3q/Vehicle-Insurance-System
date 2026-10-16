@@ -59,7 +59,7 @@
           <div class="avatar">{{ initials }}</div>
           <div>
             <strong>{{ user?.realName || '未登录用户' }}</strong>
-            <p>{{ user?.phone }}</p>
+            <p>{{ user?.email || '未绑定邮箱' }}</p>
           </div>
         </div>
         <ul class="info-list">

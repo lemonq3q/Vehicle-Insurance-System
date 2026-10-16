@@ -42,11 +42,11 @@ export const visitorLeads = [
 ];
 
 export const members = [
-  { id: 101, enterpriseId: 1, realName: '陈晓峰', username: 'chenxf', phone: '138****6821', roleName: '拥有者', status: 1, joinedAt: '2026-01-18', lastLoginAt: '2026-07-25 18:16' },
-  { id: 102, enterpriseId: 1, realName: '周雨婷', username: 'zhouyt', phone: '186****2376', roleName: '管理员', status: 1, joinedAt: '2026-02-03', lastLoginAt: '2026-07-25 17:48' },
-  { id: 103, enterpriseId: 1, realName: '孙浩然', username: 'sunhr', phone: '137****8462', roleName: '出单员', status: 1, joinedAt: '2026-03-12', lastLoginAt: '2026-07-25 16:32' },
-  { id: 104, enterpriseId: 1, realName: '吴思远', username: 'wusy', phone: '159****1278', roleName: '出单员', status: 1, joinedAt: '2026-04-08', lastLoginAt: '2026-07-24 17:46' },
-  { id: 105, enterpriseId: 1, realName: '高静怡', username: 'gaojy', phone: '188****5506', roleName: '出单员', status: 0, joinedAt: '2026-04-16', lastLoginAt: '2026-07-09 14:18' }
+  { id: 101, enterpriseId: 1, realName: '陈晓峰', username: 'chenxf', email: 'chenxf@example.com', roleName: '拥有者', status: 1, joinedAt: '2026-01-18', lastLoginAt: '2026-07-25 18:16' },
+  { id: 102, enterpriseId: 1, realName: '周雨婷', username: 'zhouyt', email: 'zhouyt@example.com', roleName: '管理员', status: 1, joinedAt: '2026-02-03', lastLoginAt: '2026-07-25 17:48' },
+  { id: 103, enterpriseId: 1, realName: '孙浩然', username: 'sunhr', email: 'sunhr@example.com', roleName: '出单员', status: 1, joinedAt: '2026-03-12', lastLoginAt: '2026-07-25 16:32' },
+  { id: 104, enterpriseId: 1, realName: '吴思远', username: 'wusy', email: 'wusy@example.com', roleName: '出单员', status: 1, joinedAt: '2026-04-08', lastLoginAt: '2026-07-24 17:46' },
+  { id: 105, enterpriseId: 1, realName: '高静怡', username: 'gaojy', email: 'gaojy@example.com', roleName: '出单员', status: 0, joinedAt: '2026-04-16', lastLoginAt: '2026-07-09 14:18' }
 ];
 
 /**

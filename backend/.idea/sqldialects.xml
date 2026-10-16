@@ -6,6 +6,8 @@
     <file url="file://$PROJECT_DIR$/db/migration/V20260926_01_add_stripe_recharge_lifecycle.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/db/migration/V20260928_02_add_recharge_refund_summary.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/db/migration/V20260928_03_add_reminder_lifecycle.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/db/migration/V20261011_01_unique_active_user_email.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/db/migration/deploy_20261011_email_accounts_incremental.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/../docs/db/insurance_saas_full_20260828.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/../docs/db/insurance_saas_saas_only.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/../outputs/database/insurance_saas_full_20260828_202043_production.sql" dialect="MySQL" />

@@ -12,6 +12,10 @@ import org.apache.ibatis.annotations.*;
  */
 @Mapper
 public interface StripePaymentMapper {
+  /** 从当前付款人的共享账号读取邮箱，禁止由客户端指定其他用户的邮箱。 */
+  @Select("SELECT email FROM tenant_user WHERE id=#{userId} AND deleted=0")
+  String findUserEmail(Long userId);
+
   @Select("SELECT * FROM saas_recharge_order WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0")
   Map<String, Object> findRechargeOrder(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
 

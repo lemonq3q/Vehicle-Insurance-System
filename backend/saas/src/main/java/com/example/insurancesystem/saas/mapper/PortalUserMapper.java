@@ -10,42 +10,25 @@ import org.apache.ibatis.annotations.*;
 public interface PortalUserMapper {
 
   @Select(
-      "SELECT * FROM tenant_user WHERE deleted=0 AND (username=#{login} OR phone=#{login}) LIMIT 1")
+      "SELECT * FROM tenant_user WHERE deleted=0 AND LOWER(TRIM(email))=#{login} AND (SELECT COUNT(*) FROM tenant_user u WHERE u.deleted=0 AND LOWER(TRIM(u.email))=#{login})=1 LIMIT 1")
   User findForLogin(String login);
 
   @Select("SELECT * FROM tenant_user WHERE id=#{id} AND deleted=0 LIMIT 1")
   User findById(Long id);
 
   @Select(
-      "SELECT id,username,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at "
+      "SELECT id,username,email,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at "
           + "FROM tenant_user WHERE id=#{id} AND deleted=0")
   Map<String, Object> findProfile(Long id);
 
-  @Select("SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND phone=#{phone}")
-  int countByPhone(String phone);
-
   @Select("SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND phone=#{phone} AND id<>#{id}")
   int countPhoneExcept(@Param("phone") String phone, @Param("id") Long id);
-
-  @Select(
-      "SELECT COUNT(1) FROM tenant_user WHERE deleted=0 AND username=#{username} AND id<>#{id}")
-  int countUsernameExcept(@Param("username") String username, @Param("id") Long id);
-
-  @Insert(
-      "INSERT INTO tenant_user(username,phone,password,real_name,status,created_at,updated_at,deleted) "
-          + "VALUES(#{phone},#{phone},#{password},#{realName},1,NOW(),NOW(),0)")
-  @Options(useGeneratedKeys = true, keyProperty = "id")
-  int insertUser(Map<String, Object> user);
-
-  @Update(
-      "UPDATE tenant_user SET password=#{password},updated_at=NOW() WHERE phone=#{phone} AND deleted=0")
-  int updatePassword(@Param("phone") String phone, @Param("password") String password);
 
   @Update("UPDATE tenant_user SET last_login_time=#{time},updated_at=NOW() WHERE id=#{id}")
   int updateLastLogin(@Param("id") Long id, @Param("time") LocalDateTime time);
 
   @Update(
-      "UPDATE tenant_user SET username=#{username},phone=#{phone},real_name=#{realName},id_num=#{idNum},updated_at=NOW(),updated_by=#{id} "
+      "UPDATE tenant_user SET phone=#{phone},real_name=#{realName},id_num=#{idNum},updated_at=NOW(),updated_by=#{id} "
           + "WHERE id=#{id} AND deleted=0")
   int updateProfile(Map<String, Object> profile);
 

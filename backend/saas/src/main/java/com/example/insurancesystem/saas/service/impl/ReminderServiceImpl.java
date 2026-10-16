@@ -156,7 +156,15 @@ public class ReminderServiceImpl implements ReminderService {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("提醒业务快照解析失败", exception);
         }
-        Map<String, Object> request = new LinkedHashMap<>(reminder);
+        /*
+         * 跨服务接口只发送监控端定义的业务快照字段。数据库行还包含 createdAt、updatedAt、
+         * syncPending 等本地持久化状态，直接转发会使严格的 JSON 接收端在合并前拒绝请求。
+         */
+        Map<String, Object> request = new LinkedHashMap<>();
+        for (String field : List.of("enterpriseId", "reminderType", "reminderKey", "reminderStage",
+                "stageLevel", "severity", "businessDataJson", "isActive", "lifecycleVersion", "invalidatedAt")) {
+            request.put(field, reminder.get(field));
+        }
         request.put("enterpriseName", string(source, "enterpriseName"));
         request.put("title", "【" + severityName(string(reminder, "severity")) + "】" + string(source, "enterpriseName") + "：" + string(reminder, "title"));
         request.put("content", "企业“" + string(source, "enterpriseName") + "”（" + string(source, "enterpriseCode") + "）" + string(reminder, "content"));

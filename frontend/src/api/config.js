@@ -8,9 +8,8 @@ const REFRESHED_TOKEN_HEADER = 'new-token';
 
 const notInterceptUrls = [
   '/auth/login',
-  '/auth/register',
-  '/auth/code',
-  '/auth/forget',
+  '/auth/email-code',
+  '/auth/forget-password',
   '/auth/sso/exchange'
 ];
 
@@ -20,7 +19,7 @@ axios.defaults.timeout = 60000; // 全局60秒超时
 
 /**
  * 在普通业务请求发出前补充车险系统登录令牌，并延长本地令牌的有效时间。
- * 登录、注册、验证码和 SSO 换票接口尚未建立车险会话，因此必须跳过鉴权；Excel 请求则额外打标，
+ * 登录、找回密码、验证码和 SSO 换票接口尚未建立车险会话，因此必须跳过鉴权；Excel 请求则额外打标，
  * 让响应拦截器能够把二进制响应作为文件下载，而不是按统一 JSON 结果处理。
  */
 axios.interceptors.request.use(function (config) {

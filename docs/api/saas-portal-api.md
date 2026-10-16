@@ -66,151 +66,26 @@
 | 403 | 无操作权限 | 当前企业角色不允许执行该动作 |
 | 404 | 数据不存在 | 邀请码、成员、套餐等不存在 |
 
-## 1. 登录注册
+## 1. 邮箱认证
 
-### 1.1 登录
+SaaS 门户与车险系统共用 `tenant_user` 邮箱身份。邮箱规范化为去首尾空白并转小写；保留原用户 ID 和 SSO 关系，不再以手机号或内部 username 登录。微信登录后续接入。
 
-`POST /portal/auth/login`
-
-作用：企业用户登录门户，返回 token、当前用户、可选企业和当前企业。
-
-Body：
-
-| 字段 | 类型 | 必填 | 说明 | 示例 |
-| --- | --- | --- | --- | --- |
-| username | string | 是 | 登录账号，可为手机号 | 13800000001 |
-| password | string | 是 | 密码，至少 8 位 | Portal@123 |
-
-Response data：
-
-| 字段 | 类型 | 说明 |
+| 方法和路径 | 请求 JSON body | 返回 data |
 | --- | --- | --- |
-| token | string | 登录 token |
-| user | TenantUser | 当前用户 |
-| enterprises | TenantEnterprise[] | 可进入的企业 |
-| currentEnterpriseId | number \| null | 当前企业 ID |
-| currentEnterprise | TenantEnterprise \| null | 当前企业完整信息 |
-| currentMember | TenantMember \| null | 当前用户在当前企业中的成员关系与角色 |
+| POST `/portal/auth/login` | `email:string`、`password:string`（必填） | token、user、enterprises、currentEnterpriseId、currentEnterprise、currentMember |
+| POST `/portal/auth/email-code` | `email:string`、`scene:REGISTER或RESET_PASSWORD`（必填） | expiresInSeconds:300、retryAfterSeconds:60 |
+| POST `/portal/auth/register` | `email:string`、`emailCode:string`、`realName:string`、`password:string`（必填） | TenantUser，不含密码 |
+| POST `/portal/auth/forget-password` | `email:string`、`emailCode:string`、`password:string`（必填） | true |
 
-Mock 示例：
+请求均匿名；验证码通过真实 QQ/Gmail 发信接口发送，禁止返回固定 mock 验证码。有效期五分钟，重发间隔一分钟，场景隔离且只能消费一次。新密码为 8–64 字符且 UTF-8 不超过 72 字节，登录兼容历史密码。注册只创建共享个人账号，用户需在门户创建或加入企业后才能使用车险端。
 
-```json
-{
-  "code": 200,
-  "msg": "登录成功",
-  "data": {
-    "token": "mock-portal-token",
-    "user": { "id": 10001, "username": "linxf", "phone": "13800000001", "realName": "林晓峰" },
-    "enterprises": [{ "id": 20001, "name": "杭州小马车险服务有限公司", "code": "ENT-HZ-202607" }],
-    "currentEnterpriseId": 20001,
-    "currentEnterprise": { "id": 20001, "name": "杭州小马车险服务有限公司", "code": "ENT-HZ-202607" },
-    "currentMember": { "id": 30001, "enterpriseId": 20001, "roleCode": "OWNER", "status": 1 }
-  }
-}
-```
+完整字段约束、响应外壳、错误码、离线 mock 示例及两端路径对照，见 [共享邮箱账号接口](email-account-api.md)。常见错误：400 参数或验证码不正确，403 账号停用，404 邮箱不存在，409 邮箱已占用，429 重发或尝试次数超限，502 真实邮件服务失败。
 
-错误情况：
-
-| code | msg | 触发条件 |
-| --- | --- | --- |
-| 400 | 用户名或密码错误 | 登录账号不存在或密码校验失败 |
-| 403 | 账号未启用 | 用户账号状态为停用 |
-
-### 1.2 发送短信验证码
-
-`POST /portal/auth/sms-code`
-
-作用：为注册或找回密码发送手机号验证码。同一手机号再次发送前应等待 `retryAfterSeconds`。
-
-Body：
-
-| 字段 | 类型 | 必填 | 说明 | 示例 |
-| --- | --- | --- | --- | --- |
-| phone | string | 是 | 11 位手机号 | 13800000005 |
-| scene | string | 是 | `REGISTER` 注册，`RESET_PASSWORD` 找回密码 | REGISTER |
-
-Response data：
-
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| expiresInSeconds | number | 验证码有效秒数 |
-| retryAfterSeconds | number | 再次发送前等待秒数 |
-
-Mock 示例：
+登录响应示例：
 
 ```json
-{
-  "code": 200,
-  "msg": "验证码已发送，mock 验证码为 123456",
-  "data": {
-    "expiresInSeconds": 300,
-    "retryAfterSeconds": 60
-  }
-}
+{"code":200,"msg":"登录成功","data":{"token":"example-token","user":{"id":10001,"username":"legacy-account","email":"user@example.com","phone":null,"realName":"李明"},"enterprises":[],"currentEnterpriseId":null,"currentEnterprise":null,"currentMember":null}}
 ```
-
-常见错误：手机号格式错误返回 `400`；验证码场景不支持返回 `400`；发送过于频繁时后端应返回 `429`。
-
-### 1.3 注册
-
-`POST /portal/auth/register`
-
-作用：注册企业用户账号，默认不创建企业身份。
-
-Body：
-
-| 字段 | 类型 | 必填 | 说明 | 示例 |
-| --- | --- | --- | --- | --- |
-| phone | string | 是 | 手机号 | 13800000005 |
-| smsCode | string | 是 | 6 位短信验证码 | 123456 |
-| realName | string | 是 | 姓名 | 李明 |
-| password | string | 是 | 密码 | password123 |
-
-Response data：`TenantUser`
-
-Mock 示例：
-
-```json
-{
-  "code": 200,
-  "msg": "注册成功",
-  "data": {
-    "id": 10099,
-    "username": "13800000005",
-    "phone": "13800000005",
-    "realName": "李明",
-    "status": 1
-  }
-}
-```
-
-常见错误：手机号格式错误、验证码错误或失效、手机号已注册时返回 `400`。
-
-### 1.4 找回密码
-
-`POST /portal/auth/forget-password`
-
-Body：
-
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| phone | string | 是 | 绑定手机号 |
-| smsCode | string | 是 | 6 位短信验证码 |
-| password | string | 是 | 新密码 |
-
-Response data：`true`
-
-Mock 示例：
-
-```json
-{
-  "code": 200,
-  "msg": "密码已重置",
-  "data": true
-}
-```
-
-常见错误：手机号不存在、验证码错误或失效、新密码不符合安全要求时返回 `400`。
 
 ## 2. 账户上下文
 
@@ -356,7 +231,7 @@ Query：
 | --- | --- | --- | --- |
 | pageNum | number | 否 | 页码 |
 | pageSize | number | 否 | 每页条数 |
-| keyword | string | 否 | 姓名、手机号、账号模糊搜索 |
+| keyword | string | 否 | 姓名或邮箱模糊搜索 |
 | roleCode | string | 否 | OWNER、ADMIN、ISSUER |
 | status | number | 否 | 0 停用，1 启用，2 待审核；已退出成员不再出现在成员关系表中 |
 
@@ -945,6 +820,8 @@ Response data：分页 `SaasWalletTransaction`
 
 Response data：`TenantUser`
 
+绑定接口为 `POST /portal/user/profile/email-code` 与 `POST /portal/user/profile/bind-email`，要求登录且当前账号无邮箱，完整契约见 [共享邮箱账号接口](email-account-api.md)。
+
 ### 6.2 更新个人资料
 
 `PUT /portal/user/profile`
@@ -953,8 +830,7 @@ Body：
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| username | string | 是 | 登录账号 |
-| phone | string | 是 | 手机号 |
+| phone | string | 否 | 联系电话，非登录身份；留空可清除 |
 | realName | string | 是 | 姓名 |
 | idNum | string | 否 | 证件号，后端按需加密或脱敏 |
 
@@ -967,8 +843,9 @@ Response data：`TenantUser`
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | id | number | 用户 ID |
-| username | string | 登录账号 |
-| phone | string | 手机号 |
+| username | string | 内部历史账号标识 |
+| email | string \| null | 经过验证的登录邮箱，未绑定时为空 |
+| phone | string \| null | 可选联系电话 |
 | realName | string | 姓名 |
 | idNum | string | 证件号 |
 | avatarFileId | number | 头像文件 ID |
@@ -996,7 +873,7 @@ Response data：`TenantUser`
 | enterpriseId | number | 企业 ID |
 | userId | number | 用户 ID |
 | realName | string | 成员姓名 |
-| phone | string | 手机号 |
+| email | string \| null | 成员登录邮箱，未绑定时为 null |
 | roleCode | string | OWNER、ADMIN、ISSUER |
 | status | number | 1 启用，0 停用，2 待审核；退出后成员关系被软删除 |
 | joinedByInviteId | number | 来源邀请码 |

@@ -226,7 +226,8 @@ export default {
       if (result.type === 'error') throw new Error(result.error.message || 'Stripe 结账信息加载失败');
       this.checkoutActions = result.actions;
       const session = result.actions.getSession();
-      this.checkoutEmail = session.email || '';
+      /* 已有会话付款邮箱优先；未填写时使用当前账号绑定邮箱，空账号仍允许人工输入。 */
+      this.checkoutEmail = session.email || this.$store.state.user?.email || '';
       this.checkoutCanConfirm = session.canConfirm;
       this.stripeCheckoutSdk.on('change', updated => { this.checkoutCanConfirm = updated.canConfirm; });
       this.stripePaymentElement = this.stripeCheckoutSdk.createPaymentElement({

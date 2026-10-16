@@ -11,7 +11,8 @@ import com.example.insurancesystem.mapper.MenuMapper;
 import com.example.insurancesystem.mapper.UserMapper;
 import com.example.insurancesystem.security.SingleLoginSessionManager;
 import com.example.insurancesystem.handler.exception.BusinessException;
-import com.example.insurancesystem.utils.EmailUtil;
+import com.example.insurancesystem.utils.email.EmailAccountService;
+import com.example.insurancesystem.utils.email.EmailVerificationService;
 import com.example.insurancesystem.utils.JwtUtil;
 import com.example.insurancesystem.utils.RedisCache;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +26,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 @Service
 /**
@@ -56,19 +55,22 @@ public class LoginServiceImpl implements LoginService {
     @Autowired
     private MenuMapper menuMapper;
 
+    @Autowired
+    private EmailAccountService emailAccounts;
+
     @Override
     /**
      * 使用 Spring Security 校验账号密码，并要求用户已加入企业后才允许进入车险业务系统。
      */
     public ResponseResult login(User user) {
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(EmailVerificationService.normalizeEmail(user.getEmail()), user.getPassword());
         Authentication authenticate;
         try {
             authenticate = authenticationManager.authenticate(authenticationToken);
         } catch (DisabledException exception) {
             throw new BusinessException(403, "账号未启用");
         } catch (BadCredentialsException exception) {
-            throw new BusinessException(400, "用户名或密码错误");
+            throw new BusinessException(400, "邮箱或密码错误");
         }
         if(authenticate == null) {
             throw new RuntimeException("Authentication failed");
@@ -168,51 +170,14 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
-    /**
-     * 向已登记邮箱发送六位找回密码验证码。
-     * 同一邮箱一分钟内禁止重复发送，验证码及发送时间在 Redis 中保留五分钟。
-     */
+    /** 为车险找回密码发送真实邮件验证码，使用共享服务的场景、冷却与有效期规则。 */
     public ResponseResult getEmailCode(String email) {
-        String storeCode = redisCache.getCacheObject("email:" + email);
-        if (storeCode != null) {
-            Long storeTime = Long.parseLong(storeCode.split(":")[1]);
-            if (System.currentTimeMillis() - storeTime < 60 * 1000) {
-                return new ResponseResult(400, "请一分钟后再尝试发送");
-            }
-        }
-        ResponseResult<User> result = userService.selectByEmail(email);
-        if (result.getCode() != 200) {
-            return result;
-        }
-        Random random = new Random();
-        StringBuilder codeSb = new StringBuilder();
-        for (int i = 0; i < 6; i++) {
-            codeSb.append(random.nextInt(10));
-        }
-        String code = codeSb.toString();
-        if(!EmailUtil.sendEmail(email, "验证码", "您的验证码是" + code + "，请勿泄露此验证码。")){
-            return new ResponseResult(400, "发送失败，请检查邮箱是否正确");
-        }
-        redisCache.setCacheObject("email:" + email, code + ":" + System.currentTimeMillis(), 5, TimeUnit.MINUTES);
-        return new ResponseResult(200, "发送成功");
+        return new ResponseResult(200, "验证码已发送", emailAccounts.sendCode(Map.of("email", email, "scene", "RESET_PASSWORD")));
     }
 
     @Override
-    /**
-     * 校验邮箱验证码后更新密码，并在验证成功时立即删除验证码，防止重复使用。
-     */
+    /** 验证当前应用的重置验证码后修改共享密码，禁止从注册或绑定场景复用验证码。 */
     public ResponseResult forgetPassword(String email, String code, String password) {
-        String realCode = redisCache.getCacheObject("email:" + email);
-        if(realCode == null){
-            return new ResponseResult(400, "验证码错误");
-        }
-        realCode = realCode.split(":")[0];
-        if (!realCode.equals(code)) {
-            return new ResponseResult(400, "验证码错误");
-        }
-        else{
-            redisCache.deleteObject("email:" + email);
-        }
-        return userService.updatePasswordByEmail(email, password);
+        return new ResponseResult(200, "密码已重置", emailAccounts.resetPassword(Map.of("email", email, "emailCode", code, "password", password)));
     }
 }

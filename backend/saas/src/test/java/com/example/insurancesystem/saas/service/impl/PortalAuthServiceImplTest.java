@@ -1,7 +1,7 @@
 package com.example.insurancesystem.saas.service.impl;
 
 import com.example.insurancesystem.handler.exception.BusinessException;
-import com.example.insurancesystem.saas.integration.sms.SmsVerificationService;
+import com.example.insurancesystem.utils.email.EmailAccountService;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
 import com.example.insurancesystem.saas.mapper.PortalUserMapper;
 import com.example.insurancesystem.security.SingleLoginSessionManager;
@@ -28,7 +28,7 @@ class PortalAuthServiceImplTest {
           mock(PortalUserMapper.class),
           mock(EnterpriseMapper.class),
           mock(PasswordEncoder.class),
-          mock(SmsVerificationService.class));
+          mock(EmailAccountService.class));
 
   @Test
   void mapsInvalidCredentialsToBusinessWarning() {
@@ -38,10 +38,10 @@ class PortalAuthServiceImplTest {
     BusinessException exception =
         assertThrows(
             BusinessException.class,
-            () -> service.login(Map.of("username", "unknown", "password", "wrong")));
+            () -> service.login(Map.of("email", "unknown@example.com", "password", "wrong")));
 
     assertEquals(400, exception.getCode());
-    assertEquals("用户名或密码错误", exception.getMsg());
+    assertEquals("邮箱或密码错误", exception.getMsg());
   }
 
   @Test
@@ -52,7 +52,7 @@ class PortalAuthServiceImplTest {
     BusinessException exception =
         assertThrows(
             BusinessException.class,
-            () -> service.login(Map.of("username", "disabled", "password", "password")));
+            () -> service.login(Map.of("email", "disabled@example.com", "password", "password")));
 
     assertEquals(403, exception.getCode());
     assertEquals("账号未启用", exception.getMsg());

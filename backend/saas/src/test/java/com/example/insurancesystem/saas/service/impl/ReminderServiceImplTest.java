@@ -63,6 +63,26 @@ class ReminderServiceImplTest {
     }
 
     /**
+     * 持久化行可能带有只属于 SaaS 的审计和同步列，跨服务合并请求只能包含监控接口接收的字段。
+     */
+    @Test
+    void sendsOnlyReminderMergeContractFields() {
+        Map<String, Object> row = stored("AUTO_RENEW_PLAN_UNAVAILABLE", "AUTO_RENEW_PLAN_UNAVAILABLE:subscription-8");
+        row.put("createdAt", LocalDateTime.now());
+        row.put("updatedAt", LocalDateTime.now());
+        row.put("syncPending", 1);
+        when(mapper.findPendingSyncBatch(0, 100)).thenReturn(List.of(row));
+
+        service.generateDailyReminders();
+
+        verify(monitor).merge(argThat(request -> request.containsKey("reminderKey")
+                && request.containsKey("triggeredAt")
+                && !request.containsKey("createdAt")
+                && !request.containsKey("updatedAt")
+                && !request.containsKey("syncPending")));
+    }
+
+    /**
      * 套餐恢复上架不删除历史，周期复核发现稳定键不再满足条件后按版本失效。
      */
     @Test

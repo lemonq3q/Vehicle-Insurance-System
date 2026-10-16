@@ -14,7 +14,7 @@
       <div class="query-toolbar">
         <h2>企业成员</h2>
         <form class="query-filters" @submit.prevent="search">
-          <input v-model.trim="query.keyword" class="layui-input" placeholder="姓名、账号或手机" aria-label="姓名、账号或手机" />
+          <input v-model.trim="query.keyword" class="layui-input" placeholder="姓名或邮箱" aria-label="姓名或邮箱" />
           <select v-model="query.roleName" class="layui-select" aria-label="企业角色">
             <option value="">全部角色</option>
             <option value="拥有者">企业拥有者</option>
@@ -40,8 +40,7 @@
             <thead>
               <tr>
                 <th>成员</th>
-                <th>登录账号</th>
-                <th>手机号码</th>
+                <th>邮箱</th>
                 <th>企业角色</th>
                 <th>状态</th>
                 <th>加入时间</th>
@@ -53,8 +52,7 @@
                 <td>
                   <strong>{{ item.realName }}</strong>
                 </td>
-                <td>{{ item.username }}</td>
-                <td>{{ item.phone }}</td>
+                <td>{{ item.email || '未绑定' }}</td>
                 <td>
                   <span :class="['tag', roleTagClass(item.roleName)]">{{ roleDisplayName(item.roleName) }}</span>
                 </td>

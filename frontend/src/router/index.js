@@ -8,7 +8,7 @@ import { createRouter, createWebHistory } from 'vue-router';
  */
 const HomePage = () => import('@/page/HomePage.vue');
 /**
- * 加载车险账号登录、注册和密码找回页面。
+ * 加载车险账号登录和密码找回页面；共享账号注册由 SaaS 门户提供。
  */
 const LoginPage = () => import('@/page/LoginPage.vue');
 /**

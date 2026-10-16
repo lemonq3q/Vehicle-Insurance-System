@@ -11,7 +11,7 @@
       <div class="table-toolbar">
         <h2>企业成员</h2>
         <div class="filters">
-          <input v-model="query.keyword" class="layui-input" placeholder="姓名、手机号或账号" @keyup.enter="searchMembers" />
+          <input v-model="query.keyword" class="layui-input" placeholder="姓名或邮箱" @keyup.enter="searchMembers" />
           <select v-model="query.roleCode" class="layui-select">
             <option value="">全部角色</option>
             <option value="OWNER">企业拥有者</option>
@@ -27,8 +27,7 @@
           <thead>
             <tr>
               <th>姓名</th>
-              <th>账号</th>
-              <th>手机号</th>
+              <th>邮箱</th>
               <th>角色</th>
               <th>状态</th>
               <th>加入时间</th>
@@ -39,8 +38,7 @@
           <tbody>
             <tr v-for="item in members" :key="item.id">
               <td>{{ item.realName }}</td>
-              <td>{{ item.username }}</td>
-              <td>{{ item.phone }}</td>
+              <td>{{ item.email || '未绑定' }}</td>
               <td><span class="portal-tag" :class="{ blue: item.roleCode === 'OWNER', gray: item.roleCode === 'ISSUER' }">{{ roleName(item.roleCode) }}</span></td>
               <td><span class="portal-tag" :class="{ gray: item.status === 0, warn: item.status === 2 }">{{ memberStatusName(item.status) }}</span></td>
               <td>{{ item.joinedAt }}</td>

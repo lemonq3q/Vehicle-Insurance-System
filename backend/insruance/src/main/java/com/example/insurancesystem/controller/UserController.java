@@ -117,6 +117,7 @@ public class UserController {
     }
 
     @PutMapping
+    @PreAuthorize("hasAuthority('user:update')")
     /**
      * 更新用户资料；服务层结合当前用户权限限制可修改范围并保持关联数据一致。
      */
@@ -135,7 +136,8 @@ public class UserController {
 
     @PutMapping("/password")
     /**
-     * 修改当前用户密码，服务层校验原密码并使用 BCrypt 保存新哈希。
+     * 登录用户修改本人密码，管理员按权限重置用户密码；服务层验证目标范围并保存 BCrypt 哈希。
+     * 无登录态的密码找回使用邮箱验证码接口，不能通过此入口指定他人账号。
      */
     public ResponseResult updatePassword(@RequestBody User params){
         return userService.updatePassword(params);

@@ -1,27 +1,15 @@
 import axios from "./config";
-import { buildObjectParams } from "@/utils/params";
 
 const rootUrl = "/auth";
 /**
- * * 使用登录页提交的账号凭据建立车险系统会话；成功响应中的令牌和用户资料由登录页写入本地状态。
+ * 使用登录页提交的账号凭据建立车险系统会话；成功响应中的令牌和用户资料由登录页写入本地状态。
  */
 export function login(user){
   return axios.post(`${rootUrl}/login`, user);
 }
 
 /**
-
- * * 提交注册页填写的用户资料创建待审核账号，后续是否允许进入系统由后台审批状态决定。
-
- */
-export function register(user){
-  return axios.post(`${rootUrl}/register`, user);
-}
-
-/**
-
- * * 通知后端注销当前令牌对应的会话；调用页面随后负责清理 Vuex 和浏览器中的本地身份信息。
-
+ * 通知后端注销当前令牌对应的会话；调用页面随后负责清理 Vuex 和浏览器中的本地身份信息。
  */
 export function logout(){
   let url = `${rootUrl}/logout`;
@@ -29,23 +17,17 @@ export function logout(){
 }
 
 /**
-
- * * 将邮箱、验证码和新密码编码为查询参数，完成忘记密码流程中的身份校验与密码重置。
-
+ * 通过 JSON POST 提交邮箱、验证码和新密码，完成忘记密码流程中的身份校验与密码重置。
  */
 export function forgetPassword(data){
-  let url = `${rootUrl}/forget${buildObjectParams(data)}`;
-  return axios.get(url);
+  return axios.post(`${rootUrl}/forget-password`, data);
 }
 
 /**
-
- * * 为注册或找回密码流程向指定邮箱申请一次性验证码，返回发送结果和后端定义的冷却状态。
-
+ * 为找回密码流程向指定邮箱申请一次性验证码，返回发送结果和后端定义的冷却状态。
  */
-export function getSmsCode(email){
-  let url = `${rootUrl}/code?email=${email}`;
-  return axios.get(url);
+export function sendEmailCode(data){
+  return axios.post(`${rootUrl}/email-code`, data);
 }
 
 /**
@@ -57,10 +39,25 @@ export function exchangeSsoCode(code) {
 }
 
 /**
-
- * * 基于当前车险登录态申请返回 SaaS 门户的一次性授权地址，使门户能够自动恢复同一用户会话。
-
+ * 基于当前车险登录态申请返回 SaaS 门户的一次性授权地址，使门户能够自动恢复同一用户会话。
  */
 export function createPortalAuthorization() {
   return axios.post(`${rootUrl}/sso/portal-authorize`, {});
 }
+
+/**
+ * 查询当前登录用户的共享账号资料，响应不含密码。
+ */
+export const getEmailProfile = () => axios.get(`${rootUrl}/profile`);
+/**
+ * 从服务端会话确定本人，仅更新普通资料，不修改邮箱身份或角色。
+ */
+export const updateEmailProfile = data => axios.put(`${rootUrl}/profile`, data);
+/**
+ * 为当前无邮箱账号发送绑定验证码，验证码只可由该用户消费。
+ */
+export const sendBindingEmailCode = data => axios.post(`${rootUrl}/profile/email-code`, data);
+/**
+ * 完成邮箱验证并设置登录密码，保留原用户 ID 和企业成员关系。
+ */
+export const bindEmail = data => axios.post(`${rootUrl}/profile/bind-email`, data);

@@ -87,8 +87,8 @@ public class SecurityConfig {
                 .and()
                 .authorizeRequests()
                 .antMatchers(
-                        "/auth/login", "/auth/register", "/auth/code", "/auth/forget",
-                        "/portal/auth/login", "/portal/auth/register", "/portal/auth/sms-code",
+                        "/auth/login", "/auth/register", "/auth/email-code", "/auth/forget-password",
+                        "/portal/auth/login", "/portal/auth/register", "/portal/auth/email-code",
                         "/monitor/auth/login",
                         "/portal/auth/forget-password", "/internal/sso/exchange",
                         "/internal/sso/portal-authorize", "/portal/sso/exchange",

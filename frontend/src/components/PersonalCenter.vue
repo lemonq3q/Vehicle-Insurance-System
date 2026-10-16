@@ -31,7 +31,7 @@
           <el-descriptions :column="2" border :size="'large'" class="info-desc">
             <el-descriptions-item label="用户姓名">{{ userInfo.name }}</el-descriptions-item>
             <el-descriptions-item label="手机号码">{{ userInfo.phone }}</el-descriptions-item>
-            <el-descriptions-item label="邮箱">{{ userInfo.email }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ accountProfile.email || '未绑定' }}</el-descriptions-item>
             <el-descriptions-item label="用户状态">{{ userInfo.status }}</el-descriptions-item>
             <el-descriptions-item label="用户角色">{{ userInfo.role }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ userInfo.createTime }}</el-descriptions-item>
@@ -39,6 +39,8 @@
         </el-col>
       </el-row>
     </el-card>
+
+    <EmailBindingForm v-if="profileLoaded && !accountProfile.email" @bound="handleEmailBound" />
 
     <!-- 修改密码卡片 -->
     <el-card class="pwd-card" shadow="hover">
@@ -80,8 +82,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="手机号码" prop="username">
-              <el-input v-model="editInfoForm.username" placeholder="请输入手机号"></el-input>
+            <el-form-item label="手机号码" prop="phone">
+              <el-input v-model="editInfoForm.phone" placeholder="请输入手机号"></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -89,7 +91,7 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="邮箱" prop="email">
-              <el-input v-model="editInfoForm.email" placeholder="请输入邮箱"></el-input>
+              <el-input :model-value="accountProfile.email || '未绑定，请使用绑定邮箱功能'" disabled></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -144,10 +146,12 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { Edit, Lock } from '@element-plus/icons-vue';
-import { selectPersonalUser, updatePassword, updateUser} from '@/api/user';
+import { selectPersonalUser, updatePassword } from '@/api/user';
+import { getEmailProfile, updateEmailProfile } from '@/api/login';
+import EmailBindingForm from '@/components/EmailBindingForm.vue';
 import { formatSecondTimestamp } from '@/utils/time';
 import Message from '@/utils/message';
-import { validatePhoneNumber, vaildateEmail } from '@/utils/validate';
+import { validatePhoneNumber } from '@/utils/validate';
 import Loading from '@/utils/loading';
 
 // 弹窗控制
@@ -174,6 +178,8 @@ const userInfo = reactive({
 const editInfoForm = reactive({});
 
 const oriInfo = ref({});
+const accountProfile = ref({});
+const profileLoaded = ref(false);
 
 // 修改密码表单
 const pwdForm = reactive({
@@ -187,13 +193,8 @@ const infoRules = reactive({
     { required: true, message: '请输入用户姓名', trigger: 'blur' },
     { min: 1, max: 45, message: '输入内容过长', trigger: 'blur' }
   ],
-  email: [
-    { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' },
-    { validator: vaildateEmail, trigger: 'blur'}
-  ],
-  username: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { validator: validatePhoneNumber, trigger: 'blur' }
+  phone: [
+    { validator: (rule, value, callback) => value ? validatePhoneNumber(rule, value, callback) : callback(), trigger: 'blur' }
   ],
 });
 
@@ -239,6 +240,9 @@ onMounted(() => {
 const getPersonalUser = async () => {
   try{
     Loading.open();
+    const accountResponse = await getEmailProfile();
+    accountProfile.value = accountResponse.data.data;
+    profileLoaded.value = true;
     let res = await selectPersonalUser();
     res = res.data;
     if (res.code === 200) {
@@ -261,7 +265,7 @@ const buildInfo = () => {
   userInfo.name = oriInfo.value.name;
   // userInfo.gender = oriInfo.value.gender == 1 ? '男' : '女';
   // userInfo.age = oriInfo.value.age;
-  userInfo.phone = oriInfo.value.username;
+  userInfo.phone = accountProfile.value.phone || '-';
   // userInfo.idCard = oriInfo.value.idNum;
   userInfo.status = oriInfo.value.status == 1 ? '正常' : '禁用';
   userInfo.role = oriInfo.value.roleName;
@@ -280,7 +284,7 @@ const resetInfoForm = () => {
   editInfoForm.name = oriInfo.value.name;
   // editInfoForm.gender = String(oriInfo.value.gender);
   // editInfoForm.age = oriInfo.value.age;
-  editInfoForm.username = oriInfo.value.username;
+  editInfoForm.phone = accountProfile.value.phone || '';
   editInfoForm.email = oriInfo.value.email;
   // editInfoForm.idNum = oriInfo.value.idNum;
   editInfoForm.status = oriInfo.value.status == 1 ? '正常' : '禁用';
@@ -288,16 +292,21 @@ const resetInfoForm = () => {
 
 /**
 
- * * 只提取个人中心允许修改的姓名、手机号和邮箱，并携带当前用户 ID，避免覆盖角色和状态。
+ * * 只提交姓名、可选联系电话与证件号，邮箱及用户 ID 均由专用接口和服务端身份确定。
 
  */
 const buildInsertData = () => {
   return {
-    id: oriInfo.value.id,
-    name: editInfoForm.name,
-    username: editInfoForm.username,
-    email: editInfoForm.email,
+    realName: editInfoForm.name,
+    phone: editInfoForm.phone,
+    idNum: accountProfile.value.idNum,
   };
+};
+
+/** 邮箱验证成功后重新获取共享资料，使显示区与绑定入口立即反映已绑定状态。 */
+const handleEmailBound = async profile => {
+  accountProfile.value = profile;
+  await getPersonalUser();
 };
 
 // 保存个人信息
@@ -311,7 +320,7 @@ const saveInfo = async (formEl) => {
       try{
         Loading.open();
         let data = buildInsertData();
-        await updateUser(data).then(res => {
+        await updateEmailProfile(data).then(res => {
           res = res.data;
           if (res.code == 200){
             Message.success("更新成功");

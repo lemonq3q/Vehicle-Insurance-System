@@ -8,20 +8,20 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface EnterpriseMapper {
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name,u.status AS user_status "
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.email,u.phone,u.real_name,u.status AS user_status "
           + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 "
           + "WHERE m.user_id=#{userId} AND m.deleted=0 AND m.status IN (0,1,2) ORDER BY m.joined_at DESC LIMIT 1")
   Map<String, Object> findCurrentMember(Long userId);
 
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name,u.status AS user_status "
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.email,u.phone,u.real_name,u.status AS user_status "
           + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 "
           + "WHERE m.enterprise_id=#{enterpriseId} AND m.user_id=#{userId} AND m.deleted=0 LIMIT 1")
   Map<String, Object> findMemberByUser(
       @Param("enterpriseId") Long enterpriseId, @Param("userId") Long userId);
 
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.deleted,m.joined_at,u.username,u.phone,u.real_name "
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.deleted,m.joined_at,u.username,u.email,u.phone,u.real_name "
           + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 "
           + "WHERE m.enterprise_id=#{enterpriseId} AND m.user_id=#{userId} LIMIT 1")
   Map<String, Object> findMemberByUserIncludingDeleted(
@@ -120,26 +120,34 @@ public interface EnterpriseMapper {
           + "AND (max_use_count IS NULL OR used_count<max_use_count) AND (expires_at IS NULL OR expires_at>NOW())")
   int consumeInvite(Long id);
 
+  /**
+   * 按企业权限分页读取共享账号成员，返回邮箱用于登录身份展示。
+   * 姓名或邮箱关键词与统计查询保持一致，空邮箱保留 null，不回退历史手机号。
+   */
   @Select(
-      "<script>SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name "
+      "<script>SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.email,u.phone,u.real_name "
           + "FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 WHERE m.enterprise_id=#{enterpriseId} AND m.deleted=0 "
-          + "<if test=\"keyword != null and keyword != ''\">AND (u.real_name LIKE CONCAT('%',#{keyword},'%') OR u.phone LIKE CONCAT('%',#{keyword},'%') OR u.username LIKE CONCAT('%',#{keyword},'%'))</if> "
+          + "<if test=\"keyword != null and keyword != ''\">AND (u.real_name LIKE CONCAT('%',#{keyword},'%') OR u.email LIKE CONCAT('%',#{keyword},'%'))</if> "
           + "<if test=\"roleCode != null and roleCode != ''\">AND m.role_code=#{roleCode}</if><if test=\"status != null\">AND m.status=#{status}</if> "
           + "ORDER BY FIELD(m.role_code,'OWNER','ADMIN','ISSUER'),m.joined_at LIMIT #{offset},#{pageSize}</script>")
   List<Map<String, Object>> findMembers(Map<String, Object> query);
 
+  /**
+   * 使用与成员列表相同的姓名、邮箱、角色和状态条件统计分页总数。
+   * 不按历史用户名或联系电话匹配，避免页面搜索语义与邮箱身份不一致。
+   */
   @Select(
       "<script>SELECT COUNT(1) FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id AND u.deleted=0 WHERE m.enterprise_id=#{enterpriseId} AND m.deleted=0 "
-          + "<if test=\"keyword != null and keyword != ''\">AND (u.real_name LIKE CONCAT('%',#{keyword},'%') OR u.phone LIKE CONCAT('%',#{keyword},'%') OR u.username LIKE CONCAT('%',#{keyword},'%'))</if> "
+          + "<if test=\"keyword != null and keyword != ''\">AND (u.real_name LIKE CONCAT('%',#{keyword},'%') OR u.email LIKE CONCAT('%',#{keyword},'%'))</if> "
           + "<if test=\"roleCode != null and roleCode != ''\">AND m.role_code=#{roleCode}</if><if test=\"status != null\">AND m.status=#{status}</if></script>")
   long countMembers(Map<String, Object> query);
 
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id WHERE m.id=#{id} AND m.enterprise_id=#{enterpriseId} AND m.deleted=0")
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.email,u.phone,u.real_name FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id WHERE m.id=#{id} AND m.enterprise_id=#{enterpriseId} AND m.deleted=0")
   Map<String, Object> findMember(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
 
   @Select(
-      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.phone,u.real_name FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id WHERE m.id=#{id} AND m.enterprise_id=#{enterpriseId} AND m.deleted=0 FOR UPDATE")
+      "SELECT m.id,m.enterprise_id,m.user_id,m.role_code,m.status,m.joined_at,u.username,u.email,u.phone,u.real_name FROM tenant_member m JOIN tenant_user u ON u.id=m.user_id WHERE m.id=#{id} AND m.enterprise_id=#{enterpriseId} AND m.deleted=0 FOR UPDATE")
   Map<String, Object> lockMember(@Param("id") Long id, @Param("enterpriseId") Long enterpriseId);
 
   @Update(
@@ -194,6 +202,10 @@ public interface EnterpriseMapper {
       @Param("offset") int offset,
       @Param("pageSize") int pageSize);
 
+  /**
+   * 使用与成员列表相同的姓名、邮箱、角色和状态条件统计分页总数。
+   * 不按历史用户名或联系电话匹配，避免页面搜索语义与邮箱身份不一致。
+   */
   @Select(
       "<script>SELECT COUNT(1) FROM tenant_member_change_log WHERE enterprise_id=#{enterpriseId} "
           + "<if test=\"eventType != null and eventType != ''\">AND event_type=#{eventType}</if></script>")

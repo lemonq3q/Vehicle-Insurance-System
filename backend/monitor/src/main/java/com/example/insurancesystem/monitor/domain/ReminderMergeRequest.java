@@ -1,11 +1,14 @@
 package com.example.insurancesystem.monitor.domain;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * SaaS 向监控系统传递的提醒当前阶段快照。reminderKey 表示稳定业务周期，新版生命周期允许阶段升降；
  * 所有文案均由掌握套餐、余额和用量语义的 SaaS 生成，监控系统仅负责幂等合并和客服待办状态恢复。
+ * 维护窗口内允许旧版 SaaS 附带本地数据库字段；未知字段不参与监控端状态流转，必要业务字段仍由服务校验。
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReminderMergeRequest {
     public Long enterpriseId;
     public String enterpriseName;

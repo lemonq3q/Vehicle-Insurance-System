@@ -132,7 +132,15 @@ query：`enterpriseIds`（逗号分隔，去重后 1–20 个）、`range`（`7d
 
 ### GET `/enterprises/{id}/members`
 
-query：`keyword`、`roleName`、`status`、`pageNo/pageSize`。返回分页 `{id,enterpriseId,realName,username,phone,roleName,status,joinedAt,lastLoginAt}`。手机号按既有数据权限脱敏。无成员写接口。
+query：`keyword`（姓名或邮箱，最多100字符）、`roleName`、`status`、`pageNo/pageSize`。返回分页 `{list,pageNo,pageSize,total}`，成员字段为 `{id,enterpriseId,realName,username,email,roleName,status,joinedAt,lastLoginAt}`。`email:string|null` 来自共享账号表，未绑定显示“未绑定”；`username` 仅为内部历史标识，页面不展示为登录身份。不再返回成员手机号，无成员写接口。
+
+Mock 示例（`monitor-frontend/src/mock/database.js` 与 `adapter.js`）：
+
+```json
+{"code":200,"message":"success","data":{"list":[{"id":101,"enterpriseId":1,"realName":"陈晓峰","username":"chenxf","email":"chenxf@example.com","roleName":"拥有者","status":1,"joinedAt":"2026-01-18","lastLoginAt":"2026-07-25 18:16"}],"pageNo":1,"pageSize":10,"total":1},"requestId":"request-id"}
+```
+
+沿用监控登录鉴权。企业不存在返回404，非法成员状态/角色或过长关键词返回400。
 
 ### GET `/enterprises/{id}/finance-summary`
 

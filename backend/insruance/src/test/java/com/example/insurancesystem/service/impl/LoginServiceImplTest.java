@@ -26,6 +26,7 @@ class LoginServiceImplTest {
         User user = new User();
         user.setId(10L);
         user.setUsername("unassigned-user");
+        user.setEmail("unassigned@example.com");
         user.setPassword("password");
         user.setStatus(1);
         LoginUser principal = new LoginUser(user, List.of());

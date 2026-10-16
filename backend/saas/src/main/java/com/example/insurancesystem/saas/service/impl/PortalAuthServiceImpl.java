@@ -3,7 +3,8 @@ package com.example.insurancesystem.saas.service.impl;
 import com.example.insurancesystem.domain.authenticate.LoginUser;
 import com.example.insurancesystem.domain.user.User;
 import com.example.insurancesystem.handler.exception.BusinessException;
-import com.example.insurancesystem.saas.integration.sms.SmsVerificationService;
+import com.example.insurancesystem.utils.email.EmailAccountService;
+import com.example.insurancesystem.utils.email.EmailVerificationService;
 import com.example.insurancesystem.saas.mapper.EnterpriseMapper;
 import com.example.insurancesystem.saas.mapper.PortalUserMapper;
 import com.example.insurancesystem.saas.service.PortalAuthService;
@@ -24,6 +25,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 编排门户邮箱登录与共享账号注册、重置，登录后仍由既有会话和企业上下文服务加载权限。
+ * 不保存原始密码，注册和重置委托共享邮件账号服务保证两端规则一致。
+ */
 @Service
 public class PortalAuthServiceImpl implements PortalAuthService {
   private final AuthenticationManager authenticationManager;
@@ -31,7 +36,7 @@ public class PortalAuthServiceImpl implements PortalAuthService {
   private final PortalUserMapper userMapper;
   private final EnterpriseMapper enterpriseMapper;
   private final PasswordEncoder passwordEncoder;
-  private final SmsVerificationService smsService;
+  private final EmailAccountService emailAccounts;
 
   public PortalAuthServiceImpl(
       AuthenticationManager authenticationManager,
@@ -39,18 +44,19 @@ public class PortalAuthServiceImpl implements PortalAuthService {
       PortalUserMapper userMapper,
       EnterpriseMapper enterpriseMapper,
       PasswordEncoder passwordEncoder,
-      SmsVerificationService smsService) {
+      EmailAccountService emailAccounts) {
     this.authenticationManager = authenticationManager;
     this.sessionManager = sessionManager;
     this.userMapper = userMapper;
     this.enterpriseMapper = enterpriseMapper;
     this.passwordEncoder = passwordEncoder;
-    this.smsService = smsService;
+    this.emailAccounts = emailAccounts;
   }
 
   public Map<String, Object> login(Map<String, Object> body) {
-    String username = text(body, "username");
-    String password = text(body, "password");
+    String username = EmailVerificationService.normalizeEmail(text(body, "email"));
+    String password = body.get("password") == null ? "" : body.get("password").toString();
+    if (password.isEmpty()) throw new BusinessException(400, "密码不能为空");
     Authentication authentication;
     try {
       authentication =
@@ -59,7 +65,7 @@ public class PortalAuthServiceImpl implements PortalAuthService {
     } catch (DisabledException exception) {
       throw new BusinessException(403, "账号未启用");
     } catch (BadCredentialsException exception) {
-      throw new BusinessException(400, "用户名或密码错误");
+      throw new BusinessException(400, "邮箱或密码错误");
     }
     LoginUser loginUser = (LoginUser) authentication.getPrincipal();
     return createSession(loginUser, null);
@@ -112,37 +118,20 @@ public class PortalAuthServiceImpl implements PortalAuthService {
     return result;
   }
 
+  /**
+   * 创建经过真实邮箱验证的共享个人账号，不自动分配企业权限。
+   */
   @Transactional
   public Map<String, Object> register(Map<String, Object> body) {
-    String phone = text(body, "phone"),
-        code = text(body, "smsCode"),
-        realName = text(body, "realName"),
-        password = text(body, "password");
-    if (userMapper.countByPhone(phone) > 0) throw new BusinessException(400, "手机号已注册");
-    validatePassword(password);
-    smsService.verify(phone, "REGISTER", code);
-    Map<String, Object> user = new LinkedHashMap<>();
-    user.put("phone", phone);
-    user.put("realName", realName);
-    user.put("password", passwordEncoder.encode(password));
-    userMapper.insertUser(user);
-    return PortalMaps.camel(userMapper.findProfile(((Number) user.get("id")).longValue()));
+    return emailAccounts.register(body);
   }
 
+  /**
+   * 验证邮件后重置共享密码，保证门户与车险端使用同一账号资料。
+   */
   @Transactional
   public boolean forgetPassword(Map<String, Object> body) {
-    String phone = text(body, "phone"),
-        code = text(body, "smsCode"),
-        password = text(body, "password");
-    validatePassword(password);
-    smsService.verify(phone, "RESET_PASSWORD", code);
-    if (userMapper.updatePassword(phone, passwordEncoder.encode(password)) == 0)
-      throw new BusinessException(404, "手机号不存在");
-    return true;
-  }
-
-  private void validatePassword(String password) {
-    if (password.length() < 8) throw new BusinessException(400, "密码至少需要 8 位");
+    return emailAccounts.resetPassword(body);
   }
 
   private String text(Map<String, Object> body, String key) {

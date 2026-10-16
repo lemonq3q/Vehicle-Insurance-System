@@ -5,6 +5,8 @@ import com.stripe.StripeClient;
 import com.stripe.model.Refund;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionListParams;
+import com.stripe.param.checkout.SessionCreateParams;
+import com.stripe.net.RequestOptions;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,6 +20,17 @@ public class StripeCheckoutClient {
 
   public StripeCheckoutClient(StripePaymentProperties properties) {
     this.properties = properties;
+  }
+
+  /**
+   * 创建带当前账号邮箱的结账会话，复用支付服务传入的订单幂等键。
+   * @param params 已由支付服务验证金额和企业归属的结账参数
+   * @param options 订单级幂等选项，防止网络重试创建重复付款会话
+   * @return Stripe 返回的结账快照，网络失败由调用方转换为业务错误
+   */
+  public Session create(SessionCreateParams params, RequestOptions options) throws Exception {
+    validateSecretKey();
+    return client().v1().checkout().sessions().create(params, options);
   }
 
   /**

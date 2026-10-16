@@ -11,13 +11,6 @@
       </div>
       <div 
         class="auth-tab no_select" 
-        :class="{ active: activeTab === 'register' }"
-        @click="activeTab = 'register'"
-      >
-        注册
-      </div>
-      <div 
-        class="auth-tab no_select" 
         :class="{ active: activeTab === 'forget' }"
         @click="activeTab = 'forget'"
       >
@@ -34,11 +27,11 @@
         :rules="loginRules"
         class="auth-form"
       >
-        <el-form-item prop="username">
+        <el-form-item prop="email">
           <el-input
-            v-model="loginForm.username"
+            v-model.trim="loginForm.email"
             class="auth-input"
-            placeholder="请输入电话号码"
+            placeholder="请输入邮箱" type="email" maxlength="100" autocomplete="username"
             size="large"
             :prefix-icon="User"
           />
@@ -58,85 +51,9 @@
             type="primary" 
             size="large" 
             class="auth-btn"
-            @click="handleLogin(loginRef)"
+            @click="handleLogin(loginRef)" :loading="submitting.login"
           >
             登录
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-
-    <!-- 注册表单 -->
-    <div class="auth-box" v-show="activeTab === 'register'">
-      <el-form
-        ref="registerRef"
-        :model="registerForm"
-        status-icon
-        :rules="registerRules"
-        class="auth-form"
-        autocomplete="off"       
-        data-form-type="other"
-      >
-        <!-- 骗浏览器把用户密码填到这里来 -->
-        <div style="position:absolute;left:-9999px;top:-9999px;z-index:-1;">
-          <input type="text" name="fake-username" autocomplete="username">
-          <input type="password" name="fake-password" autocomplete="password">
-        </div>
-        <el-form-item prop="username">
-          <el-input
-            v-model="registerForm.username"
-            class="auth-input"
-            placeholder="请输入手机号码"
-            size="large"
-            :prefix-icon="Phone"
-          />
-        </el-form-item>
-        <el-form-item prop="realName">
-          <el-input
-            v-model="registerForm.realName"
-            class="auth-input"
-            placeholder="请输入用户名"
-            size="large"
-            :prefix-icon="UserFilled"
-          />
-        </el-form-item>
-        <el-form-item prop="email">
-          <el-input
-            v-model="registerForm.email"
-            class="auth-input"
-            placeholder="请输入邮箱"
-            size="large"
-            :prefix-icon="ElMessageIcon"
-          />
-        </el-form-item>
-        <el-form-item prop="password">
-          <el-input
-            v-model="registerForm.password"
-            class="auth-input"
-            placeholder="请输入密码"
-            size="large"
-            :prefix-icon="Lock"
-            show-password
-          />
-        </el-form-item>
-        <el-form-item prop="confirmPassword">
-          <el-input
-            v-model="registerForm.confirmPassword"
-            class="auth-input"
-            placeholder="请确认密码"
-            size="large"
-            :prefix-icon="Lock"
-            show-password
-          />
-        </el-form-item>
-        <el-form-item class="auth-btn-item">
-          <el-button 
-            type="primary" 
-            size="large" 
-            class="auth-btn"
-            @click="handleRegister(registerRef)"
-          >
-            注册
           </el-button>
         </el-form-item>
       </el-form>
@@ -158,7 +75,7 @@
         </div>
         <el-form-item prop="email">
           <el-input
-            v-model="forgetForm.email"
+            v-model.trim="forgetForm.email"
             class="auth-input"
             placeholder="请输入绑定的邮箱"
             size="large"
@@ -167,9 +84,9 @@
         </el-form-item>
 
         <!-- 验证码 + 获取验证码按钮 -->
-        <el-form-item prop="code">
+        <el-form-item prop="emailCode">
           <el-input
-            v-model="forgetForm.code"
+            v-model.trim="forgetForm.emailCode"
             class="auth-input"
             placeholder="请输入验证码"
             size="large"
@@ -215,7 +132,7 @@
             type="primary" 
             size="large" 
             class="auth-btn"
-            @click="handleForgetPassword(forgetRef)"
+            @click="handleForgetPassword(forgetRef)" :loading="submitting.forgot"
           >
             确认重置密码
           </el-button>
@@ -226,289 +143,110 @@
 </template>
 
 <script setup>
-import { reactive, ref, onUnmounted } from 'vue';
-import { 
-  User, Lock, Phone, UserFilled, MessageBox, Message as ElMessageIcon
-} from '@element-plus/icons-vue';
-
-import { login, register, getSmsCode, forgetPassword } from '@/api/login';
+import { reactive, ref, computed, onUnmounted } from 'vue';
+import { User, Lock, MessageBox, Message as ElMessageIcon } from '@element-plus/icons-vue';
+import { login, sendEmailCode, forgetPassword } from '@/api/login';
 import Message from '@/utils/message';
 import { useRouter } from 'vue-router';
-import { validatePhoneNumber, validateStr, vaildateEmail, judgeEmail } from '@/utils/validate';
 import { useStore } from 'vuex';
 import { objToJsonStr } from '@/utils/convert';
 import Storage from '@/utils/storage';
 import Loading from '@/utils/loading';
 
-// 路由实例
 const router = useRouter();
 const store = useStore();
-
-const codeLoading = ref(false);
-
-// 切换标签
 const activeTab = ref('login');
-
-// 登录表单相关
 const loginRef = ref();
-const loginForm = reactive({
-  username: '',
-  password: ''
-});
-const loginRules = reactive({
-  username: [
-    { required: true, message: '请输入手机号码', trigger: 'submit' },
-    { validator: validatePhoneNumber, trigger: 'submit' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'submit' },
-    { min: 1, max: 16, message: '密码长度超出16位', trigger: 'submit' },
-    { validator: validateStr, trigger: 'submit' }
-  ]
-});
-
-// 注册表单相关
-const registerRef = ref();
-const registerForm = reactive({
-  username: '',
-  realName: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-  roleName: '出单员'
-});
-const registerRules = reactive({
-  username: [
-    { required: true, message: '请输入手机号码', trigger: 'blur' },
-    { validator: validatePhoneNumber, trigger: 'blur' }
-  ],
-  realName: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 1, max: 50, message: '输入内容过长', trigger: 'blur' }
-  ],
-  email: [
-    { min: 0, max: 95, message: '输入内容过长', trigger: 'blur'},
-    { validator: vaildateEmail, trigger: 'blur'}
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 16, message: '密码长度需在6-16位之间', trigger: 'blur' },
-    { validator: validateStr, trigger: 'submit' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    { 
-      /**
-       * * 校验注册页两次密码一致性，并通过 Element Plus callback 返回结果。
-       */
-      validator: (rule, value, callback) => {
-        if (value !== registerForm.password) {
-          callback(new Error('两次输入的密码不一致'));
-        } else {
-          callback();
-        }
-      }, 
-      trigger: 'blur' 
-    }
-  ]
-});
-
-// ==============================================
-// 找回密码表单相关（新增）
-// ==============================================
 const forgetRef = ref();
-const forgetForm = reactive({
-  email: '',    
-  code: '',          // 验证码
-  password: '',      // 新密码
-  confirmPassword: ''// 确认密码
-});
+const loginForm = reactive({ email: '', password: '' });
+const forgetForm = reactive({ email: '', emailCode: '', password: '', confirmPassword: '' });
+const codeStates = reactive({ forgot: { sending: false, seconds: 0, timer: null } });
+const submitting = reactive({ login: false, forgot: false });
+const codeLoading = computed(() => codeStates.forgot.sending);
+const codeDisabled = computed(() => codeStates.forgot.sending || codeStates.forgot.seconds > 0);
+const codeText = computed(() => codeStates.forgot.seconds > 0 ? `${codeStates.forgot.seconds}s 后重发` : '获取邮箱验证码');
 
-// 验证码倒计时
-const codeText = ref('获取验证码');
-const codeDisabled = ref(false);
-let codeTimer = null;
-
-// 找回密码表单校验规则
-const forgetRules = reactive({
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'submit' },
-    { min: 1, max: 95, message: '输入内容过长', trigger: 'blur'},
-    { validator: vaildateEmail, trigger: 'blur' }
-  ],
-  code: [
-    { required: true, message: '请输入验证码', trigger: 'submit' },
-    { min: 4, max: 6, message: '验证码格式不正确', trigger: 'submit' }
-  ],
-  password: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 16, message: '密码长度需在6-16位之间', trigger: 'blur' },
-    { validator: validateStr, trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认新密码', trigger: 'blur' },
-    { 
-      /**
-       * * 校验找回密码流程中的确认密码，防止验证码通过后写入非预期密码。
-       */
-      validator: (rule, value, callback) => {
-        if (value !== forgetForm.password) {
-          callback(new Error('两次输入的新密码不一致'));
-        } else {
-          callback();
-        }
-      }, 
-      trigger: 'blur' 
-    }
-  ]
-});
-
-// 获取验证码（60s倒计时）
 /**
- * 校验邮箱后申请找回密码验证码；发送成功才启动 60 秒倒计时并禁用重复申请。
- * 接口失败会立即恢复按钮，倒计时结束后重置文案和可用状态。
+ * 校验两端共用的邮箱身份，限制到账号表支持的 100 字符并拒绝空地址。
  */
-const getCode = async () => {
-  // 1. 先校验手机号
-  if (!forgetForm.email || forgetForm.email == '' || !judgeEmail(forgetForm.email)) {
-    Message.warning('请输入正确的邮箱');
-    return;
-  }
-  codeDisabled.value = true;
-  codeLoading.value = true;
-  let flag = true;
-  try{
-    await getSmsCode(forgetForm.email).then(res => {
-      res = res.data;
-      if(res.code == 200){
-        Message.success('验证码发送成功');
-        flag = false;
-      }
-    });
-  }
-  finally{
-    codeLoading.value = false;
-    codeDisabled.value = false;
-  }
-
-  if(flag){
-    return;
-  }
-
-  // 倒计时开始
-  codeDisabled.value = true;
-  let count = 60;
-  codeText.value = `${count}s 后重新获取`;
-
-  codeTimer = setInterval(() => {
-    count--;
-    codeText.value = `${count}s 后重新获取`;
-    if (count <= 0) {
-      clearInterval(codeTimer);
-      codeText.value = '获取验证码';
-      codeDisabled.value = false;
-    }
-  }, 1000);
+const validateEmail = (rule, value, callback) => {
+  callback(value && value.length <= 100 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) ? undefined : new Error('请输入有效的邮箱地址'));
 };
-
-// 找回密码提交
 /**
- * * 校验邮箱、验证码和两次新密码后提交重置；成功时切回登录标签并清除全部敏感表单数据。
+ * 重置密码使用共享账号的长度规则，避免 BCrypt 的 72 字节截断。
  */
-const handleForgetPassword = (formEl) => {
-  if (!formEl) return;
-  formEl.validate(async (valid) => {
-    if (valid) {
-      try {
-        Loading.open();
-        let data = {
-          email: forgetForm.email,
-          code: forgetForm.code,
-          password: forgetForm.password
-        };
-        forgetPassword(data).then(res => {
-          res = res.data;
-          if(res.code == 200){
-            Loading.close();
-            Message.success('密码重置成功！');
-            // 重置成功后跳回登录页
-            activeTab.value = 'login';
-            // 清空表单
-            forgetForm.email  = '';
-            forgetForm.code = '';
-            forgetForm.password = '';
-            forgetForm.confirmPassword = '';
-          }
-        });
-      } finally {
-        Loading.close();
-      }
-    }
-  });
+const validatePassword = (rule, value, callback) => {
+  callback(value && value.length >= 8 && value.length <= 64 && new TextEncoder().encode(value).length <= 72 ? undefined : new Error('密码需为 8 至 64 位，且编码长度不超过 72 字节'));
 };
-
-// 登录处理
 /**
- * 校验账号密码并建立车险会话，成功后同步带过期时间的 token、本地用户资料和 Vuex 权限菜单，
- * 最后进入工作台；失败时不覆盖浏览器现有身份数据。
+ * 为指定表单验证重复密码，不向后端提交确认字段。
  */
-const handleLogin = (formEl) => {
-  if (!formEl) return;
-  formEl.validate(async (valid) => {
-    if(valid){
-      try{
-        Loading.open();
-        await login(loginForm).then(res => {
-          res = res.data;
-          if (res.code == 200){
-            Storage.set("token", res.data.token, 60 * 60);
-            localStorage.setItem("userInfo", objToJsonStr(res.data.user));
-            store.commit('login/setToken', res.data.token);
-            store.commit('login/setUser', res.data.user);
-            router.push('/home');
-          }
-        })
-      }
-      finally{
-        Loading.close();
-      }
-    }
-  });
+const confirmRule = form => ({ validator: (rule, value, callback) => callback(value && value === form.password ? undefined : new Error('两次输入的密码不一致')), trigger: 'blur' });
+const emailRules = [{ validator: validateEmail, trigger: 'blur' }];
+const codeRules = [{ pattern: /^\d{6}$/, required: true, message: '请输入 6 位邮箱验证码', trigger: 'blur' }];
+const passwordRules = [{ validator: validatePassword, trigger: 'blur' }];
+const loginRules = { email: emailRules, password: [{ required: true, message: '请输入密码', trigger: 'blur' }] };
+const forgetRules = { email: emailRules, emailCode: codeRules, password: passwordRules, confirmPassword: [confirmRule(forgetForm)] };
+
+/**
+ * 按场景调用真实邮件接口，发送成功后才启动独立冷却；错误由请求拦截器显示。
+ */
+const requestCode = async (key, form, scene) => {
+  const state = codeStates[key];
+  if (state.sending || state.seconds > 0) return;
+  if (!form.email || form.email.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { Message.warning('请输入有效的邮箱地址'); return; }
+  state.sending = true;
+  try {
+    const response = await sendEmailCode({ email: form.email, scene });
+    Message.success(response.data.msg);
+    state.seconds = response.data.data.retryAfterSeconds;
+    clearInterval(state.timer);
+    state.timer = setInterval(() => { if (--state.seconds <= 0) clearInterval(state.timer); }, 1000);
+  } catch { /* 请求拦截器负责反馈；发送失败不进入倒计时。 */ }
+  finally { state.sending = false; }
 };
-
-// 注册处理
 /**
- * * 校验注册资料后移除仅用于前端比对的 confirmPassword，再提交待审核账号申请。
+ * 找回密码验证码只发到已有账号的邮箱。
  */
-const handleRegister = async (formEl) => {
-  if (!formEl) return;
-  formEl.validate(async (valid) => {
-    if(valid){
-      try{
-        Loading.open();
-        let registerData = {...registerForm};
-        delete registerData.confirmPassword;
-        await register(registerData).then(res => {
-          res = res.data;
-          if (res.code == 200){
-            Message.success(res.msg);
-          }
-        })
-      }
-      finally{
-        Loading.close();
-      }
-    }
-  });
+const getCode = () => requestCode('forgot', forgetForm, 'RESET_PASSWORD');
+
+/**
+ * 验证邮箱密码并建立车险会话，企业和套餐访问规则仍由服务端判定。
+ */
+const handleLogin = async formEl => {
+  if (!formEl || submitting.login) return;
+  if (!await formEl.validate().catch(() => false)) return;
+  submitting.login = true; Loading.open();
+  try {
+    const response = await login(loginForm);
+    const { token, user } = response.data.data;
+    Storage.set('token', token, 60 * 60);
+    localStorage.setItem('userInfo', objToJsonStr(user));
+    store.commit('login/setToken', token); store.commit('login/setUser', user);
+    await router.push('/home');
+  } catch { /* 统一请求层显示错误，失败不建立登录态。 */ }
+  finally { submitting.login = false; Loading.close(); }
 };
-
-// 销毁定时器
 /**
- * * 离开登录页时清理验证码倒计时，避免已销毁组件继续更新响应式状态。
+ * 验证邮箱所有权后重置共享账号密码，使用 POST 避免密码出现在 URL。
  */
-onUnmounted(() => {
-  if (codeTimer) clearInterval(codeTimer);
-});
+const handleForgetPassword = async formEl => {
+  if (!formEl || submitting.forgot) return;
+  if (!await formEl.validate().catch(() => false)) return;
+  submitting.forgot = true; Loading.open();
+  try {
+    const payload = { email: forgetForm.email, emailCode: forgetForm.emailCode, password: forgetForm.password };
+    const response = await forgetPassword(payload);
+    Message.success(response.data.msg);
+    loginForm.email = forgetForm.email; activeTab.value = 'login';
+    forgetForm.password = ''; forgetForm.confirmPassword = ''; forgetForm.emailCode = '';
+  } catch { /* 请求失败保留输入，统一拦截器显示原因。 */ }
+  finally { submitting.forgot = false; Loading.close(); }
+};
+/**
+ * 离开页面时释放找回密码的计时器。
+ */
+onUnmounted(() => Object.values(codeStates).forEach(state => clearInterval(state.timer)));
 </script>
 
 <style scoped>

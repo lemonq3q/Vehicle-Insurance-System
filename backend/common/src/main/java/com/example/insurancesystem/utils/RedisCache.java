@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.BoundSetOperations;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -41,6 +42,33 @@ public class RedisCache {
      */
     public <T> void setCacheObject(final String key, final T value, final Integer timeout, final TimeUnit timeUnit){
         redisTemplate.opsForValue().set(redisKey(key), value, timeout, timeUnit);
+    }
+
+    /**
+     * 原子占用有时限的业务键，用于验证码发送冷却；多实例同时申请时只有一个请求可发送邮件。
+     * @return 当前调用首次创建该键时为 true，已被其他请求占用时为 false
+     */
+    public boolean putIfAbsent(String key, Object value, long seconds) {
+        return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(redisKey(key), value, seconds, TimeUnit.SECONDS));
+    }
+
+    /**
+     * 仅在缓存仍等于调用方读到的值时删除，使用 Lua 保证验证码不能被并发消费两次，
+     * 并避免旧请求删除新验证码或其他请求持有的冷却标记。参数沿用模板的 JSON 序列化器。
+     */
+    public boolean deleteIfEquals(String key, Object expected) {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end", Long.class);
+        return Long.valueOf(1).equals(redisTemplate.execute(script, Collections.singletonList(redisKey(key)), expected));
+    }
+
+    /**
+     * 原子增加短期错误尝试次数，首次计数时设置过期时间，阻止并发绕过验证码尝试额度。
+     */
+    public long incrementCounter(String key, long seconds) {
+        Long count = redisTemplate.opsForValue().increment(redisKey(key));
+        if (Long.valueOf(1).equals(count)) expire(key, seconds);
+        return count == null ? 0 : count;
     }
 
     /**

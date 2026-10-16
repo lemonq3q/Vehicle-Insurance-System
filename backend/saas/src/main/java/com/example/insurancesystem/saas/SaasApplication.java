@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = "com.example.insurancesystem")
-@MapperScan("com.example.insurancesystem.saas.mapper")
+@MapperScan(basePackages = {"com.example.insurancesystem.saas.mapper", "com.example.insurancesystem.utils.email"}, annotationClass = org.apache.ibatis.annotations.Mapper.class)
 @EnableScheduling
 public class SaasApplication {
 

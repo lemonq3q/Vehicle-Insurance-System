@@ -1,6 +1,7 @@
 const currentUser = {
   id: 10001,
   username: 'linxf',
+  email: 'linxf@example.com',
   phone: '13800000001',
   realName: '林晓峰',
   idNum: '330106199001011234',
@@ -10,7 +11,7 @@ const currentUser = {
 };
 
 let currentEnterpriseId = 20001;
-const smsCodes = new Map();
+const emailCodes = new Map();
 const MOCK_NOW = new Date('2026-07-14T12:00:00');
 let lastVisitorLeadAt = 0;
 
@@ -76,6 +77,7 @@ let members = [
     enterpriseId: 20001,
     userId: 10001,
     username: 'linxf',
+    email: 'linxf@example.com',
     realName: '林晓峰',
     phone: '13800000001',
     roleCode: 'OWNER',
@@ -88,6 +90,7 @@ let members = [
     enterpriseId: 20001,
     userId: 10002,
     username: 'chenyu',
+    email: 'chenyu@example.com',
     realName: '陈雨',
     phone: '13800000002',
     roleCode: 'ADMIN',
@@ -100,6 +103,7 @@ let members = [
     enterpriseId: 20001,
     userId: 10003,
     username: 'wangmin',
+    email: 'wangmin@example.com',
     realName: '王敏',
     phone: '13800000003',
     roleCode: 'ISSUER',
@@ -112,6 +116,7 @@ let members = [
     enterpriseId: 20001,
     userId: 10004,
     username: 'zhouxuan',
+    email: 'zhouxuan@example.com',
     realName: '周旋',
     phone: '13800000004',
     roleCode: 'ISSUER',
@@ -670,35 +675,36 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   if (url === '/portal/auth/login' && method === 'POST') {
     return ok({ token: 'mock-portal-token', ...context() }, '登录成功');
   }
-  if (url === '/portal/auth/sms-code' && method === 'POST') {
-    if (!/^1[3-9]\d{9}$/.test(data.phone || '')) {
-      return fail('请输入正确的 11 位手机号');
-    }
-    if (!['REGISTER', 'RESET_PASSWORD'].includes(data.scene)) {
-      return fail('短信验证码场景不正确');
-    }
-    smsCodes.set(`${data.scene}:${data.phone}`, '123456');
-    return ok({ expiresInSeconds: 300, retryAfterSeconds: 60 }, '验证码已发送，mock 验证码为 123456');
+  /* 仅供离线契约联调：实际请求实例始终访问后端，验证码不会由此分支发送。 */
+  if (url === '/portal/auth/email-code' && method === 'POST') {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email || '')) return fail('请输入有效的邮箱地址');
+    if (!['REGISTER', 'RESET_PASSWORD'].includes(data.scene)) return fail('邮箱验证码场景不正确');
+    emailCodes.set(`${data.scene}:${data.email.toLowerCase()}`, '123456');
+    return ok({ expiresInSeconds: 300, retryAfterSeconds: 60 }, '验证码已发送');
   }
   if (url === '/portal/auth/register' && method === 'POST') {
-    if (smsCodes.get(`REGISTER:${data.phone}`) !== data.smsCode) {
-      return fail('短信验证码错误或已失效');
-    }
-    smsCodes.delete(`REGISTER:${data.phone}`);
-    return ok({
-      ...currentUser,
-      id: 10099,
-      username: data.phone,
-      phone: data.phone,
-      realName: data.realName
-    }, '注册成功');
+    const email = String(data.email || '').trim().toLowerCase();
+    if (emailCodes.get(`REGISTER:${email}`) !== data.emailCode) return fail('邮箱验证码错误或已失效');
+    emailCodes.delete(`REGISTER:${email}`);
+    return ok({ ...currentUser, id: 10099, username: email, email, phone: null, realName: data.realName }, '注册成功');
   }
   if (url === '/portal/auth/forget-password' && method === 'POST') {
-    if (smsCodes.get(`RESET_PASSWORD:${data.phone}`) !== data.smsCode) {
-      return fail('短信验证码错误或已失效');
-    }
-    smsCodes.delete(`RESET_PASSWORD:${data.phone}`);
+    const email = String(data.email || '').trim().toLowerCase();
+    if (emailCodes.get(`RESET_PASSWORD:${email}`) !== data.emailCode) return fail('邮箱验证码错误或已失效');
+    emailCodes.delete(`RESET_PASSWORD:${email}`);
     return ok(true, '密码已重置');
+  }
+  if (url === '/portal/user/profile/email-code' && method === 'POST') {
+    if (currentUser.email) return fail('当前账号已绑定邮箱', 409);
+    emailCodes.set(`BIND_EMAIL:${data.email}`, '123456');
+    return ok({ expiresInSeconds: 300, retryAfterSeconds: 60 }, '验证码已发送');
+  }
+  if (url === '/portal/user/profile/bind-email' && method === 'POST') {
+    if (currentUser.email) return fail('当前账号已绑定邮箱', 409);
+    if (emailCodes.get(`BIND_EMAIL:${data.email}`) !== data.emailCode) return fail('邮箱验证码错误或已失效');
+    emailCodes.delete(`BIND_EMAIL:${data.email}`);
+    currentUser.email = data.email.toLowerCase();
+    return ok({ ...currentUser }, '邮箱绑定成功');
   }
   if (url === '/portal/account/context') {
     return ok(context());
@@ -722,15 +728,17 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   if (url === '/portal/sso/authorize' && method === 'POST') {
     const member = getCurrentMember();
     const enterprise = getCurrentEnterprise();
-    if (Number(currentUser.status) !== 1) return fail('当前用户账号未启用', 403);
-    if (!member || Number(member.status) !== 1) return fail('当前企业成员状态不可用', 403);
+    if (!member) return fail('请先创建或加入企业', 403);
     if (!enterprise || Number(enterprise.status) !== 1) return fail('当前企业不可用', 403);
+    /* 与真实授权接口一致：套餐未生效时先给出订阅指引，不让未启用的成员状态遮蔽根因。 */
     if (!subscription?.planId || Number(subscription.status) !== 1 || parseDateTime(subscription.endAt) <= MOCK_NOW) {
       const message = subscription?.status === 3 && subscription?.suspendReason === 'ARREARS'
         ? '企业套餐因余额欠费已暂停，请先充值后再进入车险系统'
-        : '企业当前没有正常生效的套餐，暂时无法进入车险系统';
+        : '企业当前没有生效中的套餐，请先前往订阅服务开通套餐';
       return fail(message, 403);
     }
+    if (Number(currentUser.status) !== 1 || Number(member.status) !== 1)
+      return fail('当前账号尚未启用，请联系企业管理员启用后再进入车险系统', 403);
     return ok({
       redirectUrl: `${process.env.VUE_APP_INSURANCE_FRONTEND_URL || 'http://localhost:8888'}/sso/callback?code=mock-insurance-sso-code`,
       expiresIn: 60
@@ -770,6 +778,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       payChannel: 'STRIPE',
       username: currentUser.username,
       realName: currentUser.realName,
+      email: currentUser.email,
       phone: currentUser.phone,
       roleCode: 'OWNER',
       status: 1,
@@ -807,6 +816,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
       userId: currentUser.id,
       username: currentUser.username,
       realName: currentUser.realName,
+      email: currentUser.email,
       phone: currentUser.phone,
       roleCode: 'ISSUER',
       status: 0,
@@ -856,7 +866,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
   if (url === '/portal/enterprise/members' && method === 'GET') {
     let filtered = members.filter(item => item.enterpriseId === currentEnterpriseId);
     if (params.keyword) {
-      filtered = filtered.filter(item => `${item.realName}${item.phone}${item.username}`.includes(params.keyword));
+      filtered = filtered.filter(item => `${item.realName}${item.email || ''}`.includes(params.keyword));
     }
     if (params.roleCode) {
       filtered = filtered.filter(item => item.roleCode === params.roleCode);
@@ -1166,7 +1176,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     return ok(currentUser);
   }
   if (url === '/portal/user/profile' && method === 'PUT') {
-    Object.assign(currentUser, data);
+    Object.assign(currentUser, { realName: data.realName, phone: data.phone, idNum: data.idNum });
     return ok(currentUser, '个人信息已更新');
   }
   return Promise.resolve({ code: 404, msg: 'mock 接口不存在', data: null });

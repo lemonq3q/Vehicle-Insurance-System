@@ -169,7 +169,7 @@ export async function mockAdapter(config) {
   else if (method === 'GET' && url === '/enterprises/usage-comparison') result = ok(usageFor(String(params.enterpriseIds || '').split(',').map(Number), params.range || '30d'));
   else if (method === 'GET' && /^\/enterprises\/\d+\/members$/.test(url)) {
     const enterpriseId = Number(url.split('/')[2]); let rows = members.filter(item => item.enterpriseId === enterpriseId);
-    if (params.keyword) rows = rows.filter(item => `${item.realName}${item.username}${item.phone}`.includes(params.keyword));
+    if (params.keyword) rows = rows.filter(item => `${item.realName}${item.email || ''}`.includes(params.keyword));
     if (params.roleName) rows = rows.filter(item => item.roleName === params.roleName);
     if (params.status !== '' && params.status !== undefined) rows = rows.filter(item => item.status === Number(params.status));
     result = ok(page(rows, Number(params.pageNo || 1), Number(params.pageSize || 10)));

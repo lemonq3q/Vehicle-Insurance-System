@@ -28,6 +28,17 @@ server:
   port: 8080
 
 insurance:
+  email:
+    account-enabled: true
+    provider: ${EMAIL_PROVIDER:qq}
+    qq:
+      user: ${QQ_EMAIL_USER:}
+      password: ${QQ_EMAIL_AUTH_CODE:}
+    gmail:
+      client-id: ${GMAIL_CLIENT_ID:}
+      client-secret: ${GMAIL_CLIENT_SECRET:}
+      refresh-token: ${GMAIL_REFRESH_TOKEN:}
+      from: ${GMAIL_FROM:}
   tenant-isolation:
     enabled: true
   oss:

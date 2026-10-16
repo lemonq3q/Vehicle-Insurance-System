@@ -131,12 +131,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     /**
-     * 按用户主键直接重置密码，校验密码长度后统一使用安全编码器落库。
+     * 登录用户修改本人密码，具有用户管理权限的管理员可重置指定账号密码。
+     * 请求 ID 不能绕过当前会话权限；邮箱忘记密码使用独立验证码接口。
      */
     public ResponseResult updatePassword(User params) {
         Long userid = params.getId();
         if(userid == null){
             return new ResponseResult(400, "更新失败，用户不存在");
+        }
+        /*
+         * 保留管理员维护能力，同时禁止普通用户篡改请求 ID 重置他人密码。
+         * 本人 ID 取自已认证会话，不依赖前端个人中心传入的账号资料。
+         */
+        if (!userid.equals(SystemCommonUtil.getNowUserId()) && !SystemCommonUtil.hasPerm("user:update")) {
+            return new ResponseResult(403, "不能修改其他用户的密码");
         }
         String password = params.getPassword();
         if (password == null || password.isEmpty() || password.length() < 6 || password.length() > 16){
@@ -298,6 +306,10 @@ public class UserServiceImpl implements UserService {
         }
         MerchantUserDTO current = params.getId() == null ? null : userMapper.selectMerchantUserDTOById(params.getId());
         if (current == null) return new ResponseResult(404, "更新失败，用户不存在");
+        /* 邮箱是共享登录身份，普通人员编辑不得绕过验证写入或替换绑定邮箱。 */
+        if (params.getEmail() != null && !java.util.Objects.equals(params.getEmail(), current.getEmail())) {
+            return new ResponseResult(400, "邮箱身份需由用户在个人中心完成验证绑定");
+        }
         mergeMissing(params, current);
         if (params.getUsername() != null){
             if (judgeRepeatPhone(params.getUsername(), params.getId())){

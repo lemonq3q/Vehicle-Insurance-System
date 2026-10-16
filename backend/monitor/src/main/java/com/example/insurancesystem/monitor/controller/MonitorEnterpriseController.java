@@ -97,7 +97,10 @@ public class MonitorEnterpriseController {
         return new ResponseResult<>(200, service.usage(id, range));
     }
 
-    /** 按姓名、账号、手机号、企业角色和成员状态分页查询企业成员，只提供监控侧只读数据。 */
+    /**
+     * 按姓名、邮箱、企业角色和成员状态分页查询共享账号成员。
+     * 仅返回监控侧只读资料，未绑定邮箱保留空值，不暴露成员手机号。
+     */
     @GetMapping("/{id}/members")
     public ResponseResult<Map<String, Object>> members(@PathVariable Long id,
             @RequestParam(required = false) String keyword,
