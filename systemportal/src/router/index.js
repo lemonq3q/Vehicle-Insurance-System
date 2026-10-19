@@ -25,6 +25,7 @@ const HelpCenterPage = () => import('@/views/help/HelpCenterPage.vue');
 const NoEnterprisePage = () => import('@/views/enterprise/NoEnterprisePage.vue');
 
 const routes = [
+  { path: '/wechat/callback', component: () => import('@/views/WechatCallbackPage.vue'), meta: { title: '微信验证' } },
   {
     path: '/',
     name: 'marketing',

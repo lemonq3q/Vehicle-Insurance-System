@@ -13,13 +13,13 @@
       </div>
 
       <div class="auth-card">
-        <div class="auth-tabs">
-          <button type="button" :class="{ active: mode === 'login' }" @click="switchMode('login')">登录</button>
-          <button type="button" :class="{ active: mode === 'register' }" @click="switchMode('register')">注册</button>
-          <button type="button" :class="{ active: mode === 'forgot' }" @click="switchMode('forgot')">找回密码</button>
+        <div v-if="mode === 'login'" class="auth-tabs" role="tablist" aria-label="登录方式">
+          <button type="button" role="tab" :aria-selected="loginMethod === 'wechat'" :class="{ active: loginMethod === 'wechat' }" @click="loginMethod = 'wechat'">微信扫码</button>
+          <button type="button" role="tab" :aria-selected="loginMethod === 'email'" :class="{ active: loginMethod === 'email' }" @click="loginMethod = 'email'">邮箱登录</button>
         </div>
-
-        <form v-if="mode === 'login'" @submit.prevent="submitLogin">
+        <div v-else class="auth-form-heading"><h2>{{ mode === 'register' ? '注册账号' : '找回密码' }}</h2><button type="button" @click="switchMode('login')">返回登录</button></div>
+        <WechatLogin v-if="mode === 'login' && loginMethod === 'wechat'" />
+        <form v-if="mode === 'login' && loginMethod === 'email'" @submit.prevent="submitLogin">
           <div class="form-field">
             <label for="loginUser">邮箱</label>
             <input id="loginUser" v-model.trim="loginForm.email" class="layui-input" type="email" maxlength="100" autocomplete="username" />
@@ -33,7 +33,8 @@
           </button>
         </form>
 
-        <form v-else-if="mode === 'register'" @submit.prevent="submitRegister">
+        <div v-if="mode === 'login' && loginMethod === 'email'" class="auth-links"><button type="button" @click="switchMode('register')">注册账号</button><button type="button" @click="switchMode('forgot')">找回密码</button></div>
+        <form v-if="mode === 'register'" @submit.prevent="submitRegister">
           <div class="form-field">
             <label for="regEmail">邮箱</label>
             <input id="regEmail" v-model.trim="registerForm.email" class="layui-input" type="email" maxlength="100" autocomplete="email" />
@@ -42,7 +43,7 @@
             <label for="regCode">邮箱验证码</label>
             <div class="verification-row">
               <input id="regCode" v-model.trim="registerForm.emailCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-              <button type="button" class="code-button" :disabled="isEmailDisabled('register')" @click="sendCode('REGISTER', registerForm.email, 'register')">
+              <button v-region-loading="{ scopes: ['email-code'], compact: true }" type="button" class="code-button" :disabled="isEmailDisabled('register')" @click="sendCode('REGISTER', registerForm.email, 'register')">
                 {{ codeButtonText('register') }}
               </button>
             </div>
@@ -60,7 +61,7 @@
           </button>
         </form>
 
-        <form v-else @submit.prevent="submitForgot">
+        <form v-else-if="mode === 'forgot'" @submit.prevent="submitForgot">
           <div class="form-field">
             <label for="forgotEmail">邮箱</label>
             <input id="forgotEmail" v-model.trim="forgotForm.email" class="layui-input" type="email" maxlength="100" autocomplete="email" />
@@ -69,7 +70,7 @@
             <label for="forgotCode">邮箱验证码</label>
             <div class="verification-row">
               <input id="forgotCode" v-model.trim="forgotForm.emailCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-              <button type="button" class="code-button" :disabled="isEmailDisabled('forgot')" @click="sendCode('RESET_PASSWORD', forgotForm.email, 'forgot')">
+              <button v-region-loading="{ scopes: ['email-code'], compact: true }" type="button" class="code-button" :disabled="isEmailDisabled('forgot')" @click="sendCode('RESET_PASSWORD', forgotForm.email, 'forgot')">
                 {{ codeButtonText('forgot') }}
               </button>
             </div>
@@ -92,19 +93,21 @@
 import { forgetPassword, register, sendEmailCode } from '@/api/portal';
 import { notifySuccess, notifyWarning } from '@/utils/notification';
 import PasswordField from '@/components/PasswordField.vue';
+import WechatLogin from '@/components/WechatLogin.vue';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_CODE_PATTERN = /^\d{6}$/;
 
 export default {
   name: 'AuthPage',
-  components: { PasswordField },
+  components: { PasswordField, WechatLogin },
   /**
    * 初始化登录、注册、找回密码三组表单，以及注册和找回场景彼此独立的邮箱发送与倒计时状态。
    */
   data() {
     return {
       mode: 'login',
+      loginMethod: 'wechat',
       loginForm: { email: '', password: '' },
       registerForm: { email: '', emailCode: '', realName: '', password: '' },
       forgotForm: { email: '', emailCode: '', password: '' },
@@ -121,12 +124,15 @@ export default {
   beforeUnmount() {
     Object.values(this.emailState).forEach(state => window.clearInterval(state.timer));
   },
+  /** 门户注册链接可直接进入注册表单，不改变既有邮箱注册流程。 */
+  created() { if (this.$route.query.mode === 'register') this.mode = 'register'; },
   methods: {
     /**
      * 在登录、注册和找回密码面板间切换，不清除用户已经填写的其他面板内容。
      */
     switchMode(mode) {
       this.mode = mode;
+      if (mode === 'login') this.loginMethod = 'email';
     },
     /**
      * 判断邮箱是否符合邮箱地址格式，供发送验证码和提交校验共用。
@@ -245,6 +251,7 @@ export default {
         const response = await register(this.registerForm);
         notifySuccess(response.msg || '注册成功');
         this.mode = 'login';
+        this.loginMethod = 'email';
         this.loginForm.email = this.registerForm.email;
         this.registerForm.password = '';
         this.registerForm.emailCode = '';
@@ -268,6 +275,7 @@ export default {
         const response = await forgetPassword(this.forgotForm);
         notifySuccess(response.msg || '密码已重置');
         this.mode = 'login';
+        this.loginMethod = 'email';
         this.loginForm.email = this.forgotForm.email;
         this.forgotForm.password = '';
         this.forgotForm.emailCode = '';
@@ -282,6 +290,13 @@ export default {
 </script>
 
 <style scoped>
+.auth-links,.auth-form-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:18px 0}
+.auth-links button,.auth-form-heading button{border:0;background:none;color:#24795b;min-height:44px;cursor:pointer}
+.auth-form-heading h2{margin:0;font-size:24px}
+.auth-tabs button{min-height:56px!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;background:transparent!important;font-size:20px;color:#737b82}
+.auth-tabs button.active{border-bottom-color:#24a879!important;color:#182330!important}
+button:focus-visible{outline:2px solid #24795b;outline-offset:3px}
+
 .auth-page {
   display: flex;
   min-height: 100dvh;
@@ -315,7 +330,7 @@ export default {
 
 .auth-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 430px;
+  grid-template-columns: minmax(0, 1fr) minmax(400px, 480px);
   gap: 56px;
   width: 100%;
   max-width: 1160px;
@@ -345,15 +360,15 @@ export default {
 .auth-card {
   padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
   color: var(--portal-text);
   box-shadow: var(--portal-shadow);
 }
 
 .auth-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 22px;
 }

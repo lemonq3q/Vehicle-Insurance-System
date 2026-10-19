@@ -38,4 +38,8 @@ public class InsuranceSessionInvalidationService {
         sessionManager.removeAll(userId);
         return 1;
     }
+    /** 按微信撤回发生时间撤销旧会话，远端重试不得清除重新授权后的新登录。 */
+    public void logoutUserBefore(Long userId, long beforeEpochSeconds) {
+        sessionManager.removeBefore(userId, beforeEpochSeconds);
+    }
 }

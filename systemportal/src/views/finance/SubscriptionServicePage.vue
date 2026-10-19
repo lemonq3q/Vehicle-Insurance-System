@@ -1,93 +1,99 @@
 <template>
-  <section>
-    <div class="section-title">
-      <div>
-        <h1>订阅服务</h1>
-        <p>查看当前订阅并选择套餐</p>
-      </div>
-      <button class="layui-btn layui-btn-primary layui-border-green portal-btn" type="button" :disabled="!canManageFinance" @click="goToRecharge">余额充值</button>
-    </div>
-
-    <div v-if="isSuspended" class="subscription-alert" role="alert" aria-live="polite">
-      <svg class="subscription-alert-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 9v4m0 4h.01M10.3 3.7 2.4 17.4A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.6L13.7 3.7a2 2 0 0 0-3.4 0Z" />
-      </svg>
-      <div class="subscription-alert-content">
-        <strong>当前套餐已暂停</strong>
-        <p>{{ suspensionMessage }}</p>
-      </div>
-      <button v-if="canManageFinance" class="layui-btn portal-btn subscription-alert-action" type="button" @click="goToRecharge">
-        前往充值
-      </button>
-    </div>
-
-    <div class="stat-grid">
-      <div class="portal-card stat-card">
-        <div class="stat-label">企业余额</div>
-        <div class="stat-value">¥{{ money(overview.wallet?.balanceAmount) }}</div>
-        <div class="stat-note">币种 {{ overview.wallet?.currency || 'CNY' }}</div>
-      </div>
-      <div class="portal-card stat-card">
-        <div class="stat-label">当前套餐</div>
-        <div class="stat-value">{{ currentPlanName }}</div>
-        <div class="stat-note">{{ overview.subscription?.userLimit || 0 }} 人 · {{ overview.subscription?.workorderLimit || 0 }} 单</div>
-      </div>
-      <div class="portal-card stat-card">
-        <div class="stat-label">到期时间</div>
-        <div class="stat-value small">{{ overview.subscription?.endAt || '-' }}</div>
-        <div class="stat-note">下次续费 {{ overview.subscription?.nextRenewAt || '-' }}</div>
-      </div>
-      <div class="portal-card stat-card">
-        <div class="stat-label">自动续费</div>
-        <div class="stat-value">{{ overview.subscription?.autoRenewEnabled ? '已开启' : '未开启' }}</div>
-        <div class="stat-note">
-          <!-- 关闭续费属于停止后续扣费的操作，用红色区分；开启续费仍保持原有绿色样式。 -->
-          <button class="layui-btn layui-btn-xs layui-btn-primary" :class="overview.subscription?.autoRenewEnabled ? 'layui-border-red' : 'layui-border-green'" :disabled="!canUpdateAutoRenew || updatingAutoRenew" @click="openAutoRenewDialog">
-            {{ overview.subscription?.autoRenewEnabled ? '关闭' : '开启' }}
-          </button>
+  <section v-region-loading="{ main: true, busy: pageLoad.pending }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>订阅服务</h1>
+          <p>查看当前订阅并选择套餐</p>
         </div>
+        <button class="layui-btn layui-btn-primary layui-border-green portal-btn" type="button" :disabled="!canManageFinance" @click="goToRecharge">余额充值</button>
       </div>
-    </div>
 
-    <div class="portal-card plan-list">
-      <article v-for="plan in plans" :key="plan.id" class="plan-card">
-        <div class="plan-head">
-          <span class="portal-tag" :class="{ blue: isCurrentPlan(plan) }">
-            {{ isCurrentPlan(plan) ? '当前套餐' : '可订阅' }}
-          </span>
-          <strong>{{ plan.name }}</strong>
+      <div v-if="isSuspended" class="subscription-alert" role="alert" aria-live="polite">
+        <svg class="subscription-alert-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 9v4m0 4h.01M10.3 3.7 2.4 17.4A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.6L13.7 3.7a2 2 0 0 0-3.4 0Z" />
+        </svg>
+        <div class="subscription-alert-content">
+          <strong>当前套餐已暂停</strong>
+          <p>{{ suspensionMessage }}</p>
         </div>
-        <p>{{ plan.description }}</p>
-        <div class="price">¥{{ plan.price }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
-        <ul>
-          <li>成员上限：{{ plan.userLimit }} 人</li>
-          <li>工单额度：{{ plan.workorderLimit }} 单</li>
-          <li>有效天数：{{ plan.durationDays }} 天</li>
-          <li>原价：¥{{ plan.originalPrice }}</li>
-        </ul>
-        <button class="layui-btn portal-btn portal-btn-primary plan-action" :disabled="!canManageFinance" @click="openOrder(plan)">
-          {{ actionName(plan) }}
+        <button v-if="canManageFinance" class="layui-btn portal-btn subscription-alert-action" type="button" @click="goToRecharge">
+          前往充值
         </button>
-      </article>
-    </div>
+      </div>
 
-    <ConfirmDialog :visible="autoRenewDialog" :title="autoRenewTarget ? '开启自动续费' : '关闭自动续费'" :message="autoRenewTarget ? '开启后，系统将在套餐到期时按续费设置自动创建续订订单，并使用企业余额支付。请确保账户余额充足。确认开启吗？' : '关闭后，系统将不再自动续订。当前套餐仍可使用至到期，到期后需要手动续订，否则可能影响服务使用。确认关闭吗？'" :confirm-text="autoRenewTarget ? '确认开启' : '确认关闭'" :confirm-type="autoRenewTarget ? 'primary' : 'danger'" :loading="updatingAutoRenew" @cancel="autoRenewDialog = false" @confirm="toggleAutoRenew" />
+      <div class="stat-grid">
+        <div class="portal-card stat-card">
+          <div class="stat-label">企业余额</div>
+          <div class="stat-value">¥{{ money(overview.wallet?.balanceAmount) }}</div>
+          <div class="stat-note">币种 {{ overview.wallet?.currency || 'CNY' }}</div>
+        </div>
+        <div class="portal-card stat-card">
+          <div class="stat-label">当前套餐</div>
+          <div class="stat-value">{{ currentPlanName }}</div>
+          <div class="stat-note">{{ overview.subscription?.userLimit || 0 }} 人 · {{ overview.subscription?.workorderLimit || 0 }} 单</div>
+        </div>
+        <div class="portal-card stat-card">
+          <div class="stat-label">到期时间</div>
+          <div class="stat-value small">{{ overview.subscription?.endAt || '-' }}</div>
+          <div class="stat-note">下次续费 {{ overview.subscription?.nextRenewAt || '-' }}</div>
+        </div>
+        <div class="portal-card stat-card">
+          <div class="stat-label">自动续费</div>
+          <div class="stat-value">{{ overview.subscription?.autoRenewEnabled ? '已开启' : '未开启' }}</div>
+          <div class="stat-note">
+            <!-- 关闭续费属于停止后续扣费的操作，用红色区分；开启续费仍保持原有绿色样式。 -->
+            <button class="layui-btn layui-btn-xs layui-btn-primary" :class="overview.subscription?.autoRenewEnabled ? 'layui-border-red' : 'layui-border-green'" :disabled="!canUpdateAutoRenew || updatingAutoRenew" @click="openAutoRenewDialog">
+              {{ overview.subscription?.autoRenewEnabled ? '关闭' : '开启' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="portal-card plan-list">
+        <article v-for="plan in plans" :key="plan.id" class="plan-card">
+          <div class="plan-head">
+            <span class="portal-tag" :class="{ blue: isCurrentPlan(plan) }">
+              {{ isCurrentPlan(plan) ? '当前套餐' : '可订阅' }}
+            </span>
+            <strong>{{ plan.name }}</strong>
+          </div>
+          <p>{{ plan.description }}</p>
+          <div class="price">¥{{ plan.price }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
+          <ul>
+            <li>成员上限：{{ plan.userLimit }} 人</li>
+            <li>工单额度：{{ plan.workorderLimit }} 单</li>
+            <li>有效天数：{{ plan.durationDays }} 天</li>
+            <li>原价：¥{{ plan.originalPrice }}</li>
+          </ul>
+          <button class="layui-btn portal-btn portal-btn-primary plan-action" :disabled="!canManageFinance" @click="openOrder(plan)">
+            {{ actionName(plan) }}
+          </button>
+        </article>
+      </div>
+
+      <ConfirmDialog :visible="autoRenewDialog" :title="autoRenewTarget ? '开启自动续费' : '关闭自动续费'" :message="autoRenewTarget ? '开启后，系统将在套餐到期时按续费设置自动创建续订订单，并使用企业余额支付。请确保账户余额充足。确认开启吗？' : '关闭后，系统将不再自动续订。当前套餐仍可使用至到期，到期后需要手动续订，否则可能影响服务使用。确认关闭吗？'" :confirm-text="autoRenewTarget ? '确认开启' : '确认关闭'" :confirm-type="autoRenewTarget ? 'primary' : 'danger'" :loading="updatingAutoRenew" @cancel="autoRenewDialog = false" @confirm="toggleAutoRenew" />
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadData" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getFinanceOverview, getPlans, updateAutoRenew } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { notifySuccess } from '@/utils/notification';
 
 export default {
   name: 'SubscriptionServicePage',
-  components: { ConfirmDialog },
+  components: { DataLoadFeedback, ConfirmDialog },
   /**
    * 保存企业钱包、当前订阅快照和全部可售套餐，页面据此生成充值、续订或改订入口。
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       overview: { wallet: {}, subscription: { status: 0, userLimit: 0, plan: {} } },
       plans: [],
       autoRenewDialog: false,
@@ -156,14 +162,17 @@ export default {
      * 并行读取企业财务概览与套餐列表，并为尚未创建钱包或订阅的企业补齐稳定默认结构。
      */
     async loadData() {
-      const [overview, plans] = await Promise.all([getFinanceOverview(), getPlans()]);
-      const data = overview.data || {};
-      this.overview = {
-        ...data,
-        wallet: data.wallet || { balanceAmount: 0, currency: 'CNY' },
-        subscription: data.subscription || { status: 0, userLimit: 0, plan: {} }
-      };
-      this.plans = plans.data;
+      return loadPageData(this.pageLoad, async () => {
+        const [overview, plans] = await Promise.all([getFinanceOverview(), getPlans()]);
+        if (!overview?.data || !Array.isArray(plans?.data)) throw new Error('订阅资料加载失败，请重试');
+        const data = overview.data || {};
+        this.overview = {
+          ...data,
+          wallet: data.wallet || { balanceAmount: 0, currency: 'CNY' },
+          subscription: data.subscription || { status: 0, userLimit: 0, plan: {} }
+        };
+        this.plans = plans.data;
+      });
     },
     /**
      * 将余额和套餐价格统一格式化为两位小数。

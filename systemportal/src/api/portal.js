@@ -1,196 +1,196 @@
 import request from '@/api/request';
 
 /**
- * 使用门户请求实例发送带查询参数的 GET 请求，并直接返回已规范化的业务响应。
+ * 使用门户请求实例发送 GET 请求；loading 为前端父区域标识，不改变后端查询参数或响应契约。
  */
-const get = (url, params) => request.get(url, { params });
+const get = (url, params, loading) => request.get(url, { params, loading });
 /**
- * 使用门户请求实例发送 JSON POST 请求。
+ * 使用门户请求实例发送 JSON POST 请求；调用方显式区分局部试算、验证码和重要表单提交。
  */
-const post = (url, data) => request.post(url, data);
+const post = (url, data, loading) => request.post(url, data, { loading });
 /**
- * 使用门户请求实例发送 JSON PUT 请求。
+ * 使用门户请求实例发送 JSON PUT 请求；重要资料修改显式开启全屏提交保护。
  */
-const put = (url, data) => request.put(url, data);
+const put = (url, data, loading) => request.put(url, data, { loading });
 /**
- * 将删除条件放入 Axios delete 的 data 配置中发送。
+ * 将删除条件放入 Axios delete 的 data 配置中发送；加载范围仅由前端消费。
  */
-const del = (url, data) => request.delete(url, { data });
+const del = (url, data, loading) => request.delete(url, { data, loading });
 
 /**
  * 使用账号密码或验证码登录门户并获取 token 与账号上下文。
  */
-export const login = data => post('/portal/auth/login', data);
+export const login = data => post('/portal/auth/login', data, { fullscreen: true });
 /**
  * 为注册或找回密码邮箱发送真实的一次性验证码。
  */
-export const sendEmailCode = data => post('/portal/auth/email-code', data);
+export const sendEmailCode = data => post('/portal/auth/email-code', data, { scope: 'email-code' });
 /**
  * 提交门户账号注册资料并建立用户。
  */
-export const register = data => post('/portal/auth/register', data);
+export const register = data => post('/portal/auth/register', data, { fullscreen: true });
 /**
  * 使用验证码和新密码完成门户密码找回。
  */
-export const forgetPassword = data => post('/portal/auth/forget-password', data);
+export const forgetPassword = data => post('/portal/auth/forget-password', data, { fullscreen: true });
 /**
  * 查询当前用户、企业列表、当前企业和成员角色上下文。
  */
-export const getAccountContext = (config = {}) => request.get('/portal/account/context', config);
+export const getAccountContext = (config = {}) => request.get('/portal/account/context', { loading: { scope: 'context' }, ...config });
 /**
  * 查询当前企业仪表盘经营指标，包含本月工单、续保提醒、新增客户、盈利及环比。
  */
-export const getDashboardStatistics = () => get('/portal/dashboard/statistics');
+export const getDashboardStatistics = () => get('/portal/dashboard/statistics', undefined, { scope: 'dashboard' });
 /**
  * 申请从门户进入车险系统的一次性 SSO 跳转地址。
  */
-export const createInsuranceAuthorization = () => post('/portal/sso/authorize', {});
+export const createInsuranceAuthorization = () => post('/portal/sso/authorize', {}, { scope: 'enter-system' });
 /**
  * 使用车险系统返回的一次性 code 恢复门户会话。
  */
-export const exchangePortalSsoCode = code => request.post('/portal/sso/exchange', { code }, { silentAuthFailure: true });
+export const exchangePortalSsoCode = code => request.post('/portal/sso/exchange', { code }, { silentAuthFailure: true, loading: { scope: 'auth-callback' } });
 
 /**
  * 查询当前企业及其订阅、钱包等门户概览资料。
  */
-export const getEnterpriseCurrent = () => get('/portal/enterprise/current');
+export const getEnterpriseCurrent = () => get('/portal/enterprise/current', undefined, { scope: 'enterprise' });
 /**
  * 查询当前企业最近一个月内的仪表盘提醒。后端已按严重程度和提醒时间倒序排列，
  * 页面不自行扩展时间范围，避免过期业务风险长期占用近期提醒区域。
  */
-export const getRecentReminders = () => get('/portal/reminders/recent');
+export const getRecentReminders = () => get('/portal/reminders/recent', undefined, { scope: 'dashboard' });
 /**
  * 创建新企业并将当前账号设为拥有者。
  */
-export const createEnterprise = data => post('/portal/enterprise', data);
+export const createEnterprise = data => post('/portal/enterprise', data, { fullscreen: true });
 /**
  * 更新当前企业允许维护的名称、联系及经营资料。
  */
-export const updateEnterprise = data => put('/portal/enterprise/current', data);
+export const updateEnterprise = data => put('/portal/enterprise/current', data, { fullscreen: true });
 /**
  * 使用有效邀请码加入目标企业。
  */
-export const joinEnterpriseByInvite = data => post('/portal/enterprise/join-by-invite', data);
+export const joinEnterpriseByInvite = data => post('/portal/enterprise/join-by-invite', data, { fullscreen: true });
 /**
  * 分页查询当前企业的邀请码及使用状态。
  */
-export const getInviteCodes = params => get('/portal/enterprise/invite-codes', params);
+export const getInviteCodes = params => get('/portal/enterprise/invite-codes', params, { scope: 'invites' });
 /**
  * 批量创建指定角色和有效期的企业邀请码。
  */
-export const createInviteCode = data => post('/portal/enterprise/invite-codes', data);
+export const createInviteCode = data => post('/portal/enterprise/invite-codes', data, { fullscreen: true });
 /**
  * 删除尚可撤销的企业邀请码。
  */
-export const deleteInviteCode = data => del('/portal/enterprise/invite-codes', data);
+export const deleteInviteCode = data => del('/portal/enterprise/invite-codes', data, { fullscreen: true });
 /**
  * 分页查询当前企业成员及角色状态。
  */
-export const getMembers = params => get('/portal/enterprise/members', params);
+export const getMembers = params => get('/portal/enterprise/members', params, { scope: 'members' });
 /**
  * 调整企业成员角色，所有者角色转移使用独立接口。
  */
-export const updateMemberRole = data => put('/portal/enterprise/members/role', data);
+export const updateMemberRole = data => put('/portal/enterprise/members/role', data, { fullscreen: true });
 /**
  * 启用或停用企业成员的门户使用权。
  */
-export const updateMemberStatus = data => put('/portal/enterprise/members/status', data);
+export const updateMemberStatus = data => put('/portal/enterprise/members/status', data, { fullscreen: true });
 /**
  * 将指定非所有者成员移出当前企业。
  */
-export const removeEnterpriseMember = data => post('/portal/enterprise/members/remove', data);
+export const removeEnterpriseMember = data => post('/portal/enterprise/members/remove', data, { fullscreen: true });
 /**
  * 将企业所有权转移给符合条件的目标成员。
  */
-export const transferOwner = data => post('/portal/enterprise/owner-transfer', data);
+export const transferOwner = data => post('/portal/enterprise/owner-transfer', data, { fullscreen: true });
 /**
  * 分页查询成员角色、状态和进出企业的变更日志。
  */
-export const getMemberChangeLogs = params => get('/portal/enterprise/member-change-logs', params);
+export const getMemberChangeLogs = params => get('/portal/enterprise/member-change-logs', params, { scope: 'members' });
 /**
  * 由当前非所有者成员主动退出企业。
  */
-export const exitEnterprise = () => post('/portal/enterprise/members/exit', {});
+export const exitEnterprise = () => post('/portal/enterprise/members/exit', {}, { fullscreen: true });
 
 /**
  * 查询当前企业钱包、订阅和成员占用等财务概览。
  */
-export const getFinanceOverview = () => get('/portal/finance/overview');
+export const getFinanceOverview = () => get('/portal/finance/overview', undefined, { scope: 'finance-overview' });
 /**
  * 查询门户可购买的有效套餐及其成员、工单额度。
  */
-export const getPlans = () => get('/portal/finance/plans');
+export const getPlans = () => get('/portal/finance/plans', undefined, { scope: 'plans' });
 /**
  * 官网公开读取套餐；失败时静默使用页面备用套餐，不发布全局错误通知。
  */
 export const getMarketingPlans = () => request.get('/portal/finance/plans', {
-  skipErrorNotification: true
+  skipErrorNotification: true, loading: { scope: 'marketing-plans' }
 });
 /**
  * 官网游客提交联系资料；来源由浏览器标准头和服务端白名单验证。
  */
 export const createVisitorLead = data => request.post('/portal/visitor-leads', data, {
-  skipErrorNotification: true
+  skipErrorNotification: true, loading: { fullscreen: true }
 });
 /**
  * 创建指定金额的余额充值订单；实际支付方式由 Stripe Checkout 决定。
  */
-export const createRechargeOrder = data => post('/portal/finance/recharge-orders', data);
+export const createRechargeOrder = data => post('/portal/finance/recharge-orders', data, { fullscreen: true });
 /**
  * 查询单个充值订单及其支付状态。
  */
-export const getRechargeOrder = id => get(`/portal/finance/recharge-orders/${id}`);
+export const getRechargeOrder = id => get(`/portal/finance/recharge-orders/${id}`, undefined, { scope: 'recharge-order' });
 /**
  * 创建或复用充值订单对应的 Stripe Embedded Checkout Session。
  */
-export const createStripeRechargeCheckoutSession = id => post(`/portal/payment/stripe/recharge-orders/${id}/checkout-session`, {});
+export const createStripeRechargeCheckoutSession = id => post(`/portal/payment/stripe/recharge-orders/${id}/checkout-session`, {}, { scope: 'checkout' });
 /**
  * 取消仍处于待支付状态的充值订单。
  */
-export const cancelRechargeOrder = id => post(`/portal/finance/recharge-orders/${id}/cancel`, {});
+export const cancelRechargeOrder = id => post(`/portal/finance/recharge-orders/${id}/cancel`, {}, { fullscreen: true });
 /**
  * 按时间和状态分页查询充值订单。
  */
-export const getRechargeOrders = params => get('/portal/finance/recharge-orders', params);
+export const getRechargeOrders = params => get('/portal/finance/recharge-orders', params, { scope: 'recharges' });
 /**
  * 试算套餐订阅或变更费用，包括余额、周期折算和超额工单费用。
  */
-export const getSubscriptionOrderPreview = data => post('/portal/finance/subscription-orders/preview', data);
+export const getSubscriptionOrderPreview = data => post('/portal/finance/subscription-orders/preview', data, { scope: 'subscription-preview' });
 /**
  * 创建并支付订阅订单，余额不足时返回待充值上下文。
  */
-export const createSubscriptionOrder = data => post('/portal/finance/subscription-orders', data);
+export const createSubscriptionOrder = data => post('/portal/finance/subscription-orders', data, { fullscreen: true });
 /**
  * 开启或关闭当前有效订阅的自动续费。
  */
-export const updateAutoRenew = data => put('/portal/finance/subscription/auto-renew', data);
+export const updateAutoRenew = data => put('/portal/finance/subscription/auto-renew', data, { fullscreen: true });
 /**
  * 按类型、状态和时间分页查询订阅订单。
  */
-export const getSubscriptionOrders = params => get('/portal/finance/subscription-orders', params);
+export const getSubscriptionOrders = params => get('/portal/finance/subscription-orders', params, { scope: 'subscription-orders' });
 /**
  * 查询当前企业单个历史订阅订单，包含下单时的套餐权益快照、费用构成和支付状态。
  */
-export const getSubscriptionOrder = id => get(`/portal/finance/subscription-orders/${id}`);
+export const getSubscriptionOrder = id => get(`/portal/finance/subscription-orders/${id}`, undefined, { scope: 'subscription-record' });
 /**
  * 分页查询企业钱包的充值、订阅、退款和超额计费流水。
  */
-export const getWalletTransactions = params => get('/portal/finance/wallet-transactions', params);
+export const getWalletTransactions = params => get('/portal/finance/wallet-transactions', params, { scope: 'transactions' });
 
 /**
  * 查询当前门户用户的个人资料。
  */
-export const getProfile = () => get('/portal/user/profile');
+export const getProfile = () => get('/portal/user/profile', undefined, { scope: 'profile' });
 /**
  * 更新当前用户允许修改的个人资料字段。
  */
-export const updateProfile = data => put('/portal/user/profile', data);
+export const updateProfile = data => put('/portal/user/profile', data, { fullscreen: true });
 
 /**
  * 为当前已登录且未绑定邮箱的账号发送绑定验证码，服务端从会话确定账号归属。
  */
-export const sendBindingEmailCode = data => post('/portal/user/profile/email-code', data);
+export const sendBindingEmailCode = data => post('/portal/user/profile/email-code', data, { scope: 'binding-email-code' });
 /**
  * 验证邮箱所有权并为当前账号设置邮箱及登录密码，不允许覆盖已有绑定。
  */
-export const bindEmail = data => post('/portal/user/profile/bind-email', data);
+export const bindEmail = data => post('/portal/user/profile/bind-email', data, { fullscreen: true });

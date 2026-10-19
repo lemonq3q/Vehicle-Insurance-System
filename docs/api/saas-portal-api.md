@@ -68,7 +68,7 @@
 
 ## 1. 邮箱认证
 
-SaaS 门户与车险系统共用 `tenant_user` 邮箱身份。邮箱规范化为去首尾空白并转小写；保留原用户 ID 和 SSO 关系，不再以手机号或内部 username 登录。微信登录后续接入。
+SaaS 门户与车险系统共用 `tenant_user` 邮箱身份。邮箱规范化为去首尾空白并转小写；保留原用户 ID 和 SSO 关系，不再以手机号或内部 username 登录。微信登录及首次绑定见 `wechat-login-api.md`。
 
 | 方法和路径 | 请求 JSON body | 返回 data |
 | --- | --- | --- |

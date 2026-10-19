@@ -29,7 +29,8 @@ function load(relative) {
     Storage: { get() {}, set() {}, remove: key => effects.push(['remove', key]) },
     router: { push: url => effects.push(['route', url]) },
     notifyError: msg => effects.push(['error', msg]), notifyWarning: msg => effects.push(['warning', msg]),
-    normalizeDateTimes: value => value, getToken() {}, updateToken() {}
+    normalizeDateTimes: value => value, getToken() {}, updateToken() {},
+    Loading: { open: () => () => {} }
   };
   const source = fs.readFileSync(path.join(__dirname, '..', relative), 'utf8')
     .replace(/^import .*;\r?\n/gm, '')

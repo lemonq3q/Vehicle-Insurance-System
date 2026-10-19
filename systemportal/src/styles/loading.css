@@ -1,0 +1,64 @@
+.portal-loading-region { position: relative; }
+.portal-region-busy { min-height: 120px; }
+.portal-loading-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 16px;
+  border-radius: inherit;
+  background: rgb(255 255 255 / 86%);
+  cursor: progress;
+}
+.portal-loading-indicator {
+  position: sticky;
+  top: 35vh;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--portal-accent-strong, #15803d);
+  font-size: 14px;
+  font-weight: 600;
+}
+.portal-loading-ring {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgb(22 163 74 / 18%);
+  border-top-color: var(--portal-accent, #16a34a);
+  border-radius: 50%;
+  animation: portal-loading-rotate 800ms linear infinite;
+}
+.portal-loading-compact.portal-region-busy { min-height: 0; }
+.portal-loading-compact > .portal-loading-mask { padding: 0; align-items: center; }
+.portal-loading-compact .portal-loading-indicator { position: static; }
+.portal-loading-compact .portal-loading-ring { width: 20px; height: 20px; border-width: 2px; }
+.portal-loading-compact .portal-loading-indicator > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+/* 已有父区域正在加载时隐藏子区域遮罩，同组多个卡片只在父级呈现一次反馈。 */
+.portal-region-busy .portal-region-busy > .portal-loading-mask { display: none; }
+.portal-region-busy .data-load-feedback .portal-loading-indicator { visibility: hidden; }
+.portal-region-busy .skeleton-card span,
+.portal-region-busy .skeleton-card strong,
+.portal-region-busy .skeleton-card small,
+.portal-region-busy .plan-skeleton { animation: none; }
+.portal-submit-loading {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 24px;
+  border: 0;
+  background: rgb(255 255 255 / 90%);
+  cursor: progress;
+}
+.portal-submit-loading[open] { display: grid; place-items: center; }
+.portal-submit-loading::backdrop { background: transparent; }
+.portal-submit-loading .portal-loading-ring { width: 46px; height: 46px; }
+@keyframes portal-loading-rotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .portal-loading-ring { animation: none; } }

@@ -12,6 +12,11 @@ public final class PortalMaps {
     if (source == null) return null;
     Map<String, Object> result = new LinkedHashMap<>();
     source.forEach((key, value) -> result.put(toCamel(key), value));
+    /* 微信绑定是接口布尔状态，MySQL CASE 可能返回数值，统一规范避免前端误判。 */
+    if (result.containsKey("wechatBound")) {
+      Object bound = result.get("wechatBound");
+      result.put("wechatBound", Boolean.TRUE.equals(bound) || (bound instanceof Number && ((Number) bound).intValue() == 1));
+    }
     return result;
   }
 

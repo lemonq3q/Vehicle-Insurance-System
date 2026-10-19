@@ -12,6 +12,9 @@ public interface LoginService {
      */
     ResponseResult login(User user);
 
+    /** 微信服务器验证身份后以共享用户 ID 加载企业权限并签发既有 JWT，不允许自动注册。 */
+    ResponseResult wechatLogin(Long userId);
+
     /**
      * 消费 SaaS 一次性授权码并建立等价车险登录会话。
      */

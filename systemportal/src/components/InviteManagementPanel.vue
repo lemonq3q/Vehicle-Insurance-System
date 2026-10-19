@@ -1,60 +1,65 @@
 <template>
-  <article class="portal-card panel invite-panel">
-    <div class="invite-create-area">
-      <div class="table-toolbar">
-        <h2>企业邀请码</h2>
-        <button class="layui-btn portal-btn portal-btn-primary" :disabled="creating" @click="createInvite">
-          {{ creating ? '创建中' : '创建邀请码' }}
-        </button>
-      </div>
-      <div class="invite-form">
-        <div class="form-field">
-          <label for="maxUseCount">邀请人数</label>
-          <input id="maxUseCount" v-model.number="form.maxUseCount" class="layui-input" type="number" min="1" step="1" @blur="validateCount" />
-          <p v-if="errors.maxUseCount" class="form-error">{{ errors.maxUseCount }}</p>
+  <article class="portal-card panel invite-panel" v-region-loading="{ scopes: ['invites'], busy: pageLoad.pending, immediate: true }">
+    <template v-if="pageLoad.ready">
+      <div class="invite-create-area">
+        <div class="table-toolbar">
+          <h2>企业邀请码</h2>
+          <button class="layui-btn portal-btn portal-btn-primary" :disabled="creating" @click="createInvite">
+            {{ creating ? '创建中' : '创建邀请码' }}
+          </button>
         </div>
-        <div class="form-field">
-          <label for="expiresAt">过期日期</label>
-          <LayDatePicker v-model="form.expiresAt" placeholder="请选择邀请码过期日期" />
-          <p v-if="errors.expiresAt" class="form-error">{{ errors.expiresAt }}</p>
+        <div class="invite-form">
+          <div class="form-field">
+            <label for="maxUseCount">邀请人数</label>
+            <input id="maxUseCount" v-model.number="form.maxUseCount" class="layui-input" type="number" min="1" step="1" @blur="validateCount" />
+            <p v-if="errors.maxUseCount" class="form-error">{{ errors.maxUseCount }}</p>
+          </div>
+          <div class="form-field">
+            <label for="expiresAt">过期日期</label>
+            <LayDatePicker v-model="form.expiresAt" placeholder="请选择邀请码过期日期" />
+            <p v-if="errors.expiresAt" class="form-error">{{ errors.expiresAt }}</p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="invite-list-area">
-      <h3>已创建的邀请码</h3>
-      <div class="data-table-wrap">
-        <table class="layui-table portal-table">
-          <thead><tr><th>邀请码</th><th>默认角色</th><th>使用次数</th><th>过期日期</th><th>状态</th><th>操作</th></tr></thead>
-          <tbody>
-            <tr v-for="item in rows" :key="item.id">
-              <td>{{ item.code }}</td>
-              <td>{{ roleName(item.defaultRoleCode) }}</td>
-              <td>{{ item.usedCount }} / {{ item.maxUseCount || '不限' }}</td>
-              <td>{{ item.expiresAt }}</td>
-              <td><span class="portal-tag">可用</span></td>
-              <td><button class="layui-btn layui-btn-xs layui-btn-primary layui-border-red" @click="openDeleteDialog(item)">删除</button></td>
-            </tr>
-            <tr v-if="!rows.length"><td class="empty-cell" colspan="6">暂无邀请码</td></tr>
-          </tbody>
-        </table>
+      <div class="invite-list-area">
+        <h3>已创建的邀请码</h3>
+        <div class="data-table-wrap">
+          <table class="layui-table portal-table">
+            <thead><tr><th>邀请码</th><th>默认角色</th><th>使用次数</th><th>过期日期</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="item in rows" :key="item.id">
+                <td>{{ item.code }}</td>
+                <td>{{ roleName(item.defaultRoleCode) }}</td>
+                <td>{{ item.usedCount }} / {{ item.maxUseCount || '不限' }}</td>
+                <td>{{ item.expiresAt }}</td>
+                <td><span class="portal-tag">可用</span></td>
+                <td><button class="layui-btn layui-btn-xs layui-btn-primary layui-border-red" @click="openDeleteDialog(item)">删除</button></td>
+              </tr>
+              <tr v-if="!rows.length"><td class="empty-cell" colspan="6">暂无邀请码</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <LayPagination :total="total" :page-num="query.pageNum" :page-size="query.pageSize" @change="changePage" @size-change="changePageSize" />
       </div>
-      <LayPagination :total="total" :page-num="query.pageNum" :page-size="query.pageSize" @change="changePage" @size-change="changePageSize" />
-    </div>
 
-    <ConfirmDialog
-      :visible="deleteDialog.visible"
-      title="删除邀请码"
-      :message="`确定删除邀请码“${deleteDialog.invite?.code || ''}”吗？删除后该邀请码将无法继续使用。`"
-      confirm-text="确认删除"
-      :loading="deleteDialog.loading"
-      @cancel="closeDeleteDialog"
-      @confirm="confirmDelete"
-    />
+      <ConfirmDialog
+        :visible="deleteDialog.visible"
+        title="删除邀请码"
+        :message="`确定删除邀请码“${deleteDialog.invite?.code || ''}”吗？删除后该邀请码将无法继续使用。`"
+        confirm-text="确认删除"
+        :loading="deleteDialog.loading"
+        @cancel="closeDeleteDialog"
+        @confirm="confirmDelete"
+      />
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadData" />
   </article>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { createInviteCode, deleteInviteCode, getInviteCodes } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import LayDatePicker from '@/components/LayDatePicker.vue';
@@ -64,13 +69,14 @@ import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'InviteManagementPanel',
-  components: { ConfirmDialog, LayDatePicker, LayPagination },
+  components: { DataLoadFeedback, ConfirmDialog, LayDatePicker, LayPagination },
   /**
    * 管理邀请码分页列表、创建表单校验状态和删除确认框状态。创建与删除分别设置独立 loading，
    * 避免网络请求期间重复提交或关闭正在执行的危险操作。
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       rows: [],
       total: 0,
       query: { pageNum: 1, pageSize: 5 },
@@ -92,9 +98,11 @@ export default {
      * 按当前分页条件读取企业邀请码，并将后端总数显式转换为数字供分页组件计算。
      */
     async loadData() {
-      const response = await getInviteCodes(this.query);
-      this.rows = response.data.table;
-      this.total = Number(response.data.total || 0);
+      return loadPageData(this.pageLoad, async () => {
+        const response = await getInviteCodes(this.query);
+        this.rows = response.data.table;
+        this.total = Number(response.data.total || 0);
+      });
     },
     /**
      * 邀请人数必须是正整数，既限制无效额度，也避免小数经后端隐式取整造成实际可用次数歧义。

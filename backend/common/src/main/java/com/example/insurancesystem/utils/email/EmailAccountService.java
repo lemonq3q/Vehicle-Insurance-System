@@ -113,6 +113,8 @@ public class EmailAccountService {
             }
             result.put(name.toString(), value);
         });
+        Object bound = result.get("wechatBound");
+        result.put("wechatBound", Boolean.TRUE.equals(bound) || (bound instanceof Number && ((Number) bound).intValue() == 1));
         return result;
     }
 

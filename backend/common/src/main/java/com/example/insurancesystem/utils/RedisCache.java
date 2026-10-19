@@ -63,6 +63,36 @@ public class RedisCache {
     }
 
     /**
+     * 比较 Redis 原始会话中的 sessionId 后原子删除，兼容旧版本缺少新增字段的序列化记录。
+     * 不比较整个对象，避免应用升级后新增字段使旧会话无法撤销；新登录的不同 jti 受保护。
+     */
+    public boolean deleteSessionIfId(String key, String sessionId) {
+        return changeSessionIfId(key, sessionId, "return redis.call('del', KEYS[1])");
+    }
+
+    /**
+     * 只有原始会话仍属于相同 sessionId 才续期，不重新创建已撤回的会话。
+     * 时间为服务端数值直接编入 Lua，避免 JSON 值序列化影响 Redis expire 的整数参数。
+     */
+    public boolean expireSessionIfId(String key, String sessionId, long seconds) {
+        return changeSessionIfId(key, sessionId, "return redis.call('expire', KEYS[1], " + seconds + ")");
+    }
+
+    /**
+     * 在 Lua 中读取原始 JSON 并比较 jti，再执行固定会话操作；无记录或非法历史数据均安全失败。
+     * 同时兼容 JSON 对象和历史类型包装数组，外部输入不参与 Lua 操作语句拼接。
+     */
+    private boolean changeSessionIfId(String key, String sessionId, String operation) {
+        if (sessionId == null) return false;
+        String source = "local raw=redis.call('get',KEYS[1]); if not raw then return 0 end; "
+                + "local ok,doc=pcall(cjson.decode,raw); if not ok or type(doc)~='table' then return 0 end; "
+                + "if type(doc[2])=='table' then doc=doc[2] end; "
+                + "local expected=cjson.decode(ARGV[1]); if doc['sessionId']==expected then " + operation + " else return 0 end";
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(source, Long.class);
+        return Long.valueOf(1).equals(redisTemplate.execute(script, Collections.singletonList(redisKey(key)), sessionId));
+    }
+
+    /**
      * 原子增加短期错误尝试次数，首次计数时设置过期时间，阻止并发绕过验证码尝试额度。
      */
     public long incrementCounter(String key, long seconds) {

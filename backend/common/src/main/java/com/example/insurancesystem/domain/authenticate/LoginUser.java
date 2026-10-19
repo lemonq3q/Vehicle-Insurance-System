@@ -30,6 +30,9 @@ public class LoginUser implements UserDetails {
 
     private String sessionId;
 
+    /** 会话首次建立的毫秒时间，刷新 JWT 和活跃续期不改变，用于撤回事件的时间边界判断。 */
+    private Long authenticatedAt;
+
     private Long enterpriseId;
 
     @JsonIgnore

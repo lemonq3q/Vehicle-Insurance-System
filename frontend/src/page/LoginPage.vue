@@ -1,23 +1,11 @@
 <template>
   <div class="auth-container">
-    <!-- 切换标签 -->
-    <div class="auth-tabs">
-      <div 
-        class="auth-tab no_select" 
-        :class="{ active: activeTab === 'login' }"
-        @click="activeTab = 'login'"
-      >
-        登录
-      </div>
-      <div 
-        class="auth-tab no_select" 
-        :class="{ active: activeTab === 'forget' }"
-        @click="activeTab = 'forget'"
-      >
-        找回密码
-      </div>
+    <div class="auth-card">
+    <div class="auth-tabs" role="tablist" aria-label="登录方式">
+      <button type="button" role="tab" :aria-selected="activeTab === 'wechat'" class="auth-tab" :class="{ active: activeTab === 'wechat' }" @click="activeTab = 'wechat'">微信扫码</button>
+      <button type="button" role="tab" :aria-selected="activeTab !== 'wechat'" class="auth-tab" :class="{ active: activeTab !== 'wechat' }" @click="activeTab = 'login'">邮箱登录</button>
     </div>
-
+    <WechatLogin v-if="activeTab === 'wechat'" />
     <!-- 登录表单 -->
     <div class="auth-box" v-show="activeTab === 'login'">
       <el-form
@@ -59,6 +47,7 @@
       </el-form>
     </div>
 
+    <div v-if="activeTab === 'login'" class="auth-links"><button type="button" @click="activeTab = 'forget'">找回密码</button></div>
     <!-- 找回密码表单 -->
     <div class="auth-box" v-show="activeTab === 'forget'">
       <el-form
@@ -139,6 +128,7 @@
         </el-form-item>
       </el-form>
     </div>
+    </div>
   </div>
 </template>
 
@@ -152,10 +142,11 @@ import { useStore } from 'vuex';
 import { objToJsonStr } from '@/utils/convert';
 import Storage from '@/utils/storage';
 import Loading from '@/utils/loading';
+import WechatLogin from '@/components/WechatLogin.vue';
 
 const router = useRouter();
 const store = useStore();
-const activeTab = ref('login');
+const activeTab = ref('wechat');
 const loginRef = ref();
 const forgetRef = ref();
 const loginForm = reactive({ email: '', password: '' });
@@ -250,11 +241,19 @@ onUnmounted(() => Object.values(codeStates).forEach(state => clearInterval(state
 </script>
 
 <style scoped>
+.auth-card{width:min(480px,100%);box-sizing:border-box;background:white;border-radius:22px;padding:30px;box-shadow:0 20px 60px #030a183d}
+.auth-links{display:flex;justify-content:flex-end;align-items:center;gap:16px}.auth-links button{color:#24795b;background:none;border:0;min-height:44px;display:flex;align-items:center;cursor:pointer}
+.auth-card .auth-tabs{box-shadow:none;border-radius:0;border-bottom:1px solid #e5e7eb;padding:0;background:white}
+.auth-card .auth-tab{border:0;background:none;color:#737b82;border-radius:0;min-height:56px;font-size:20px;border-bottom:3px solid transparent}
+.auth-card .auth-tab.active{color:#182330;background:none;border-bottom-color:#24a879}
+.auth-card .auth-box{box-sizing:border-box;padding:20px 0 0;border-radius:0;box-shadow:none}
+button:focus-visible,a:focus-visible{outline:2px solid #24795b;outline-offset:3px}
+
 /* 整体容器 */
 .auth-container {
   position: relative;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100dvh;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;

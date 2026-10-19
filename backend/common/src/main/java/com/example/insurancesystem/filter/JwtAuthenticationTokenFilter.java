@@ -40,8 +40,9 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
         String path = request.getServletPath();
+        if ("/portal/auth/wechat/events".equals(path)) return true;
+        if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
         return "/portal/visitor-leads".equals(path)
                 || "/portal/payment/stripe/webhook".equals(path);
     }

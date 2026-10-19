@@ -71,6 +71,17 @@ public class PortalAuthServiceImpl implements PortalAuthService {
     return createSession(loginUser, null);
   }
 
+  /**
+   * 微信身份由共享授权流程验证后，重新读取账号状态并使用既有单会话 JWT 签发流程。
+   * 不附加企业身份，保留无企业个人账号进入门户后创建或加入企业的原有流程。
+   */
+  @Override
+  public Map<String, Object> wechatLogin(Long userId) {
+    User user = userMapper.findById(userId);
+    if (user == null || !Integer.valueOf(1).equals(user.getStatus())) throw new BusinessException(403, "用户账号不可用");
+    return createSession(new LoginUser(user, Collections.singletonList("portal:access")), null);
+  }
+
   @Override
   public Map<String, Object> ssoLogin(Long userId, Long enterpriseId) {
     User user = userMapper.findById(userId);

@@ -1,0 +1,20 @@
+CREATE TABLE `tenant_user` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `username` varchar(100) DEFAULT NULL COMMENT '登录账号，可兼容手机号',
+  `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
+  `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
+  `password` varchar(100) DEFAULT NULL COMMENT '加密密码',
+  `real_name` varchar(100) DEFAULT NULL COMMENT '姓名',
+  `id_num` varchar(100) DEFAULT NULL COMMENT '证件号',
+  `avatar_file_id` bigint DEFAULT NULL COMMENT '头像文件ID',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '1启用 0禁用',
+  `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `created_at` datetime DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
+  `updated_by` bigint DEFAULT NULL COMMENT '更新人',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '软删除',
+  `active_email` varchar(100) GENERATED ALWAYS AS ((case when (`deleted` = 0) then nullif(lower(trim(`email`)),_utf8mb4'') else NULL end)) STORED,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_user_active_email` (`active_email`),
+  KEY `idx_tenant_user_status_created` (`deleted`,`status`,`created_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='企业用户账号表';

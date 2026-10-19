@@ -100,6 +100,16 @@ saas:
 
 # 与车险端使用相同邮件渠道；验证码由当前应用缓存隔离，不使用短信 mock。
 insurance:
+  wechat:
+    # 两端使用同一个网站应用；先执行增量 SQL，再启用微信登录。
+    account-enabled: true
+    enabled: ${WECHAT_ENABLED:false}
+    app-id: ${WECHAT_APP_ID:}
+    app-secret: ${WECHAT_APP_SECRET:}
+    # 避免车险环境变量通过 Spring 等价名称匹配直接覆盖门户的回调配置。
+    callback-uri: ${PORTAL_WECHAT_REDIRECT_URI:http://localhost:8887/wechat/callback}
+    message-token: ${WECHAT_MESSAGE_TOKEN:}
+    encoding-aes-key: ${WECHAT_ENCODING_AES_KEY:}
   email:
     account-enabled: true
     provider: ${EMAIL_PROVIDER:qq}

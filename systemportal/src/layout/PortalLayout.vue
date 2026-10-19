@@ -26,9 +26,10 @@
       </div>
       <div class="header-actions">
         <button
+          v-region-loading="{ scopes: ['enter-system'], compact: true }"
           class="layui-btn portal-btn portal-btn-primary enter-system-button"
           type="button"
-          :disabled="enteringSystem || !$store.state.currentMember"
+          :disabled="enteringSystem || !$store.state.contextLoaded"
           @click="enterInsuranceSystem"
         >
           <i class="layui-icon layui-icon-release"></i>
@@ -50,9 +51,14 @@
       </div>
     </header>
 
-    <main class="portal-main">
-      <router-view />
-    </main>
+    <div class="portal-main-shell" :class="{ 'portal-main-loading': contentBusy }">
+      <main class="portal-main" :inert="contentBusy ? '' : null" :aria-busy="contentBusy">
+        <router-view />
+      </main>
+      <div v-if="contentBusy" class="portal-main-cover" role="status" aria-live="polite">
+        <div class="portal-loading-indicator"><span class="portal-loading-ring" aria-hidden="true"></span><span>{{ submittingContent ? '正在提交，请稍候…' : '正在加载，请稍候…' }}</span></div>
+      </div>
+    </div>
 
     <ConfirmDialog
       :visible="logoutDialogVisible"
@@ -68,6 +74,8 @@
 <script>
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { createInsuranceAuthorization } from '@/api/portal';
+import { loadingState } from '@/utils/loading';
+import { notifyWarning } from '@/utils/notification';
 
 export default {
   name: 'PortalLayout',
@@ -113,6 +121,10 @@ export default {
     };
   },
   computed: {
+    /** 内容区查询和重要提交共用 main 遮罩，侧栏、页头不进入 inert 范围。 */
+    contentBusy() { return loadingState.main > 0 || loadingState.fullscreen > 0; },
+    /** 区分重要写入与普通读取的提示，加载范围均限制在内容区边界内。 */
+    submittingContent() { return loadingState.fullscreen > 0; },
     /**
      * * 读取 Vuex 侧栏折叠状态，驱动布局宽度和菜单文字显示。
      */
@@ -161,10 +173,15 @@ export default {
   methods: {
     /**
      * 基于当前门户会话申请进入车险系统的一次性授权地址并执行整页跳转。
-     * 请求期间锁定按钮防止重复签发 code；失败时恢复状态，错误提示由请求拦截器统一发布。
+     * 上下文未就绪时不判断企业归属；已确认无企业或成员时提示先创建或加入企业，不发起授权。
+     * 请求期间锁定按钮防止重复签发 code；有效成员仍由后端校验最终权限，失败时统一提示。
      */
     async enterInsuranceSystem() {
-      if (this.enteringSystem) return;
+      if (this.enteringSystem || !this.$store.state.contextLoaded) return;
+      if (!this.$store.state.currentEnterprise || !this.$store.state.currentMember) {
+        notifyWarning('您尚未加入企业，请先前往“企业信息”创建或加入企业，再进入车险系统。');
+        return;
+      }
       this.enteringSystem = true;
       try {
         const response = await createInsuranceAuthorization();
@@ -358,16 +375,19 @@ export default {
   font-size: inherit;
 }
 
-.portal-main {
+.portal-main-shell {
   position: fixed;
   top: 68px;
   right: 0;
   bottom: 0;
   left: 248px;
-  overflow-y: auto;
-  padding: 24px;
   transition: left 180ms ease;
 }
+
+.portal-main { height: 100%; overflow-y: auto; padding: 24px; }
+.portal-main-cover { position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:rgb(255 255 255 / 96%); }
+.portal-main-cover .portal-loading-indicator { position:static; }
+.portal-main-loading :deep(.data-load-feedback .portal-loading-indicator) { visibility:hidden; }
 
 .portal-app.collapsed .portal-sidebar {
   width: 76px;
@@ -380,7 +400,7 @@ export default {
 }
 
 .portal-app.collapsed .portal-header,
-.portal-app.collapsed .portal-main {
+.portal-app.collapsed .portal-main-shell {
   left: 76px;
 }
 
@@ -396,9 +416,9 @@ export default {
   }
 
   .portal-header,
-  .portal-main,
+  .portal-main-shell,
   .portal-app.collapsed .portal-header,
-  .portal-app.collapsed .portal-main {
+  .portal-app.collapsed .portal-main-shell {
     left: 76px;
   }
 

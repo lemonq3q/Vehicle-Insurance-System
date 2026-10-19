@@ -1,137 +1,141 @@
 <template>
-  <section>
-    <div class="section-title">
-      <div>
-        <h1>企业人员</h1>
-        <p>查看当前企业成员并追踪人员加入、退出和角色变化。</p>
-      </div>
-    </div>
-
-    <article class="portal-card panel members-panel">
-      <div class="table-toolbar">
-        <h2>企业成员</h2>
-        <div class="filters">
-          <input v-model="query.keyword" class="layui-input" placeholder="姓名或邮箱" @keyup.enter="searchMembers" />
-          <select v-model="query.roleCode" class="layui-select">
-            <option value="">全部角色</option>
-            <option value="OWNER">企业拥有者</option>
-            <option value="ADMIN">管理员</option>
-            <option value="ISSUER">出单员</option>
-          </select>
-          <button class="layui-btn portal-btn portal-btn-primary" @click="searchMembers">查询</button>
-          <button class="layui-btn layui-btn-primary portal-btn" @click="resetMemberQuery">重置</button>
+  <section v-region-loading="{ main: true, busy: pageLoad.pending, scopes: ['members'] }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>企业人员</h1>
+          <p>查看当前企业成员并追踪人员加入、退出和角色变化。</p>
         </div>
       </div>
-      <div class="data-table-wrap">
-        <table class="layui-table portal-table members-table">
-          <thead>
-            <tr>
-              <th>姓名</th>
-              <th>邮箱</th>
-              <th>角色</th>
-              <th>状态</th>
-              <th>加入时间</th>
-              <th>修改角色</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in members" :key="item.id">
-              <td>{{ item.realName }}</td>
-              <td>{{ item.email || '未绑定' }}</td>
-              <td><span class="portal-tag" :class="{ blue: item.roleCode === 'OWNER', gray: item.roleCode === 'ISSUER' }">{{ roleName(item.roleCode) }}</span></td>
-              <td><span class="portal-tag" :class="{ gray: item.status === 0, warn: item.status === 2 }">{{ memberStatusName(item.status) }}</span></td>
-              <td>{{ item.joinedAt }}</td>
-              <td>
-                <div class="member-actions">
-                  <select v-if="canManage && item.roleCode !== 'OWNER'" :value="item.roleCode" class="layui-select role-select" @change="changeRole(item, $event.target.value)">
-                    <option value="ADMIN">管理员</option>
-                    <option value="ISSUER">出单员</option>
-                  </select>
-                  <span v-else class="text-muted">不可修改</span>
-                </div>
-              </td>
-              <td>
-                <div class="member-actions">
-                  <button
-                    v-if="canManage && item.roleCode !== 'OWNER' && [0, 1].includes(item.status)"
-                    class="layui-btn layui-btn-xs layui-btn-primary"
-                    :class="item.status === 1 ? 'member-disable-button' : 'layui-border-green'"
-                    @click="toggleMemberStatus(item)"
-                  >
-                    {{ item.status === 1 ? '停用' : '启用' }}
-                  </button>
-                  <button v-if="isOwner && item.roleCode !== 'OWNER' && item.status === 1" class="layui-btn layui-btn-xs layui-btn-primary layui-border-blue" @click="openTransferDialog(item)">转让拥有者</button>
-                  <button v-if="canRemoveMember(item)" class="layui-btn layui-btn-xs layui-btn-primary layui-border-red" @click="openRemoveDialog(item)">踢出</button>
-                  <span v-if="!canManage || item.roleCode === 'OWNER'" class="text-muted">不可操作</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <LayPagination :total="memberTotal" :page-num="query.pageNum" :page-size="query.pageSize" @change="changeMemberPage" @size-change="changeMemberPageSize" />
-    </article>
 
-    <article class="portal-card panel change-log-panel">
-      <div class="table-toolbar">
-        <h2>企业人员变动记录</h2>
-        <div class="filters">
-          <select v-model="changeQuery.eventType" class="layui-select">
-            <option value="">全部类型</option>
-            <option value="JOIN">加入企业</option>
-            <option value="EXIT">主动退出</option>
-            <option value="KICK">踢出企业</option>
-            <option value="ROLE_CHANGE">角色修改</option>
-            <option value="OWNER_TRANSFER">拥有者转让</option>
-          </select>
-          <button class="layui-btn portal-btn portal-btn-primary" @click="searchChanges">查询</button>
-          <button class="layui-btn layui-btn-primary portal-btn" @click="resetChangeQuery">重置</button>
+      <article class="portal-card panel members-panel">
+        <div class="table-toolbar">
+          <h2>企业成员</h2>
+          <div class="filters">
+            <input v-model="query.keyword" class="layui-input" placeholder="姓名或邮箱" @keyup.enter="searchMembers" />
+            <select v-model="query.roleCode" class="layui-select">
+              <option value="">全部角色</option>
+              <option value="OWNER">企业拥有者</option>
+              <option value="ADMIN">管理员</option>
+              <option value="ISSUER">出单员</option>
+            </select>
+            <button class="layui-btn portal-btn portal-btn-primary" @click="searchMembers">查询</button>
+            <button class="layui-btn layui-btn-primary portal-btn" @click="resetMemberQuery">重置</button>
+          </div>
         </div>
-      </div>
-      <div class="data-table-wrap">
-        <table class="layui-table portal-table">
-          <thead><tr><th>变动类型</th><th>操作人</th><th>相关成员</th><th>角色变化</th><th>发生时间</th><th>说明</th></tr></thead>
-          <tbody>
-            <tr v-for="item in changeLogs" :key="item.id">
-              <td><span class="portal-tag" :class="changeTagClass(item.eventType)">{{ eventName(item.eventType) }}</span></td>
-              <td>{{ item.operatorNameSnapshot || '系统' }}</td>
-              <td>{{ item.targetNameSnapshot || '-' }}</td>
-              <td>{{ roleChangeText(item) }}</td>
-              <td>{{ item.occurredAt || '-' }}</td>
-              <td>{{ item.remark || '-' }}</td>
-            </tr>
-            <tr v-if="!changeLogs.length"><td colspan="6" class="empty-cell">暂无人员变动记录</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <LayPagination :total="changeTotal" :page-num="changeQuery.pageNum" :page-size="changeQuery.pageSize" @change="changeLogPage" @size-change="changeLogPageSize" />
-    </article>
+        <div class="data-table-wrap">
+          <table class="layui-table portal-table members-table">
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>邮箱</th>
+                <th>角色</th>
+                <th>状态</th>
+                <th>加入时间</th>
+                <th>修改角色</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in members" :key="item.id">
+                <td>{{ item.realName }}</td>
+                <td>{{ item.email || '未绑定' }}</td>
+                <td><span class="portal-tag" :class="{ blue: item.roleCode === 'OWNER', gray: item.roleCode === 'ISSUER' }">{{ roleName(item.roleCode) }}</span></td>
+                <td><span class="portal-tag" :class="{ gray: item.status === 0, warn: item.status === 2 }">{{ memberStatusName(item.status) }}</span></td>
+                <td>{{ item.joinedAt }}</td>
+                <td>
+                  <div class="member-actions">
+                    <select v-if="canManage && item.roleCode !== 'OWNER'" :value="item.roleCode" class="layui-select role-select" @change="changeRole(item, $event.target.value)">
+                      <option value="ADMIN">管理员</option>
+                      <option value="ISSUER">出单员</option>
+                    </select>
+                    <span v-else class="text-muted">不可修改</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="member-actions">
+                    <button
+                      v-if="canManage && item.roleCode !== 'OWNER' && [0, 1].includes(item.status)"
+                      class="layui-btn layui-btn-xs layui-btn-primary"
+                      :class="item.status === 1 ? 'member-disable-button' : 'layui-border-green'"
+                      @click="toggleMemberStatus(item)"
+                    >
+                      {{ item.status === 1 ? '停用' : '启用' }}
+                    </button>
+                    <button v-if="isOwner && item.roleCode !== 'OWNER' && item.status === 1" class="layui-btn layui-btn-xs layui-btn-primary layui-border-blue" @click="openTransferDialog(item)">转让拥有者</button>
+                    <button v-if="canRemoveMember(item)" class="layui-btn layui-btn-xs layui-btn-primary layui-border-red" @click="openRemoveDialog(item)">踢出</button>
+                    <span v-if="!canManage || item.roleCode === 'OWNER'" class="text-muted">不可操作</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <LayPagination :total="memberTotal" :page-num="query.pageNum" :page-size="query.pageSize" @change="changeMemberPage" @size-change="changeMemberPageSize" />
+      </article>
 
-    <ConfirmDialog
-      :visible="transferDialog.visible"
-      title="转让企业拥有者"
-      :message="transferDialogMessage"
-      confirm-text="确认转让"
-      :loading="transferDialog.loading"
-      @cancel="closeTransferDialog"
-      @confirm="confirmTransfer"
-    />
+      <article class="portal-card panel change-log-panel">
+        <div class="table-toolbar">
+          <h2>企业人员变动记录</h2>
+          <div class="filters">
+            <select v-model="changeQuery.eventType" class="layui-select">
+              <option value="">全部类型</option>
+              <option value="JOIN">加入企业</option>
+              <option value="EXIT">主动退出</option>
+              <option value="KICK">踢出企业</option>
+              <option value="ROLE_CHANGE">角色修改</option>
+              <option value="OWNER_TRANSFER">拥有者转让</option>
+            </select>
+            <button class="layui-btn portal-btn portal-btn-primary" @click="searchChanges">查询</button>
+            <button class="layui-btn layui-btn-primary portal-btn" @click="resetChangeQuery">重置</button>
+          </div>
+        </div>
+        <div class="data-table-wrap">
+          <table class="layui-table portal-table">
+            <thead><tr><th>变动类型</th><th>操作人</th><th>相关成员</th><th>角色变化</th><th>发生时间</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr v-for="item in changeLogs" :key="item.id">
+                <td><span class="portal-tag" :class="changeTagClass(item.eventType)">{{ eventName(item.eventType) }}</span></td>
+                <td>{{ item.operatorNameSnapshot || '系统' }}</td>
+                <td>{{ item.targetNameSnapshot || '-' }}</td>
+                <td>{{ roleChangeText(item) }}</td>
+                <td>{{ item.occurredAt || '-' }}</td>
+                <td>{{ item.remark || '-' }}</td>
+              </tr>
+              <tr v-if="!changeLogs.length"><td colspan="6" class="empty-cell">暂无人员变动记录</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <LayPagination :total="changeTotal" :page-num="changeQuery.pageNum" :page-size="changeQuery.pageSize" @change="changeLogPage" @size-change="changeLogPageSize" />
+      </article>
 
-    <ConfirmDialog
-      :visible="removeDialog.visible"
-      title="移出企业成员"
-      :message="removeDialogMessage"
-      confirm-text="确认踢出"
-      :loading="removeDialog.loading"
-      @cancel="closeRemoveDialog"
-      @confirm="confirmRemoveMember"
-    />
+      <ConfirmDialog
+        :visible="transferDialog.visible"
+        title="转让企业拥有者"
+        :message="transferDialogMessage"
+        confirm-text="确认转让"
+        :loading="transferDialog.loading"
+        @cancel="closeTransferDialog"
+        @confirm="confirmTransfer"
+      />
 
+      <ConfirmDialog
+        :visible="removeDialog.visible"
+        title="移出企业成员"
+        :message="removeDialogMessage"
+        confirm-text="确认踢出"
+        :loading="removeDialog.loading"
+        @cancel="closeRemoveDialog"
+        @confirm="confirmRemoveMember"
+      />
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadInitialData" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getMemberChangeLogs, getMembers, removeEnterpriseMember, transferOwner, updateMemberRole, updateMemberStatus } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import LayPagination from '@/components/LayPagination.vue';
@@ -139,12 +143,13 @@ import { getRoleName } from '@/utils/portalLabels';
 
 export default {
   name: 'EnterpriseMembersPage',
-  components: { ConfirmDialog, LayPagination },
+  components: { DataLoadFeedback, ConfirmDialog, LayPagination },
   /**
    * 分别维护成员列表与变更记录的查询、分页和总数，并保存移除成员及转让拥有者两个高风险操作的确认状态。
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       members: [],
       changeLogs: [],
       memberTotal: 0,
@@ -187,9 +192,15 @@ export default {
    * 页面初始化时并行加载成员与审计记录，两套分页互不依赖，无需串行等待。
    */
   async created() {
-    await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
+    await this.loadInitialData();
   },
   methods: {
+    /** 初次进入时同时确认成员与日志快照，两个数据集齐备后才展示列表和空状态。 */
+    async loadInitialData() {
+      return loadPageData(this.pageLoad, async () => {
+        await Promise.all([this.loadMembers(), this.loadChangeLogs()]);
+      });
+    },
     roleName: getRoleName,
     /**
      * 将成员状态枚举映射为页面文案，并为后端未知状态保留明确兜底显示。

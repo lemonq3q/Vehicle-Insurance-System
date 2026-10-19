@@ -46,6 +46,11 @@ public class InsuranceSessionClient {
     post(logoutUserUrl, Map.of("userId", userId));
   }
 
+  /** 微信撤回调用携带事件时间，防止延迟通知或重试让后续新会话再次失效。 */
+  public void logoutUserBefore(Long userId, long beforeEpochSeconds) {
+    post(logoutUserUrl, Map.of("userId", userId, "beforeEpochSeconds", beforeEpochSeconds));
+  }
+
   private void post(String url, Map<String, Object> body) {
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);

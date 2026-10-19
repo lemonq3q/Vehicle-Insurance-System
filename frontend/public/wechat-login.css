@@ -1,0 +1,60 @@
+/* 由微信官方 WxLogin 的 href 参数加载到跨域 iframe 内，普通页面 scoped 样式无法作用于此处。 */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * iframe 和宿主容器均按二维码实际 260px 高度布局，不再为隐藏的标题与说明预留空白。
+ * 扫码后的官方状态在同一二维码区域呈现，避免为了状态提示永久撑大二维码与刷新按钮的间距。
+ */
+.impowerBox {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+}
+
+.impowerBox .wrp_code {
+  line-height: 0;
+}
+
+.impowerBox .title,
+.impowerBox .status.status_browser {
+  display: none !important;
+}
+
+/* 仅移除默认登录标题与公司说明，保留扫码成功、待手机确认和失效等官方状态。 */
+.impowerBox .qrcode {
+  display: block;
+  width: 260px;
+  max-width: calc(100vw - 24px);
+  height: auto;
+  margin: 0 auto;
+  border: 0 !important;
+}
+
+.impowerBox .info {
+  display: contents;
+  margin: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.impowerBox .status {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 64px 20px 20px;
+  background: rgb(255 255 255 / 96%);
+  text-align: center;
+}

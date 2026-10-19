@@ -20,6 +20,9 @@ public interface UserMapper extends BatchBaseMapper<User> {
      */
     User selectLoginUser(String username);
 
+    /** 按已验证微信用户主键加载同等企业、成员与订阅聚合数据，支持无邮箱账号。 */
+    User selectWechatUser(Long userId);
+
     /**
      * 校验 SaaS 单点登录用户是否属于指定企业，并返回车险系统登录资料。
      */

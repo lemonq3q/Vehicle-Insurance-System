@@ -155,10 +155,10 @@
         <div><p class="section-kicker">PRICING</p><h2>按团队规模选择合适的版本</h2></div>
         <p>从小团队起步到多成员协作，随业务成长平滑升级。具体权益与价格以当前上架套餐为准。</p>
       </div>
-      <div v-if="plansLoading" class="plan-grid" aria-label="套餐加载中">
+      <div v-if="plansLoading" v-region-loading="{ scopes: ['marketing-plans'], immediate: true }" class="plan-grid" aria-label="套餐加载中">
         <article v-for="index in 3" :key="index" class="plan-card plan-skeleton" data-reveal></article>
       </div>
-      <div v-else class="plan-grid">
+      <div v-else v-region-loading="'marketing-plans'" class="plan-grid">
         <article v-for="(plan, index) in displayPlans" :key="plan.id || plan.name" class="plan-card" :class="{ featured: index === 1 }" data-reveal>
           <span v-if="index === 1" class="recommended">推荐选择</span>
           <p class="plan-code">{{ planLabel(index) }}</p>

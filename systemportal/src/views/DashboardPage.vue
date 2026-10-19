@@ -1,5 +1,5 @@
 <template>
-  <section aria-labelledby="dashboard-title">
+  <section v-region-loading="{ main: true, scopes: ['dashboard'] }" aria-labelledby="dashboard-title">
     <div class="section-title">
       <div>
         <h1 id="dashboard-title">仪表盘</h1>

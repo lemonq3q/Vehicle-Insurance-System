@@ -34,6 +34,7 @@ public class SingleLoginSessionManager {
      */
     public void save(Long userId, String sessionId, LoginUser loginUser) {
         loginUser.setSessionId(sessionId);
+        loginUser.setAuthenticatedAt(System.currentTimeMillis());
         redisCache.setCacheObject(key(userId), loginUser, SESSION_HOURS, TimeUnit.HOURS);
     }
 
@@ -52,7 +53,7 @@ public class SingleLoginSessionManager {
      * 已认证请求通过后续期 Redis 会话，使持续活跃用户不会因固定缓存时间被强制下线。
      */
     public void refresh(Long userId, LoginUser loginUser) {
-        redisCache.setCacheObject(key(userId), loginUser, SESSION_HOURS, TimeUnit.HOURS);
+        redisCache.expireSessionIfId(key(userId), loginUser.getSessionId(), TimeUnit.HOURS.toSeconds(SESSION_HOURS));
     }
 
     /**
@@ -61,7 +62,7 @@ public class SingleLoginSessionManager {
     public void remove(Long userId, String sessionId) {
         LoginUser loginUser = get(userId, sessionId);
         if (loginUser != null) {
-            redisCache.deleteObject(key(userId));
+            redisCache.deleteSessionIfId(key(userId), loginUser.getSessionId());
         }
     }
 
@@ -74,6 +75,20 @@ public class SingleLoginSessionManager {
      */
     public void removeAll(Long userId) {
         if (userId != null) redisCache.deleteObject(key(userId));
+    }
+
+    /**
+     * 撤回事件只使发生时已建立的会话失效；保留事件之后的新登录，兼容无创建时间的历史会话。
+     * 比较删除避免旧通知与新登录并发时误删新会话，不删除任何用户或业务资料。
+     * @param userId 已验证事件定位的账号 ID
+     * @param beforeEpochSeconds 微信事件 CreateTime，秒级，边界按该秒末处理
+     */
+    public void removeBefore(Long userId, long beforeEpochSeconds) {
+        LoginUser current = redisCache.getCacheObject(key(userId));
+        if (current != null && (current.getAuthenticatedAt() == null
+                || current.getAuthenticatedAt() / 1000 <= beforeEpochSeconds)) {
+            redisCache.deleteSessionIfId(key(userId), current.getSessionId());
+        }
     }
 
     /**

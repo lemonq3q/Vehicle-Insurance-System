@@ -1,0 +1,36 @@
+{
+  "target": "localhost:3306/insurance_saas",
+  "migration": "D:\\项目\\小马e保\\git仓库\\Vehicle-Insurance-System\\backend\\db\\migration\\V20261016_01_wechat_login.sql",
+  "columns": [
+    {
+      "COLUMN_NAME": "wechat_app_id",
+      "COLUMN_TYPE": "varchar(64)"
+    },
+    {
+      "COLUMN_NAME": "wechat_open_id",
+      "COLUMN_TYPE": "varchar(128)"
+    },
+    {
+      "COLUMN_NAME": "wechat_union_id",
+      "COLUMN_TYPE": "varchar(128)"
+    },
+    {
+      "COLUMN_NAME": "wechat_nickname",
+      "COLUMN_TYPE": "varchar(100)"
+    },
+    {
+      "COLUMN_NAME": "wechat_bound_at",
+      "COLUMN_TYPE": "datetime"
+    }
+  ],
+  "indexColumns": [
+    "wechat_app_id",
+    "wechat_open_id"
+  ],
+  "unique": true,
+  "accountCountBefore": 6,
+  "accountCountAfter": 6,
+  "originalAccountDataUnchanged": true,
+  "verified": true,
+  "completedAt": "2026-10-18T07:09:39.742Z"
+}

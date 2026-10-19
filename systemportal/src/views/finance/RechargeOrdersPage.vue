@@ -1,68 +1,73 @@
 <template>
   <section>
-    <div class="section-title">
-      <div>
-        <h1>充值订单</h1>
-        <p>追踪企业外部支付换余额的记录</p>
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>充值订单</h1>
+          <p>追踪企业外部支付换余额的记录</p>
+        </div>
       </div>
-    </div>
-    <article class="portal-card panel">
-      <div class="filters">
-        <input v-model="query.rechargeNo" class="layui-input" placeholder="充值订单号" @keyup.enter="search" />
-        <select v-model="query.status" class="layui-select">
-          <option value="">全部状态</option>
-          <option value="1">待支付</option>
-          <option value="2">已支付</option>
-          <option value="3">已取消</option>
-          <option value="4">支付失败</option>
-          <option value="5">已过期</option>
-          <option value="6">已关闭</option>
-          <option value="7">支付处理中</option>
-          <option value="8">已部分退款</option>
-          <option value="9">已完全退款</option>
-        </select>
-        <LayDatePicker v-model="query.dateRange" range placeholder="请选择创建时间范围" />
-        <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
-        <button class="layui-btn layui-btn-primary portal-btn" @click="resetQuery">重置</button>
-      </div>
-      <div class="data-table-wrap">
-        <table class="layui-table portal-table">
-          <thead>
-            <tr>
-              <th>订单号</th>
-              <th>金额</th>
-              <th>支付渠道</th>
-              <th>第三方交易号</th>
-              <th>状态</th>
-              <th>支付时间</th>
-              <th>创建时间</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in rows" :key="item.id">
-              <td>{{ item.rechargeNo }}</td>
-              <td>¥{{ item.amount }}</td>
-              <td>{{ channelName(item.payChannel) }}</td>
-              <td>{{ item.payTradeNo || '-' }}</td>
-              <td><span class="portal-tag recharge-status" :class="`recharge-status-${item.status}`">{{ statusName('recharge', item.status) }}</span></td>
-              <td>{{ item.paidAt || '-' }}</td>
-              <td>{{ item.createdAt }}</td>
-              <td>
-                <router-link class="layui-btn layui-btn-xs layui-btn-primary recharge-action" :class="item.status === 1 ? 'recharge-status-1' : 'layui-border-green'" :to="{ name: 'finance-recharge-detail', params: { id: item.id } }">
-                  {{ item.status === 1 ? '继续支付' : '查看详情' }}
-                </router-link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <LayPagination :total="total" :page-num="query.pageNum" :page-size="query.pageSize" @change="changePage" @size-change="changePageSize" />
-    </article>
+      <article v-region-loading="'recharges'" class="portal-card panel">
+        <div class="filters">
+          <input v-model="query.rechargeNo" class="layui-input" placeholder="充值订单号" @keyup.enter="search" />
+          <select v-model="query.status" class="layui-select">
+            <option value="">全部状态</option>
+            <option value="1">待支付</option>
+            <option value="2">已支付</option>
+            <option value="3">已取消</option>
+            <option value="4">支付失败</option>
+            <option value="5">已过期</option>
+            <option value="6">已关闭</option>
+            <option value="7">支付处理中</option>
+            <option value="8">已部分退款</option>
+            <option value="9">已完全退款</option>
+          </select>
+          <LayDatePicker v-model="query.dateRange" range placeholder="请选择创建时间范围" />
+          <button class="layui-btn portal-btn portal-btn-primary" @click="search">查询</button>
+          <button class="layui-btn layui-btn-primary portal-btn" @click="resetQuery">重置</button>
+        </div>
+        <div class="data-table-wrap">
+          <table class="layui-table portal-table">
+            <thead>
+              <tr>
+                <th>订单号</th>
+                <th>金额</th>
+                <th>支付渠道</th>
+                <th>第三方交易号</th>
+                <th>状态</th>
+                <th>支付时间</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in rows" :key="item.id">
+                <td>{{ item.rechargeNo }}</td>
+                <td>¥{{ item.amount }}</td>
+                <td>{{ channelName(item.payChannel) }}</td>
+                <td>{{ item.payTradeNo || '-' }}</td>
+                <td><span class="portal-tag recharge-status" :class="`recharge-status-${item.status}`">{{ statusName('recharge', item.status) }}</span></td>
+                <td>{{ item.paidAt || '-' }}</td>
+                <td>{{ item.createdAt }}</td>
+                <td>
+                  <router-link class="layui-btn layui-btn-xs layui-btn-primary recharge-action" :class="item.status === 1 ? 'recharge-status-1' : 'layui-border-green'" :to="{ name: 'finance-recharge-detail', params: { id: item.id } }">
+                    {{ item.status === 1 ? '继续支付' : '查看详情' }}
+                  </router-link>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <LayPagination :total="total" :page-num="query.pageNum" :page-size="query.pageSize" @change="changePage" @size-change="changePageSize" />
+      </article>
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadData" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getRechargeOrders } from '@/api/portal';
 import LayDatePicker from '@/components/LayDatePicker.vue';
 import LayPagination from '@/components/LayPagination.vue';
@@ -71,12 +76,13 @@ import { defaultMonthRange, rangeParams } from '@/utils/dateRange';
 
 export default {
   name: 'RechargeOrdersPage',
-  components: { LayDatePicker, LayPagination },
+  components: { DataLoadFeedback, LayDatePicker, LayPagination },
   /**
    * 保存充值单号、状态、日期范围等查询条件以及分页结果；默认查询当前自然月以控制首次数据量。
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       query: { pageNum: 1, pageSize: 10, rechargeNo: '', status: '', dateRange: defaultMonthRange() },
       rows: [],
       total: 0
@@ -100,9 +106,11 @@ export default {
      * 将日期范围控件值转换为后端需要的起止参数，并移除仅供页面绑定的 dateRange 字段后查询分页数据。
      */
     async loadData() {
-      const response = await getRechargeOrders({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });
-      this.rows = response.data.table;
-      this.total = Number(response.data.total || 0);
+      return loadPageData(this.pageLoad, async () => {
+        const response = await getRechargeOrders({ ...this.query, ...rangeParams(this.query.dateRange), dateRange: undefined });
+        this.rows = response.data.table;
+        this.total = Number(response.data.total || 0);
+      });
     },
     /**
      * 应用当前筛选时回到第一页，避免旧页码在缩小结果集后超出范围。

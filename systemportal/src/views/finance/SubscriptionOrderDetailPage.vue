@@ -1,113 +1,119 @@
 <template>
-  <section>
-    <div class="section-title">
-      <div>
-        <h1>订阅订单详情</h1>
-        <p>确认订阅周期和自动续费设置，系统将根据当前订阅计算应付或应退金额</p>
+  <section v-region-loading="{ main: true, busy: pageLoad.pending, scopes: ['subscription-preview'] }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>订阅订单详情</h1>
+          <p>确认订阅周期和自动续费设置，系统将根据当前订阅计算应付或应退金额</p>
+        </div>
+        <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="$router.back()">返回</button>
       </div>
-      <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="$router.back()">返回</button>
-    </div>
 
-    <div v-if="loading" class="portal-card loading-state">正在计算订单...</div>
+      <div v-if="loading" class="portal-card loading-state">正在计算订单...</div>
 
-    <div v-else-if="plan && preview" class="order-layout">
-      <article class="portal-card order-form-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="portal-tag" :class="{ blue: preview.orderType === 'CHANGE_PLAN' }">{{ orderTypeName }}</span>
-            <h2>{{ plan.name }}</h2>
+      <div v-else-if="plan && preview" class="order-layout">
+        <article class="portal-card order-form-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="portal-tag" :class="{ blue: preview.orderType === 'CHANGE_PLAN' }">{{ orderTypeName }}</span>
+              <h2>{{ plan.name }}</h2>
+            </div>
+            <div class="plan-price">¥{{ money(plan.price) }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
           </div>
-          <div class="plan-price">¥{{ money(plan.price) }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
-        </div>
 
-        <div class="plan-facts">
-          <div><span>成员上限</span><strong>{{ plan.userLimit }} 人</strong></div>
-          <div><span>工单额度</span><strong>{{ plan.workorderLimit }} 单</strong></div>
-          <div><span>单周期时长</span><strong>{{ plan.durationDays }} 天</strong></div>
-          <div><span>预计到期</span><strong>{{ preview.endAt }}</strong></div>
-        </div>
-
-        <div class="form-section">
-          <label for="periodCount">连续订阅周期</label>
-          <div class="period-control">
-            <button type="button" aria-label="减少一个周期" :disabled="!canManageFinance || form.periodCount <= preview.minimumPeriodCount" @click="changePeriod(-1)">
-              <i class="layui-icon layui-icon-subtraction"></i>
-            </button>
-            <input
-              id="periodCount"
-              v-model.number="form.periodCount"
-              class="layui-input"
-              type="number"
-              :min="preview.minimumPeriodCount"
-              :disabled="!canManageFinance"
-              step="1"
-              @change="normalizePeriod"
-            />
-            <button type="button" aria-label="增加一个周期" :disabled="!canManageFinance" @click="changePeriod(1)">
-              <i class="layui-icon layui-icon-addition"></i>
-            </button>
-            <span>个{{ periodName(plan.billingPeriod) }}周期</span>
+          <div class="plan-facts">
+            <div><span>成员上限</span><strong>{{ plan.userLimit }} 人</strong></div>
+            <div><span>工单额度</span><strong>{{ plan.workorderLimit }} 单</strong></div>
+            <div><span>单周期时长</span><strong>{{ plan.durationDays }} 天</strong></div>
+            <div><span>预计到期</span><strong>{{ preview.endAt }}</strong></div>
           </div>
-          <p v-if="preview.orderType === 'CHANGE_PLAN'" class="field-help">
-            当前套餐剩余约 {{ preview.remainingPeriodCount }} 个周期。改订后需至少选择 {{ preview.minimumPeriodCount }} 个新套餐周期，以覆盖原订阅有效期。
+
+          <div class="form-section">
+            <label for="periodCount">连续订阅周期</label>
+            <div class="period-control">
+              <button type="button" aria-label="减少一个周期" :disabled="!canManageFinance || form.periodCount <= preview.minimumPeriodCount" @click="changePeriod(-1)">
+                <i class="layui-icon layui-icon-subtraction"></i>
+              </button>
+              <input
+                id="periodCount"
+                v-model.number="form.periodCount"
+                class="layui-input"
+                type="number"
+                :min="preview.minimumPeriodCount"
+                :disabled="!canManageFinance"
+                step="1"
+                @change="normalizePeriod"
+              />
+              <button type="button" aria-label="增加一个周期" :disabled="!canManageFinance" @click="changePeriod(1)">
+                <i class="layui-icon layui-icon-addition"></i>
+              </button>
+              <span>个{{ periodName(plan.billingPeriod) }}周期</span>
+            </div>
+            <p v-if="preview.orderType === 'CHANGE_PLAN'" class="field-help">
+              当前套餐剩余约 {{ preview.remainingPeriodCount }} 个周期。改订后需至少选择 {{ preview.minimumPeriodCount }} 个新套餐周期，以覆盖原订阅有效期。
+            </p>
+          </div>
+
+          <label class="renew-setting">
+            <span>
+              <strong>到期自动续费</strong>
+              <small>到期前按所选套餐自动创建续费订单</small>
+            </span>
+            <input v-model="form.autoRenew" type="checkbox" :disabled="!canManageFinance" />
+          </label>
+
+        </article>
+
+        <aside class="portal-card amount-panel">
+          <h2>金额明细</h2>
+          <dl>
+            <div><dt>套餐金额</dt><dd>¥{{ money(preview.priceAmount) }}</dd></div>
+            <div v-if="preview.orderType === 'CHANGE_PLAN'"><dt>原套餐剩余价值抵扣</dt><dd class="credit">-¥{{ money(preview.creditAmount) }}</dd></div>
+            <div v-if="preview.workorderOverageCount > 0">
+              <dt>超额工单费（{{ preview.workorderOverageCount }} 单）</dt>
+              <dd>¥{{ money(preview.workorderOverageAmount) }}</dd>
+            </div>
+            <div class="divider"><dt>企业余额</dt><dd>¥{{ money(overview.wallet.balanceAmount) }}</dd></div>
+            <div v-if="preview.refundAmount > 0"><dt>退回企业余额</dt><dd class="refund">+¥{{ money(preview.refundAmount) }}</dd></div>
+          </dl>
+          <div class="total-row">
+            <span>{{ preview.refundAmount > 0 ? '本次应退' : '本次应付' }}</span>
+            <strong>¥{{ money(preview.refundAmount > 0 ? preview.refundAmount : preview.payableAmount) }}</strong>
+          </div>
+          <p v-if="isBalanceInsufficient" class="balance-warning">
+            当前余额不足，还需充值 ¥{{ money(shortfallAmount) }}。提交后将前往充值页面。
           </p>
-        </div>
+          <p v-if="!canManageFinance" class="permission-note">出单员仅可查看订阅信息，无法提交或支付套餐订单。</p>
+          <button class="layui-btn portal-btn portal-btn-primary submit-button" type="button" :disabled="submitting || !canManageFinance" @click="submitOrder">
+            {{ !canManageFinance ? '无操作权限' : submitting ? '正在提交...' : isBalanceInsufficient ? '前往充值' : '提交并支付' }}
+          </button>
+          <p class="submit-note">提交即表示确认套餐、周期和金额，支付将使用企业余额。</p>
+        </aside>
+      </div>
 
-        <label class="renew-setting">
-          <span>
-            <strong>到期自动续费</strong>
-            <small>到期前按所选套餐自动创建续费订单</small>
-          </span>
-          <input v-model="form.autoRenew" type="checkbox" :disabled="!canManageFinance" />
-        </label>
-
-      </article>
-
-      <aside class="portal-card amount-panel">
-        <h2>金额明细</h2>
-        <dl>
-          <div><dt>套餐金额</dt><dd>¥{{ money(preview.priceAmount) }}</dd></div>
-          <div v-if="preview.orderType === 'CHANGE_PLAN'"><dt>原套餐剩余价值抵扣</dt><dd class="credit">-¥{{ money(preview.creditAmount) }}</dd></div>
-          <div v-if="preview.workorderOverageCount > 0">
-            <dt>超额工单费（{{ preview.workorderOverageCount }} 单）</dt>
-            <dd>¥{{ money(preview.workorderOverageAmount) }}</dd>
-          </div>
-          <div class="divider"><dt>企业余额</dt><dd>¥{{ money(overview.wallet.balanceAmount) }}</dd></div>
-          <div v-if="preview.refundAmount > 0"><dt>退回企业余额</dt><dd class="refund">+¥{{ money(preview.refundAmount) }}</dd></div>
-        </dl>
-        <div class="total-row">
-          <span>{{ preview.refundAmount > 0 ? '本次应退' : '本次应付' }}</span>
-          <strong>¥{{ money(preview.refundAmount > 0 ? preview.refundAmount : preview.payableAmount) }}</strong>
-        </div>
-        <p v-if="isBalanceInsufficient" class="balance-warning">
-          当前余额不足，还需充值 ¥{{ money(shortfallAmount) }}。提交后将前往充值页面。
-        </p>
-        <p v-if="!canManageFinance" class="permission-note">出单员仅可查看订阅信息，无法提交或支付套餐订单。</p>
-        <button class="layui-btn portal-btn portal-btn-primary submit-button" type="button" :disabled="submitting || !canManageFinance" @click="submitOrder">
-          {{ !canManageFinance ? '无操作权限' : submitting ? '正在提交...' : isBalanceInsufficient ? '前往充值' : '提交并支付' }}
-        </button>
-        <p class="submit-note">提交即表示确认套餐、周期和金额，支付将使用企业余额。</p>
-      </aside>
-    </div>
-
-    <div v-else class="empty-state">未找到对应套餐，请返回订阅服务重新选择。</div>
-    <ConfirmDialog :visible="resultDialog.visible" :title="resultDialog.title" :message="resultDialog.message" :show-cancel="false" confirm-type="primary" confirm-text="知道了" @confirm="closeResultDialog" @cancel="closeResultDialog" />
+      <div v-else class="empty-state">未找到对应套餐，请返回订阅服务重新选择。</div>
+      <ConfirmDialog :visible="resultDialog.visible" :title="resultDialog.title" :message="resultDialog.message" :show-cancel="false" confirm-type="primary" confirm-text="知道了" @confirm="closeResultDialog" @cancel="closeResultDialog" />
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadPage" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { createSubscriptionOrder, getFinanceOverview, getPlans, getSubscriptionOrderPreview } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 export default {
   name: 'SubscriptionOrderDetailPage',
-  components: { ConfirmDialog },
+  components: { DataLoadFeedback, ConfirmDialog },
   /**
    * 保存目标套餐、企业财务概览、服务端试算结果和用户选择的订阅周期。试算结果是金额及可订阅性的唯一依据，
    * 页面不自行复制后端的套餐变更、抵扣或超额工单计费规则。
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       loading: true,
       submitting: false,
       resultDialog: { visible: false, title: '', message: '', destination: null },
@@ -168,22 +174,24 @@ export default {
      * 充值往返流程中的选择，最后加载试算并校正最低购买周期。
      */
     async loadPage() {
-      this.loading = true;
-      try {
-        const [overviewResponse, plansResponse] = await Promise.all([getFinanceOverview(), getPlans()]);
-        this.overview = overviewResponse.data;
-        const routePlanId = String(this.$route.params.planId || '');
-        this.plan = plansResponse.data.find(item => String(item.id) === routePlanId) || null;
-        if (!this.plan) return;
+      return loadPageData(this.pageLoad, async () => {
+        this.loading = true;
+        try {
+          const [overviewResponse, plansResponse] = await Promise.all([getFinanceOverview(), getPlans()]);
+          this.overview = overviewResponse.data;
+          const routePlanId = String(this.$route.params.planId || '');
+          this.plan = plansResponse.data.find(item => String(item.id) === routePlanId) || null;
+          if (!this.plan) return;
 
-        this.form.autoRenew = this.$route.query.autoRenew === undefined
-          ? Number(this.overview.subscription?.status) === 1 && Boolean(this.overview.subscription?.autoRenewEnabled)
-          : this.$route.query.autoRenew === 'true';
-        this.form.periodCount = Math.max(1, Number(this.$route.query.periodCount || 1));
-        await this.loadPreview(true);
-      } finally {
-        this.loading = false;
-      }
+          this.form.autoRenew = this.$route.query.autoRenew === undefined
+            ? Number(this.overview.subscription?.status) === 1 && Boolean(this.overview.subscription?.autoRenewEnabled)
+            : this.$route.query.autoRenew === 'true';
+          this.form.periodCount = Math.max(1, Number(this.$route.query.periodCount || 1));
+          await this.loadPreview(true);
+        } finally {
+          this.loading = false;
+        }
+      });
     },
     /**
      * 向服务端请求套餐订单试算。首次加载若用户周期低于后端给出的最低周期，则更新表单并再次试算，

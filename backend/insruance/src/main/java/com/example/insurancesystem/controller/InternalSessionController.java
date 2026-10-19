@@ -44,6 +44,14 @@ public class InternalSessionController {
             @RequestBody Map<String, Object> body) {
         requireTrustedClient(suppliedSecret);
         Long userId = requiredId(body, "userId");
+        Object cutoff = body.get("beforeEpochSeconds");
+        if (cutoff != null) {
+            if (!(cutoff instanceof Number) || ((Number) cutoff).longValue() <= 0
+                    || ((Number) cutoff).longValue() > java.time.Instant.now().getEpochSecond() + 300)
+                throw new BusinessException(400, "撤回时间不正确");
+            service.logoutUserBefore(userId, ((Number) cutoff).longValue());
+            return new ResponseResult<>(200, "用户车险会话已失效", 1);
+        }
         return new ResponseResult<>(200, "用户车险会话已失效", service.logoutUser(userId));
     }
 

@@ -1,71 +1,77 @@
 <template>
-  <section class="recharge-detail-page">
-    <div class="section-title">
-      <div><h1>充值订单详情</h1><p>支付信息通过安全支付服务加密处理，平台不会接触或保存完整卡号</p></div>
-      <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="returnToSource">返回</button>
-    </div>
-    <div v-if="order" class="checkout-layout" :class="{ 'summary-only-layout': order.status !== 1 }">
-      <article class="portal-card summary-panel">
-        <div class="detail-heading">
-          <div><span>充值订单号</span><h2>{{ order.rechargeNo }}</h2></div>
-          <span class="portal-tag" :class="{ warn: [1, 7, 8].includes(order.status), gray: [3, 4, 5, 6, 9].includes(order.status) }">{{ statusName('recharge', order.status) }}</span>
-        </div>
-        <dl class="detail-grid">
-          <div><dt>充值金额</dt><dd class="amount">¥{{ money(order.amount) }}</dd></div>
-          <!-- 仅实际发生余额回撤时展示退款摘要；无退款或旧响应缺少字段时不保留空白占位。 -->
-          <div v-if="Number(order.refundAmount || 0) > 0"><dt>累计退款金额</dt><dd>¥{{ money(order.refundAmount) }}</dd></div>
-          <div><dt>支付平台</dt><dd>Stripe</dd></div>
-          <div><dt>支付交易号</dt><dd>{{ order.stripePaymentIntentId || order.payTradeNo || '-' }}</dd></div>
-          <div><dt>创建时间</dt><dd>{{ order.createdAt || '-' }}</dd></div>
-          <div><dt>支付时间</dt><dd>{{ order.paidAt || '-' }}</dd></div>
-        </dl>
-        <div v-if="order.status === 1" class="cancel-row"><button class="layui-btn layui-btn-primary layui-border-red portal-btn" :disabled="submitting" @click="openCancelDialog">取消订单</button></div>
-        <div v-else-if="order.status === 2" class="payment-result success">
-          <i class="layui-icon layui-icon-ok-circle"></i><div><strong>充值已到账</strong><span>付款结果已确认，本次金额已计入企业余额。</span></div>
-        </div>
-        <div v-else-if="[8, 9].includes(order.status)" class="payment-result muted">
-          <div><strong>{{ statusName('recharge', order.status) }}</strong><span>累计退款 ¥{{ money(order.refundAmount) }}，对应金额已从企业余额回撤。原充值金额 ¥{{ money(order.amount) }}。</span></div>
-        </div>
-        <div v-else-if="order.status === 7" class="payment-result processing" aria-live="polite">
-          <span class="checkout-spinner" aria-hidden="true"></span><div><strong>支付处理中</strong><span>Checkout 已完成，银行正在确认资金。你可以安全离开此页面，到账后订单会自动更新。</span></div>
-        </div>
-        <div v-else class="payment-result muted"><div><strong>{{ statusName('recharge', order.status) }}</strong><span>{{ order.paymentFailureReason || '如需充值，请重新创建一笔订单。' }}</span></div></div>
-        <div v-if="order.status === 2 && hasSubscriptionContext" class="subscription-resume">
-          <div><strong>确认套餐{{ subscriptionAction }}</strong><span>充值已到账，确认后将使用企业余额完成套餐操作；离开后也可在订阅服务页面重新选择套餐。</span></div>
-          <button class="layui-btn portal-btn portal-btn-primary" :disabled="submitting" @click="completePendingSubscription">{{ submitting ? '正在提交' : `确认${subscriptionAction}` }}</button>
-        </div>
-      </article>
-      <article v-if="order.status === 1" class="portal-card stripe-panel" aria-live="polite">
-        <div class="stripe-heading">
-          <div><span class="step-label">安全支付</span><h2>完成付款</h2><p>选择支付方式并确认本次充值</p></div>
-          <span class="stripe-badge">安全加密支付</span>
-        </div>
-        <div class="stripe-content-scroll">
-          <div v-if="checkoutState === 'loading' || checkoutState === 'confirming'" class="checkout-status">
-            <span class="checkout-spinner" aria-hidden="true"></span><strong>{{ checkoutState === 'confirming' ? '正在确认支付结果' : '正在加载安全结账页面' }}</strong>
-            <p>{{ checkoutState === 'confirming' ? '请勿重复支付，到账通常只需几秒。' : '支付方式将根据您的地区和设备显示。' }}</p>
+  <section class="recharge-detail-page" v-region-loading="{ main: true, busy: pageLoad.pending && !pageLoad.ready }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div><h1>充值订单详情</h1><p>支付信息通过安全支付服务加密处理，平台不会接触或保存完整卡号</p></div>
+        <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="returnToSource">返回</button>
+      </div>
+      <div v-if="order" class="checkout-layout" :class="{ 'summary-only-layout': order.status !== 1 }">
+        <article v-region-loading="'recharge-order'" class="portal-card summary-panel">
+          <div class="detail-heading">
+            <div><span>充值订单号</span><h2>{{ order.rechargeNo }}</h2></div>
+            <span class="portal-tag" :class="{ warn: [1, 7, 8].includes(order.status), gray: [3, 4, 5, 6, 9].includes(order.status) }">{{ statusName('recharge', order.status) }}</span>
           </div>
-          <div v-if="checkoutError" class="checkout-error" role="alert"><strong>结账页面暂时无法加载</strong><span>{{ checkoutError }}</span><button class="layui-btn layui-btn-primary portal-btn" type="button" @click="mountCheckout">重新加载</button></div>
-          <div v-show="checkoutState === 'ready'" ref="stripeCheckout" class="stripe-checkout"></div>
-        </div>
-      </article>
-    </div>
-    <ConfirmDialog :visible="cancelDialog" title="取消充值订单" message="确定取消当前充值订单吗？取消后不能继续支付，需要重新创建订单。" confirm-text="确认取消" :loading="submitting" @cancel="cancelDialog = false" @confirm="cancelOrder" />
-    <ConfirmDialog :visible="subscriptionResult.visible" :title="subscriptionResult.title" :message="subscriptionResult.message" :show-cancel="false" confirm-type="primary" confirm-text="知道了" @confirm="closeSubscriptionResult" @cancel="closeSubscriptionResult" />
+          <dl class="detail-grid">
+            <div><dt>充值金额</dt><dd class="amount">¥{{ money(order.amount) }}</dd></div>
+            <!-- 仅实际发生余额回撤时展示退款摘要；无退款或旧响应缺少字段时不保留空白占位。 -->
+            <div v-if="Number(order.refundAmount || 0) > 0"><dt>累计退款金额</dt><dd>¥{{ money(order.refundAmount) }}</dd></div>
+            <div><dt>支付平台</dt><dd>Stripe</dd></div>
+            <div><dt>支付交易号</dt><dd>{{ order.stripePaymentIntentId || order.payTradeNo || '-' }}</dd></div>
+            <div><dt>创建时间</dt><dd>{{ order.createdAt || '-' }}</dd></div>
+            <div><dt>支付时间</dt><dd>{{ order.paidAt || '-' }}</dd></div>
+          </dl>
+          <div v-if="order.status === 1" class="cancel-row"><button class="layui-btn layui-btn-primary layui-border-red portal-btn" :disabled="submitting" @click="openCancelDialog">取消订单</button></div>
+          <div v-else-if="order.status === 2" class="payment-result success">
+            <i class="layui-icon layui-icon-ok-circle"></i><div><strong>充值已到账</strong><span>付款结果已确认，本次金额已计入企业余额。</span></div>
+          </div>
+          <div v-else-if="[8, 9].includes(order.status)" class="payment-result muted">
+            <div><strong>{{ statusName('recharge', order.status) }}</strong><span>累计退款 ¥{{ money(order.refundAmount) }}，对应金额已从企业余额回撤。原充值金额 ¥{{ money(order.amount) }}。</span></div>
+          </div>
+          <div v-else-if="order.status === 7" class="payment-result processing" aria-live="polite">
+            <span class="checkout-spinner" aria-hidden="true"></span><div><strong>支付处理中</strong><span>Checkout 已完成，银行正在确认资金。你可以安全离开此页面，到账后订单会自动更新。</span></div>
+          </div>
+          <div v-else class="payment-result muted"><div><strong>{{ statusName('recharge', order.status) }}</strong><span>{{ order.paymentFailureReason || '如需充值，请重新创建一笔订单。' }}</span></div></div>
+          <div v-if="order.status === 2 && hasSubscriptionContext" class="subscription-resume">
+            <div><strong>确认套餐{{ subscriptionAction }}</strong><span>充值已到账，确认后将使用企业余额完成套餐操作；离开后也可在订阅服务页面重新选择套餐。</span></div>
+            <button class="layui-btn portal-btn portal-btn-primary" :disabled="submitting" @click="completePendingSubscription">{{ submitting ? '正在提交' : `确认${subscriptionAction}` }}</button>
+          </div>
+        </article>
+        <article v-if="order.status === 1" v-region-loading="{ scopes: ['checkout'], busy: checkoutState === 'loading' || checkoutState === 'confirming' }" class="portal-card stripe-panel" aria-live="polite">
+          <div class="stripe-heading">
+            <div><span class="step-label">安全支付</span><h2>完成付款</h2><p>选择支付方式并确认本次充值</p></div>
+            <span class="stripe-badge">安全加密支付</span>
+          </div>
+          <div class="stripe-content-scroll">
+            <div v-if="checkoutState === 'loading' || checkoutState === 'confirming'" class="checkout-status">
+              <strong>{{ checkoutState === 'confirming' ? '正在确认支付结果' : '正在加载安全结账页面' }}</strong>
+              <p>{{ checkoutState === 'confirming' ? '请勿重复支付，到账通常只需几秒。' : '支付方式将根据您的地区和设备显示。' }}</p>
+            </div>
+            <div v-if="checkoutError" class="checkout-error" role="alert"><strong>结账页面暂时无法加载</strong><span>{{ checkoutError }}</span><button class="layui-btn layui-btn-primary portal-btn" type="button" @click="mountCheckout">重新加载</button></div>
+            <div v-show="checkoutState === 'ready'" ref="stripeCheckout" class="stripe-checkout"></div>
+          </div>
+        </article>
+      </div>
+      <ConfirmDialog :visible="cancelDialog" title="取消充值订单" message="确定取消当前充值订单吗？取消后不能继续支付，需要重新创建订单。" confirm-text="确认取消" :loading="submitting" @cancel="cancelDialog = false" @confirm="cancelOrder" />
+      <ConfirmDialog :visible="subscriptionResult.visible" :title="subscriptionResult.title" :message="subscriptionResult.message" :show-cancel="false" confirm-type="primary" confirm-text="知道了" @confirm="closeSubscriptionResult" @cancel="closeSubscriptionResult" />
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="initializePage" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { loadStripe } from '@stripe/stripe-js';
 import { cancelRechargeOrder, createStripeRechargeCheckoutSession, createSubscriptionOrder, getRechargeOrder } from '@/api/portal';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { getStatusName } from '@/utils/portalLabels';
 import { rechargeContextKey, normalizeRechargeContext, saveRechargeContext, readRechargeContext, consumeRechargeContext } from '@/utils/rechargeSubscriptionContext';
 import { normalizeRechargeReturnPath } from '@/utils/rechargeReturnPath';
+import Loading from '@/utils/loading';
 
 export default {
   name: 'RechargeOrderDetailPage',
-  components: { ConfirmDialog },
+  components: { DataLoadFeedback, ConfirmDialog },
   /**
    * 按订单保存业务入口路径，跳过订单创建和试算中间页面，保留入口查询条件。
    * 刷新及 Stripe 回跳时复用当前标签页的记录；首次直接访问且没有记录时返回充值订单列表。
@@ -96,6 +102,7 @@ export default {
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       order: null, submitting: false, cancelDialog: false,
       returnPath: '/portal/finance/recharges',
       pendingSubscription: null,
@@ -116,39 +123,7 @@ export default {
   },
   /** 先读取订单真实状态；从 Stripe 返回时等待 Webhook 入账，否则加载嵌入式结账页。 */
   async mounted() {
-    const key = rechargeContextKey(this.$route.params.id, this.$store.state);
-    this.subscriptionContextKey = key;
-    this.returnedFromPayment = this.$route.query.payment_return === '1';
-    /*
-     * 外部付款回跳只消费一次已保存的选择，不从旧 URL 恢复购买意图。
-     * 同时移除回跳和套餐参数，避免刷新或收藏该链接再次显示确认按钮。
-     */
-    if (this.returnedFromPayment) {
-      this.pendingSubscription = consumeRechargeContext(key);
-      const query = { ...this.$route.query };
-      ['payment_return', 'planId', 'periodCount', 'autoRenew', 'orderType'].forEach(field => { delete query[field]; });
-      await this.$router.replace({ path: this.$route.path, query });
-    }
-    await this.loadOrder();
-    if (!this.order) return;
-    /*
-     * 只有仍待支付的订单保存回跳所需上下文；已经到账或处理中订单的普通访问
-     * 清除历史选择，用户需要从订阅服务页面重新发起套餐操作。
-     */
-    if (!this.returnedFromPayment && this.order.status === 1) {
-      const savedContext = readRechargeContext(key);
-      this.pendingSubscription = savedContext?.completed ? null : savedContext || normalizeRechargeContext(this.$route.query);
-    } else if (!this.returnedFromPayment) {
-      consumeRechargeContext(key);
-    }
-    if (!this.returnedFromPayment && this.pendingSubscription) {
-      try { saveRechargeContext(key, this.pendingSubscription); }
-      catch (error) { this.checkoutState = 'error'; this.checkoutError = '无法保存套餐选择，请允许浏览器使用会话存储后重新加载。'; return; }
-    }
-    if (this.order.status === 7) { this.pollPaymentResult(); return; }
-    if (this.order.status !== 1) return;
-    if (this.returnedFromPayment) this.pollPaymentResult();
-    else await this.mountCheckout();
+    await this.initializePage();
   },
   /** 销毁 Stripe 组件与轮询计时器，防止路由切换后继续更新页面。 */
   beforeUnmount() {
@@ -157,6 +132,50 @@ export default {
     if (this.pollTimer) window.clearTimeout(this.pollTimer);
   },
   methods: {
+    /**
+     * 首次访问或读取失败重试时恢复完整订单初始化流程，包括支付组件和到账轮询。
+     * 重试不能只读取订单而遗漏 Stripe 挂载；初始化异常保留错误恢复入口。
+     */
+    async initializePage() {
+      try {
+        const key = rechargeContextKey(this.$route.params.id, this.$store.state);
+        this.subscriptionContextKey = key;
+        this.returnedFromPayment = this.$route.query.payment_return === '1';
+        /*
+         * 外部付款回跳只消费一次已保存的选择，不从旧 URL 恢复购买意图。
+         * 同时移除回跳和套餐参数，避免刷新或收藏该链接再次显示确认按钮。
+         */
+        if (this.returnedFromPayment) {
+          this.pendingSubscription = consumeRechargeContext(key);
+          const query = { ...this.$route.query };
+          ['payment_return', 'planId', 'periodCount', 'autoRenew', 'orderType'].forEach(field => { delete query[field]; });
+          await this.$router.replace({ path: this.$route.path, query });
+        }
+        await this.loadOrder();
+        if (!this.order) return;
+        /*
+         * 只有仍待支付的订单保存回跳所需上下文；已经到账或处理中订单的普通访问
+         * 清除历史选择，用户需要从订阅服务页面重新发起套餐操作。
+         */
+        if (!this.returnedFromPayment && this.order.status === 1) {
+          const savedContext = readRechargeContext(key);
+          this.pendingSubscription = savedContext?.completed ? null : savedContext || normalizeRechargeContext(this.$route.query);
+        } else if (!this.returnedFromPayment) {
+          consumeRechargeContext(key);
+        }
+        if (!this.returnedFromPayment && this.pendingSubscription) {
+          try { saveRechargeContext(key, this.pendingSubscription); }
+          catch (error) { this.checkoutState = 'error'; this.checkoutError = '无法保存套餐选择，请允许浏览器使用会话存储后重新加载。'; return; }
+        }
+        if (this.order.status === 7) { this.pollPaymentResult(); return; }
+        if (this.order.status !== 1) return;
+        if (this.returnedFromPayment) this.pollPaymentResult();
+        else await this.mountCheckout();
+      } catch (error) {
+        this.pageLoad.error = error?.message || '订单初始化失败，请重试';
+        this.pageLoad.pending = false;
+      }
+    },
     /**
      * 返回充值流程的业务入口，兼容旧来源记录，防止返回创建页或支付详情循环。
      * 使用 replace 避免返回后浏览器后退再次进入当前支付详情。
@@ -168,7 +187,11 @@ export default {
     /** 将订单金额统一显示为两位小数。 */
     money(value) { return Number(value || 0).toFixed(2); },
     /** 读取当前企业范围内的订单；租户隔离和归属校验由服务端执行。 */
-    async loadOrder() { const response = await getRechargeOrder(this.$route.params.id); this.order = response.data; },
+    async loadOrder() {
+      return loadPageData(this.pageLoad, async () => {
+        const response = await getRechargeOrder(this.$route.params.id); this.order = response.data;
+      });
+    },
     /**
      * 获取服务端创建的 Checkout Session。新订单使用 Stripe Full embedded page 完整结账页，
      * 邮箱、支付方式和支付按钮均由 Stripe 渲染；历史 elements Session 提示取消后重新下单，
@@ -242,6 +265,7 @@ export default {
      */
     async confirmElementsPayment() {
       if (!this.checkoutActions || this.submitting) return;
+      const releaseLoading = Loading.open({ fullscreen: true });
       this.submitting = true; this.confirmError = '';
       try {
         const result = await this.checkoutActions.confirm({ email: this.checkoutEmail });
@@ -252,7 +276,7 @@ export default {
         await this.pollPaymentResult();
       } catch (error) {
         this.confirmError = error?.message || '支付提交失败，请稍后重试。';
-      } finally { this.submitting = false; }
+      } finally { this.submitting = false; releaseLoading(); }
     },
     /**
      * Stripe 完成页面只代表客户端流程结束，余额必须等待已验签 Webhook 入账。

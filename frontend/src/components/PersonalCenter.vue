@@ -40,7 +40,16 @@
       </el-row>
     </el-card>
 
-    <EmailBindingForm v-if="profileLoaded && !accountProfile.email" @bound="handleEmailBound" />
+    <el-card v-if="profileLoaded" class="info-card" shadow="never">
+      <h2 class="card-title">登录方式</h2><p>邮箱：{{ accountProfile.email || '未绑定' }} · 微信：{{ accountProfile.wechatBound ? '已绑定' : '未绑定' }}</p>
+      <el-button v-if="!accountProfile.email || !accountProfile.wechatBound" @click="showBinding = true">绑定新的登录方式</el-button>
+
+    </el-card>
+
+    <el-dialog v-model="showBinding" title="绑定新的登录方式" width="480px" style="max-width:calc(100vw - 32px)" append-to-body destroy-on-close>
+      <EmailBindingForm v-if="!accountProfile.email" @bound="handleEmailBound" />
+      <WechatLogin v-if="!accountProfile.wechatBound" binding />
+    </el-dialog>
 
     <!-- 修改密码卡片 -->
     <el-card class="pwd-card" shadow="hover">
@@ -149,6 +158,8 @@ import { Edit, Lock } from '@element-plus/icons-vue';
 import { selectPersonalUser, updatePassword } from '@/api/user';
 import { getEmailProfile, updateEmailProfile } from '@/api/login';
 import EmailBindingForm from '@/components/EmailBindingForm.vue';
+import WechatLogin from '@/components/WechatLogin.vue';
+const showBinding = ref(false);
 import { formatSecondTimestamp } from '@/utils/time';
 import Message from '@/utils/message';
 import { validatePhoneNumber } from '@/utils/validate';
@@ -306,6 +317,7 @@ const buildInsertData = () => {
 /** 邮箱验证成功后重新获取共享资料，使显示区与绑定入口立即反映已绑定状态。 */
 const handleEmailBound = async profile => {
   accountProfile.value = profile;
+  showBinding.value = false;
   await getPersonalUser();
 };
 

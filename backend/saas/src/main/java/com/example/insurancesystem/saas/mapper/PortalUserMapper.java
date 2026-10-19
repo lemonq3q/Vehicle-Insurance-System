@@ -17,7 +17,7 @@ public interface PortalUserMapper {
   User findById(Long id);
 
   @Select(
-      "SELECT id,username,email,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at "
+      "SELECT id,username,email,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at,CASE WHEN wechat_open_id IS NOT NULL THEN TRUE ELSE FALSE END AS wechat_bound,wechat_nickname,wechat_bound_at "
           + "FROM tenant_user WHERE id=#{id} AND deleted=0")
   Map<String, Object> findProfile(Long id);
 

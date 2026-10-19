@@ -1,78 +1,89 @@
 <template>
-  <section>
-    <div class="section-title">
-      <div>
-        <h1>用户中心</h1>
-      </div>
-    </div>
-
-    <article class="portal-card profile-card">
-      <div class="profile-aside">
-        <div class="avatar">{{ avatarText }}</div>
-        <h2>{{ profile.realName || '未命名用户' }}</h2>
-        <p>{{ profile.email || '未绑定邮箱' }}</p>
-        <span class="portal-tag">账号启用</span>
+  <section v-region-loading="{ main: true, busy: pageLoad.pending, scopes: ['profile'] }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>用户中心</h1>
+        </div>
       </div>
 
-      <div class="profile-content">
-        <div class="profile-title-row">
-          <div>
-            <h2>个人资料</h2>
-            <p>账号基础信息与身份资料</p>
-          </div>
-          <button v-if="!isEditing" class="layui-btn layui-btn-primary layui-border-green portal-btn" type="button" @click="beginEdit">
-            <i class="layui-icon layui-icon-edit"></i>
-            修改信息
-          </button>
+      <article v-region-loading="'profile'" class="portal-card profile-card">
+        <div class="profile-aside">
+          <div class="avatar">{{ avatarText }}</div>
+          <h2>{{ profile.realName || '未命名用户' }}</h2>
+          <p>{{ profile.email || '未绑定邮箱' }}</p>
+          <span class="portal-tag">账号启用</span>
         </div>
 
-        <dl v-if="!isEditing" class="profile-info-grid">
-          <div><dt>登录邮箱</dt><dd>{{ profile.email || '未绑定' }}</dd></div>
-          <div><dt>姓名</dt><dd>{{ profile.realName || '-' }}</dd></div>
-          <div><dt>证件号</dt><dd>{{ maskedIdNum }}</dd></div>
-          <div><dt>账号状态</dt><dd><span class="status-dot"></span>正常</dd></div>
-          <div><dt>上次登录</dt><dd>{{ profile.lastLoginTime || '-' }}</dd></div>
-        </dl>
+        <div class="profile-content">
+          <div class="profile-title-row">
+            <div>
+              <h2>个人资料</h2>
+              <p>账号基础信息与身份资料</p>
+            </div>
+            <button v-if="!isEditing" class="layui-btn layui-btn-primary layui-border-green portal-btn" type="button" @click="beginEdit">
+              <i class="layui-icon layui-icon-edit"></i>
+              修改信息
+            </button>
+          </div>
 
-        <form v-else class="form-grid profile-form" @submit.prevent="saveProfile">
-          <div class="form-field">
-            <label for="realName">姓名</label>
-            <input id="realName" v-model="form.realName" class="layui-input" />
-          </div>
-          <div class="form-field">
-            <label for="profileEmail">登录邮箱</label>
-            <input id="profileEmail" :value="profile.email || '未绑定'" class="layui-input" type="text" disabled />
-          </div>
-          <div class="form-field full">
-            <label for="idNum">证件号</label>
-            <input id="idNum" v-model="form.idNum" class="layui-input" />
-          </div>
-          <div class="action-row full">
-            <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="cancelEdit">取消</button>
-            <button class="layui-btn portal-btn portal-btn-primary" type="submit">保存个人资料</button>
-          </div>
-        </form>
-      </div>
-    </article>
-    <EmailBindingForm v-if="profileLoaded && !profile.email" @bound="handleEmailBound" />
+          <dl v-if="!isEditing" class="profile-info-grid">
+            <div><dt>登录邮箱</dt><dd>{{ profile.email || '未绑定' }}</dd></div>
+            <div><dt>姓名</dt><dd>{{ profile.realName || '-' }}</dd></div>
+            <div><dt>证件号</dt><dd>{{ maskedIdNum }}</dd></div>
+            <div><dt>账号状态</dt><dd><span class="status-dot"></span>正常</dd></div>
+            <div><dt>上次登录</dt><dd>{{ profile.lastLoginTime || '-' }}</dd></div>
+          </dl>
 
+          <form v-else class="form-grid profile-form" @submit.prevent="saveProfile">
+            <div class="form-field">
+              <label for="realName">姓名</label>
+              <input id="realName" v-model="form.realName" class="layui-input" />
+            </div>
+            <div class="form-field">
+              <label for="profileEmail">登录邮箱</label>
+              <input id="profileEmail" :value="profile.email || '未绑定'" class="layui-input" type="text" disabled />
+            </div>
+            <div class="form-field full">
+              <label for="idNum">证件号</label>
+              <input id="idNum" v-model="form.idNum" class="layui-input" />
+            </div>
+            <div class="action-row full">
+              <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="cancelEdit">取消</button>
+              <button class="layui-btn portal-btn portal-btn-primary" type="submit">保存个人资料</button>
+            </div>
+          </form>
+        </div>
+      </article>
+      <article v-if="profileLoaded" class="portal-card login-methods">
+        <h2>登录方式</h2><p>邮箱：{{ profile.email || '未绑定' }} · 微信：{{ profile.wechatBound ? '已绑定' : '未绑定' }}</p>
+        <button v-if="!profile.email || !profile.wechatBound" type="button" class="layui-btn portal-btn portal-btn-primary" @click="showBinding = true">绑定新的登录方式</button>
+
+      </article>
+      <LoginMethodDialog v-if="showBinding" :email-bound="Boolean(profile.email)" :wechat-bound="Boolean(profile.wechatBound)" @close="showBinding = false" @bound="handleEmailBound" />
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadProfile" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getProfile, updateProfile } from '@/api/portal';
-import EmailBindingForm from '@/components/EmailBindingForm.vue';
+import LoginMethodDialog from '@/components/LoginMethodDialog.vue';
 
 export default {
   name: 'UserCenterPage',
-  components: { EmailBindingForm },
+  components: { DataLoadFeedback, LoginMethodDialog },
   /**
    * 分离服务端个人资料快照与编辑表单副本，使取消编辑可以无损恢复已保存数据。
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       profile: {},
       profileLoaded: false,
+      showBinding: false,
       form: {},
       isEditing: false
     };
@@ -98,17 +109,25 @@ export default {
    * 页面创建后读取个人资料，并复制一份作为后续编辑表单初值。
    */
   async created() {
-    const response = await getProfile();
-    this.profile = response.data;
-    this.profileLoaded = true;
-    this.form = { ...response.data };
+    await this.loadProfile();
   },
   methods: {
+    /** 首次读取服务端快照，成功后才允许显示资料、余额及登录方式等业务分支；失败提供重试。 */
+    async loadProfile() {
+      return loadPageData(this.pageLoad, async () => {
+        const response = await getProfile();
+        if (!response?.data || typeof response.data !== 'object') throw new Error('个人资料加载失败，请重试');
+        this.profile = response.data;
+        this.profileLoaded = true;
+        this.form = { ...response.data };
+      });
+    },
     /**
      * 邮箱绑定成功后替换资料快照并刷新账号上下文，使其他页面及时取得邮箱。
      */
     async handleEmailBound(profile) {
       this.profile = profile;
+      this.showBinding = false;
       this.form = { ...profile };
       await this.$store.dispatch('loadContext');
     },
@@ -141,6 +160,7 @@ export default {
 </script>
 
 <style scoped>
+.login-methods{margin-top:24px;padding:24px}.login-methods p{margin:16px 0;color:var(--portal-muted)}
 .profile-card {
   display: grid;
   grid-template-columns: 280px 1fr;

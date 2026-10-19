@@ -69,6 +69,7 @@ const PersonalCenter = () => import('@/components/PersonalCenter.vue');
 const UpStream = () => import('@/components/UpStream.vue');
 
 const routes = [
+  { path: '/wechat/callback', component: () => import('@/page/WechatCallbackPage.vue'), meta: { requiresAuth: false } },
   {
     path: '/',
     redirect: '/login',

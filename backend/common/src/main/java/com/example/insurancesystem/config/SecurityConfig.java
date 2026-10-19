@@ -87,6 +87,8 @@ public class SecurityConfig {
                 .and()
                 .authorizeRequests()
                 .antMatchers(
+                        "/auth/wechat/start", "/auth/wechat/complete",
+                        "/portal/auth/wechat/start", "/portal/auth/wechat/complete", "/portal/auth/wechat/events",
                         "/auth/login", "/auth/register", "/auth/email-code", "/auth/forget-password",
                         "/portal/auth/login", "/portal/auth/register", "/portal/auth/email-code",
                         "/monitor/auth/login",

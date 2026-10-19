@@ -32,7 +32,7 @@ public interface EmailAccountMapper {
     /**
      * 返回不含认证密钥的个人资料，供两端个人中心和账号上下文使用。
      */
-    @Select("SELECT id,username,email,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at FROM tenant_user WHERE id=#{id} AND deleted=0")
+    @Select("SELECT id,username,email,phone,real_name,id_num,avatar_file_id,status,last_login_time,created_at,updated_at,CASE WHEN wechat_open_id IS NOT NULL THEN TRUE ELSE FALSE END AS wechat_bound,wechat_nickname,wechat_bound_at FROM tenant_user WHERE id=#{id} AND deleted=0")
     Map<String, Object> findProfile(Long id);
 
     /**

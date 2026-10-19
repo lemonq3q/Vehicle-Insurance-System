@@ -7,6 +7,9 @@ export const EXCEL_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.sp
 const REFRESHED_TOKEN_HEADER = 'new-token';
 
 const notInterceptUrls = [
+  '/auth/wechat/start',
+  '/auth/wechat/complete',
+
   '/auth/login',
   '/auth/email-code',
   '/auth/forget-password',
@@ -65,7 +68,7 @@ function rejectResponse(response, originalError) {
     Storage.remove('token');
     Storage.remove('userInfo');
     router.push('/login');
-  } else if (silentAuthFailure) {
+  } else if (silentAuthFailure || config?.skipErrorNotification) {
     return Promise.reject(error);
   } else if (code >= 500 || code === 0) {
     Message.error(error.message);

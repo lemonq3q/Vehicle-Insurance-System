@@ -2,11 +2,15 @@ import axios from 'axios';
 import Storage from '@/utils/storage';
 import { notifyError, notifyWarning } from '@/utils/notification';
 import { normalizeDateTimes } from '@/utils/dateTime';
+import Loading from '@/utils/loading';
 
 const TOKEN_STORAGE_KEY = 'portalToken';
 const TOKEN_EXPIRE_SECONDS = 60 * 60 * 24;
 const REFRESHED_TOKEN_HEADER = 'new-token';
 const PUBLIC_REQUESTS = [
+  '/portal/auth/wechat/start',
+  '/portal/auth/wechat/complete',
+
   '/portal/auth/login',
   '/portal/auth/register',
   '/portal/auth/email-code',
@@ -22,6 +26,31 @@ const request = axios.create({
 });
 
 let unauthorizedHandler = null;
+const requestLoading = new WeakMap();
+
+/**
+ * 请求通过认证头处理后，按 API 明确声明的局部区域或重要提交登记任务。
+ * 以 Axios 配置对象关联任务，保持请求参数和后端接口契约不变。
+ * @param {object} config 当前请求配置，由 Axios 生成并传递给响应或异常对象。
+ * @returns {object} 原请求配置。
+ */
+function beginRequestLoading(config) {
+  if (config.loading) requestLoading.set(config, Loading.open(config.loading));
+  return config;
+}
+
+/**
+ * 完成单个请求的加载任务，覆盖成功、业务失败、HTTP 失败、超时与取消。
+ * 无配置的异常或重复清理不影响其他任务；释放函数不会写入请求或响应数据。
+ * @param {object} config 响应或错误携带的原 Axios 配置。
+ */
+function finishRequestLoading(config) {
+  const release = config && requestLoading.get(config);
+  if (release) {
+    requestLoading.delete(config);
+    release();
+  }
+}
 
 /**
 
@@ -123,7 +152,7 @@ request.interceptors.request.use(config => {
       delete config.headers.token;
       delete config.headers.Authorization;
     }
-    return config;
+    return beginRequestLoading(config);
   }
 
   const token = Storage.get(TOKEN_STORAGE_KEY);
@@ -132,14 +161,18 @@ request.interceptors.request.use(config => {
     config.headers.token = token;
     config.headers.Authorization = `Bearer ${token}`;
   }
-  return config;
-}, error => Promise.reject(error));
+  return beginRequestLoading(config);
+}, error => {
+  finishRequestLoading(error.config);
+  return Promise.reject(error);
+});
 
 /**
  * 统一处理门户响应：保存后端刷新的 token、递归规范日期格式、把业务失败转成 rejected Promise，
  * 并在 401 时清理会话。调用方可通过 skipErrorNotification 抑制公共页面的全局错误提示。
  */
 request.interceptors.response.use(response => {
+  finishRequestLoading(response.config);
   const refreshedToken = response.headers?.[REFRESHED_TOKEN_HEADER]
     || response.headers?.get?.(REFRESHED_TOKEN_HEADER);
   if (refreshedToken) {
@@ -155,6 +188,7 @@ request.interceptors.response.use(response => {
   }
   return payload;
 }, error => {
+  finishRequestLoading(error.config || error.response?.config);
   return rejectResponse(error.response, error);
 });
 

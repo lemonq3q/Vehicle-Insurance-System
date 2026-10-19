@@ -1,7 +1,6 @@
 <template>
   <main class="sso-page" aria-live="polite">
-    <section class="sso-card">
-      <div v-if="!failed" class="sso-spinner" aria-hidden="true"></div>
+    <section v-region-loading="['auth-callback', 'context']" class="sso-card">
       <h1>{{ failed ? '自动登录失败' : '正在返回 SaaS 门户' }}</h1>
       <p>{{ message }}</p>
       <router-link v-if="failed" class="retry-button" to="/login">返回登录页</router-link>

@@ -1,60 +1,66 @@
 <template>
-  <section>
-    <div class="section-title">
-      <div>
-        <h1>余额充值</h1>
-        <p>输入充值金额，下一步将在站内安全完成支付</p>
-      </div>
-      <router-link class="layui-btn layui-btn-primary portal-btn" :to="returnDestination" replace>返回</router-link>
-    </div>
-
-    <div class="recharge-layout" :class="{ single: !hasOrderContext }">
-      <article class="portal-card recharge-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="step-label">创建订单</span>
-            <h2>{{ hasOrderContext ? '补充企业余额' : '选择充值金额' }}</h2>
-          </div>
-          <span class="balance-label">当前余额 <strong>¥{{ money(balanceAmount) }}</strong></span>
+  <section v-region-loading="{ main: true, busy: pageLoad.pending, scopes: ['finance-overview'] }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>余额充值</h1>
+          <p>输入充值金额，下一步将在站内安全完成支付</p>
         </div>
+        <router-link class="layui-btn layui-btn-primary portal-btn" :to="returnDestination" replace>返回</router-link>
+      </div>
 
-        <form class="recharge-form" @submit.prevent="createOrder">
-          <div class="form-field">
-            <label for="rechargeAmount">充值金额</label>
-            <div class="amount-input">
-              <span>¥</span>
-              <input id="rechargeAmount" v-model.trim="form.amount" class="layui-input" inputmode="decimal" :readonly="hasOrderContext" :min="minimumRechargeAmount" :max="maximumRechargeAmount" step="0.01" placeholder="请输入充值金额" />
+      <div class="recharge-layout" :class="{ single: !hasOrderContext }">
+        <article class="portal-card recharge-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step-label">创建订单</span>
+              <h2>{{ hasOrderContext ? '补充企业余额' : '选择充值金额' }}</h2>
             </div>
-            <span class="amount-limit">单笔充值限额：¥{{ money(minimumRechargeAmount) }}–¥{{ money(maximumRechargeAmount) }}</span>
+            <span class="balance-label">当前余额 <strong>¥{{ money(balanceAmount) }}</strong></span>
           </div>
-          <div v-if="!hasOrderContext" class="quick-amounts" aria-label="常用充值金额">
-            <button v-for="amount in quickAmounts" :key="amount" class="quick-amount" type="button" @click="form.amount = String(amount)">¥{{ amount }}</button>
-          </div>
-          <p class="payment-hint">可用的银行卡、钱包及本地支付方式将根据币种和地区展示，请在结账时选择。</p>
-          <button class="layui-btn portal-btn portal-btn-primary submit-button" :disabled="submitting" type="submit">
-            {{ submitting ? '创建中' : '创建充值订单' }}
-          </button>
-        </form>
 
-      </article>
+          <form class="recharge-form" @submit.prevent="createOrder">
+            <div class="form-field">
+              <label for="rechargeAmount">充值金额</label>
+              <div class="amount-input">
+                <span>¥</span>
+                <input id="rechargeAmount" v-model.trim="form.amount" class="layui-input" inputmode="decimal" :readonly="hasOrderContext" :min="minimumRechargeAmount" :max="maximumRechargeAmount" step="0.01" placeholder="请输入充值金额" />
+              </div>
+              <span class="amount-limit">单笔充值限额：¥{{ money(minimumRechargeAmount) }}–¥{{ money(maximumRechargeAmount) }}</span>
+            </div>
+            <div v-if="!hasOrderContext" class="quick-amounts" aria-label="常用充值金额">
+              <button v-for="amount in quickAmounts" :key="amount" class="quick-amount" type="button" @click="form.amount = String(amount)">¥{{ amount }}</button>
+            </div>
+            <p class="payment-hint">可用的银行卡、钱包及本地支付方式将根据币种和地区展示，请在结账时选择。</p>
+            <button class="layui-btn portal-btn portal-btn-primary submit-button" :disabled="submitting" type="submit">
+              {{ submitting ? '创建中' : '创建充值订单' }}
+            </button>
+          </form>
 
-      <aside v-if="hasOrderContext" class="portal-card order-context">
-        <h2>待支付订阅</h2>
-        <div><span>订单应付</span><strong>¥{{ money(requiredAmount) }}</strong></div>
-        <div><span>充值前余额</span><strong>¥{{ money(originalBalanceAmount) }}</strong></div>
-        <div class="shortfall"><span>建议充值</span><strong>¥{{ money(shortfallAmount) }}</strong></div>
-      </aside>
-    </div>
+        </article>
+
+        <aside v-if="hasOrderContext" class="portal-card order-context">
+          <h2>待支付订阅</h2>
+          <div><span>订单应付</span><strong>¥{{ money(requiredAmount) }}</strong></div>
+          <div><span>充值前余额</span><strong>¥{{ money(originalBalanceAmount) }}</strong></div>
+          <div class="shortfall"><span>建议充值</span><strong>¥{{ money(shortfallAmount) }}</strong></div>
+        </aside>
+      </div>
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadData" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { createRechargeOrder, getFinanceOverview } from '@/api/portal';
 import { notifyWarning } from '@/utils/notification';
 import { rechargeContextKey, normalizeRechargeContext, saveRechargeContext } from '@/utils/rechargeSubscriptionContext';
 import { normalizeRechargeReturnPath } from '@/utils/rechargeReturnPath';
 
 export default {
+  components: { DataLoadFeedback },
   name: 'RechargePlaceholderPage',
   /**
    * 创建页是充值流程中间步骤，捕获真正业务入口并随订单传递。
@@ -74,6 +80,7 @@ export default {
    */
   data() {
     return {
+      pageLoad: createPageLoad(),
       form: { amount: '' },
       rechargeReturnPath: '/portal/finance/subscription',
       quickAmounts: [100, 500, 1000, 5000],
@@ -127,13 +134,19 @@ export default {
    * 初始化钱包最新余额，并按套餐订单余额缺口预填建议充值金额。
    */
   async created() {
-    const response = await getFinanceOverview();
-    this.balanceAmount = Number(response.data.wallet?.balanceAmount || 0);
-    this.minimumRechargeAmount = Number(response.data.rechargeLimits?.minimumAmount || 5);
-    this.maximumRechargeAmount = Number(response.data.rechargeLimits?.maximumAmount || 50000);
-    if (this.hasOrderContext) this.form.amount = this.money(Math.max(this.shortfallAmount, this.minimumRechargeAmount));
+    await this.loadData();
   },
   methods: {
+    /** 首次读取服务端快照，成功后才允许显示资料、余额及登录方式等业务分支；失败提供重试。 */
+    async loadData() {
+      return loadPageData(this.pageLoad, async () => {
+        const response = await getFinanceOverview();
+        this.balanceAmount = Number(response.data.wallet?.balanceAmount || 0);
+        this.minimumRechargeAmount = Number(response.data.rechargeLimits?.minimumAmount || 5);
+        this.maximumRechargeAmount = Number(response.data.rechargeLimits?.maximumAmount || 50000);
+        if (this.hasOrderContext) this.form.amount = this.money(Math.max(this.shortfallAmount, this.minimumRechargeAmount));
+      });
+    },
     /**
      * 将充值金额、余额和缺口统一格式化为两位小数。
      */

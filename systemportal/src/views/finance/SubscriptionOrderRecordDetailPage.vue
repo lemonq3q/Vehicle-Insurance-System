@@ -1,78 +1,83 @@
 <template>
-  <section>
-    <div class="section-title">
-      <div>
-        <h1>订阅订单详情</h1>
-        <p>查看本次套餐订阅的权益快照、费用构成和支付结果</p>
+  <section v-region-loading="{ main: true, busy: pageLoad.pending, scopes: ['subscription-record'] }">
+    <template v-if="pageLoad.ready">
+      <div class="section-title">
+        <div>
+          <h1>订阅订单详情</h1>
+          <p>查看本次套餐订阅的权益快照、费用构成和支付结果</p>
+        </div>
+        <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="backToOrders">返回订单列表</button>
       </div>
-      <button class="layui-btn layui-btn-primary portal-btn" type="button" @click="backToOrders">返回订单列表</button>
-    </div>
 
-    <div v-if="loading" class="portal-card loading-state" aria-live="polite">正在加载订单...</div>
+      <div v-if="loading" class="portal-card loading-state" aria-live="polite">正在加载订单...</div>
 
-    <div v-else-if="order" class="order-layout">
-      <article class="portal-card order-main-panel">
-        <div class="panel-heading">
-          <div>
-            <div class="status-line">
-              <span class="portal-tag" :class="{ blue: order.orderType === 'CHANGE_PLAN' }">{{ orderTypeName }}</span>
-              <span class="portal-tag" :class="{ warn: [1, 6].includes(Number(order.status)) }">{{ statusName('order', order.status) }}</span>
+      <div v-else-if="order" class="order-layout">
+        <article class="portal-card order-main-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="status-line">
+                <span class="portal-tag" :class="{ blue: order.orderType === 'CHANGE_PLAN' }">{{ orderTypeName }}</span>
+                <span class="portal-tag" :class="{ warn: [1, 6].includes(Number(order.status)) }">{{ statusName('order', order.status) }}</span>
+              </div>
+              <h2>{{ planName }}</h2>
+              <p class="order-number">订单号：{{ order.orderNo }}</p>
             </div>
-            <h2>{{ planName }}</h2>
-            <p class="order-number">订单号：{{ order.orderNo }}</p>
+            <div class="plan-price">¥{{ money(order.priceAmount ?? order.payableAmount) }}<small>/套餐金额</small></div>
           </div>
-          <div class="plan-price">¥{{ money(order.priceAmount ?? order.payableAmount) }}<small>/套餐金额</small></div>
-        </div>
 
-        <div class="plan-facts">
-          <div><span>成员上限</span><strong>{{ displayValue(order.buyUserLimit, '人') }}</strong></div>
-          <div><span>工单额度</span><strong>{{ displayValue(order.buyWorkorderLimit, '单') }}</strong></div>
-          <div><span>订阅周期</span><strong>{{ displayValue(order.periodCount || 1, '个周期') }}</strong></div>
-          <div><span>服务时长</span><strong>{{ displayValue(order.buyDurationDays, '天') }}</strong></div>
-        </div>
+          <div class="plan-facts">
+            <div><span>成员上限</span><strong>{{ displayValue(order.buyUserLimit, '人') }}</strong></div>
+            <div><span>工单额度</span><strong>{{ displayValue(order.buyWorkorderLimit, '单') }}</strong></div>
+            <div><span>订阅周期</span><strong>{{ displayValue(order.periodCount || 1, '个周期') }}</strong></div>
+            <div><span>服务时长</span><strong>{{ displayValue(order.buyDurationDays, '天') }}</strong></div>
+          </div>
 
-        <section class="detail-section" aria-labelledby="order-info-title">
-          <h3 id="order-info-title">订单信息</h3>
-          <dl class="detail-grid">
-            <div><dt>支付方式</dt><dd>{{ payTypeName }}</dd></div>
-            <div><dt>自动续费</dt><dd>{{ order.autoRenew ? '已开启' : '未开启' }}</dd></div>
-            <div><dt>创建时间</dt><dd>{{ order.createdAt || '-' }}</dd></div>
-            <div><dt>支付时间</dt><dd>{{ order.paidAt || '-' }}</dd></div>
+          <section class="detail-section" aria-labelledby="order-info-title">
+            <h3 id="order-info-title">订单信息</h3>
+            <dl class="detail-grid">
+              <div><dt>支付方式</dt><dd>{{ payTypeName }}</dd></div>
+              <div><dt>自动续费</dt><dd>{{ order.autoRenew ? '已开启' : '未开启' }}</dd></div>
+              <div><dt>创建时间</dt><dd>{{ order.createdAt || '-' }}</dd></div>
+              <div><dt>支付时间</dt><dd>{{ order.paidAt || '-' }}</dd></div>
+            </dl>
+          </section>
+
+          <section v-if="order.failureReason" class="failure-card" aria-labelledby="failure-title">
+            <h3 id="failure-title">订单未完成</h3>
+            <p>{{ order.failureReason }}</p>
+          </section>
+        </article>
+
+        <aside class="portal-card amount-panel">
+          <h2>金额明细</h2>
+          <dl>
+            <div><dt>套餐金额</dt><dd>¥{{ money(order.priceAmount ?? order.payableAmount) }}</dd></div>
+            <div v-if="Number(order.discountAmount || 0) > 0"><dt>优惠金额</dt><dd class="credit">-¥{{ money(order.discountAmount) }}</dd></div>
+            <div v-if="Number(order.creditAmount || 0) > 0"><dt>原套餐剩余价值抵扣</dt><dd class="credit">-¥{{ money(order.creditAmount) }}</dd></div>
+            <div v-if="Number(order.workorderOverageCount || 0) > 0">
+              <dt>超额工单费（{{ order.workorderOverageCount }} 单）</dt>
+              <dd>¥{{ money(order.workorderOverageAmount) }}</dd>
+            </div>
+            <div v-if="Number(order.refundAmount || 0) > 0"><dt>退回企业余额</dt><dd class="refund">+¥{{ money(order.refundAmount) }}</dd></div>
+            <div class="divider"><dt>应付金额</dt><dd>¥{{ money(order.payableAmount) }}</dd></div>
           </dl>
-        </section>
-
-        <section v-if="order.failureReason" class="failure-card" aria-labelledby="failure-title">
-          <h3 id="failure-title">订单未完成</h3>
-          <p>{{ order.failureReason }}</p>
-        </section>
-      </article>
-
-      <aside class="portal-card amount-panel">
-        <h2>金额明细</h2>
-        <dl>
-          <div><dt>套餐金额</dt><dd>¥{{ money(order.priceAmount ?? order.payableAmount) }}</dd></div>
-          <div v-if="Number(order.discountAmount || 0) > 0"><dt>优惠金额</dt><dd class="credit">-¥{{ money(order.discountAmount) }}</dd></div>
-          <div v-if="Number(order.creditAmount || 0) > 0"><dt>原套餐剩余价值抵扣</dt><dd class="credit">-¥{{ money(order.creditAmount) }}</dd></div>
-          <div v-if="Number(order.workorderOverageCount || 0) > 0">
-            <dt>超额工单费（{{ order.workorderOverageCount }} 单）</dt>
-            <dd>¥{{ money(order.workorderOverageAmount) }}</dd>
+          <div class="total-row">
+            <span>实付金额</span>
+            <strong>¥{{ money(order.paidAmount) }}</strong>
           </div>
-          <div v-if="Number(order.refundAmount || 0) > 0"><dt>退回企业余额</dt><dd class="refund">+¥{{ money(order.refundAmount) }}</dd></div>
-          <div class="divider"><dt>应付金额</dt><dd>¥{{ money(order.payableAmount) }}</dd></div>
-        </dl>
-        <div class="total-row">
-          <span>实付金额</span>
-          <strong>¥{{ money(order.paidAmount) }}</strong>
-        </div>
-        <p class="amount-note">金额以订单创建时的套餐和计费规则为准。</p>
-      </aside>
-    </div>
+          <p class="amount-note">金额以订单创建时的套餐和计费规则为准。</p>
+        </aside>
+      </div>
 
-    <div v-else class="portal-card empty-state">未找到该订阅订单，请返回订单列表重新选择。</div>
+      <div v-else class="portal-card empty-state">未找到该订阅订单，请返回订单列表重新选择。</div>
+    </template>
+    <DataLoadFeedback :state="pageLoad" @retry="loadOrder" />
   </section>
 </template>
 
 <script>
+import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
+import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getSubscriptionOrder } from '@/api/portal';
 import { getStatusName } from '@/utils/portalLabels';
 
@@ -82,9 +87,11 @@ import { getStatusName } from '@/utils/portalLabels';
  * 所有数据均通过当前企业范围内的详情接口读取，不根据当前套餐配置反推历史订单，也不在该页面执行支付或重试。
  */
 export default {
+  components: { DataLoadFeedback },
   name: 'SubscriptionOrderRecordDetailPage',
   data() {
     return {
+      pageLoad: createPageLoad(),
       loading: true,
       order: null
     };
@@ -125,15 +132,11 @@ export default {
      * 查询当前企业的目标订单并保存服务端返回快照，避免直接信任列表页携带的可变数据。
      */
     async loadOrder() {
-      this.loading = true;
-      try {
+      return loadPageData(this.pageLoad, async () => {
         const response = await getSubscriptionOrder(this.$route.params.id);
         this.order = response.data;
-      } catch (error) {
-        this.order = null;
-      } finally {
         this.loading = false;
-      }
+      });
     },
     /**
      * 返回订阅订单列表的固定路由，保证直接打开详情页时也有可预测的退出路径。

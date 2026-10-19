@@ -83,6 +83,22 @@ public class LoginServiceImpl implements LoginService {
         return createSession(loginUser);
     }
 
+    /**
+     * 已验证微信身份按用户主键读取现有企业与权限，仍校验账号、成员和套餐。
+     * 不用空邮箱或伪造密码绕过认证，不将微信身份当作企业访问权限。
+     */
+    @Override
+    public ResponseResult wechatLogin(Long userId) {
+        User user = userMapper.selectWechatUser(userId);
+        if (user == null) throw new BusinessException(404, "账号不存在");
+        LoginUser loginUser = new LoginUser(user, user.getEnterpriseId() == null ? java.util.Collections.emptyList()
+                : menuMapper.selectPermsByUserId(userId, user.getEnterpriseId()));
+        if (!loginUser.isEnabled()) throw new BusinessException(403, "账号或企业成员未启用");
+        if (user.getEnterpriseId() == null) throw new BusinessException(403, "尚未加入企业，请先前往 SaaS 门户创建或加入企业");
+        validateSubscriptionAccess(user);
+        return createSession(loginUser);
+    }
+
     @Override
     /**
      * 用 SaaS 门户签发的一次性授权码换取用户和企业身份，再从本系统加载成员状态及菜单权限。

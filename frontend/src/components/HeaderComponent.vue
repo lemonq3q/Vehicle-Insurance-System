@@ -345,6 +345,23 @@ const handleLogout = () => {
   cursor: pointer;
 }
 
+/*
+ * 用户菜单悬停时，Element Plus 会为触发器聚焦；跨系统跳转后可能因此显示全局蓝色焦点框。
+ * 此触发器无论是否被浏览器判为 focus-visible 都不使用轮廓，避免离开悬停后蓝框再次出现。
+ * 键盘聚焦改用浅色背景提示；规则只作用于用户菜单，不改变其他按钮的焦点样式。
+ */
+.header_user_container,
+.header_user_container:hover,
+.header_user_container:focus,
+.header_user_container:focus-visible {
+  outline: none !important;
+}
+
+.header_user_container:focus-visible {
+  border-radius: 6px;
+  background-color: var(--insurance-soft, #f1f5f9);
+}
+
 .header_user_img {
   width: 40px;
   height: 40px;

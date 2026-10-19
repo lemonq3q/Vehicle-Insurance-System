@@ -3,7 +3,7 @@
     <h2>绑定邮箱</h2>
     <p>验证邮箱并设置密码后，可以使用邮箱登录 SaaS 门户和车险系统。</p>
     <div class="form-field"><label for="bindingEmail">邮箱</label><input id="bindingEmail" v-model.trim="form.email" class="layui-input" type="email" maxlength="100" autocomplete="email" required /></div>
-    <div class="form-field"><label for="bindingCode">邮箱验证码</label><div class="verification-row"><input id="bindingCode" v-model.trim="form.emailCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required /><button type="button" class="layui-btn layui-btn-primary" :disabled="sending || seconds > 0 || saving" @click="sendCode">{{ sending ? '发送中...' : seconds > 0 ? `${seconds}s 后重发` : '获取邮箱验证码' }}</button></div></div>
+    <div class="form-field"><label for="bindingCode">邮箱验证码</label><div class="verification-row"><input id="bindingCode" v-model.trim="form.emailCode" class="layui-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required /><button v-region-loading="{ scopes: ['binding-email-code'], compact: true }" type="button" class="layui-btn layui-btn-primary" :disabled="sending || seconds > 0 || saving" @click="sendCode">{{ sending ? '发送中...' : seconds > 0 ? `${seconds}s 后重发` : '获取邮箱验证码' }}</button></div></div>
     <div class="form-field"><label for="bindingPassword">登录密码</label><PasswordField id="bindingPassword" v-model="form.password" autocomplete="new-password" /><small>密码需为 8 至 64 位</small></div>
     <button class="layui-btn portal-btn portal-btn-primary" :disabled="saving">{{ saving ? '绑定中...' : '验证并绑定邮箱' }}</button>
   </form>

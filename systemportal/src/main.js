@@ -5,6 +5,8 @@ import store from './store';
 import { setUnauthorizedHandler } from './api/request';
 import 'layui/dist/css/layui.css';
 import './styles/global.css';
+import './styles/loading.css';
+import regionLoading from './directives/regionLoading';
 
 /**
  * 统一处理接口返回的未授权状态：清除 Vuex 中的登录及企业上下文，并将非登录页导航回登录页。
@@ -20,4 +22,4 @@ setUnauthorizedHandler(() => {
 /**
  * 创建门户应用并注册路由与全局状态后挂载到页面根节点。
  */
-createApp(App).use(router).use(store).mount('#app');
+createApp(App).directive('region-loading', regionLoading).use(router).use(store).mount('#app');
