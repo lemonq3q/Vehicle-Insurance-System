@@ -14,12 +14,12 @@ import com.example.insurancesystem.mapper.UserMapper;
 import com.example.insurancesystem.mapper.UserRoleMapper;
 import com.example.insurancesystem.service.DownstreamService;
 import com.example.insurancesystem.security.EnterpriseContextHolder;
-import com.example.insurancesystem.service.MerchantStaffService;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.example.insurancesystem.service.MerchantNameValidationService;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -28,9 +28,12 @@ import java.util.List;
 @Service
 /**
  * 管理当前企业合作的下游渠道商，包括车商、维修厂和代理机构。
- * 除商户主体外，本服务还维护经营区域和联系人，使列表、详情及导出得到完整聚合数据。
+ * 本服务直接维护主体上的联系人和手机以及经营区域，使列表、详情及导出得到完整聚合数据。
  */
 public class DownstreamServiceImp implements DownstreamService {
+    @Autowired
+    private MerchantNameValidationService nameValidationService;
+
 
     @Autowired
     private MerchantMapper merchantMapper;
@@ -38,8 +41,6 @@ public class DownstreamServiceImp implements DownstreamService {
     @Autowired
     private MerchantAreaMapper merchantAreaMapper;
 
-    @Autowired
-    private MerchantStaffService merchantStaffService;
 
     @Override
     /**
@@ -98,13 +99,15 @@ public class DownstreamServiceImp implements DownstreamService {
     @Override
     @Transactional
     /**
-     * 在同一事务中创建下游商户、经营区域和可选联系人。
-     * 商户编码通过唯一约束冲突重试生成；任一联系人创建失败都会回滚整个聚合创建过程。
+     * 在同一事务中创建含联系人资料的下游主体及经营区域。
+     * 商户编码通过唯一约束冲突重试生成；联系人与手机直接保存在主体上，不创建人员或登录账号。
      */
     public ResponseResult insert(DownstreamDTO params) {
+        validateContact(params);
         Long userId = SystemCommonUtil.getNowUserId();
 
         Merchant downstream = new Merchant(params);
+        nameValidationService.validate(downstream);
         downstream.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         downstream.setCategoryId(resolveCategoryId(params.getType()));
         downstream.setUpdateBy(userId);
@@ -128,15 +131,6 @@ public class DownstreamServiceImp implements DownstreamService {
             merchantAreaMapper.insertBatchSomeColumn(downstreamAreas);
         }
 
-        if(params.getUser() != null){
-            MerchantUserDTO user = new MerchantUserDTO(params.getUser());
-            user.setMerchantId(downstream.getId());
-            user.setRoleId(MerchantStaffRoles.CONTACT_ID);
-            ResponseResult result = merchantStaffService.insert(user);
-            if(result.getCode() != 200){
-                throw  new BusinessException(400, "添加失败，因为" + result.getMsg());
-            }
-        }
 
         return new ResponseResult(200, "已插入" + x + "条数据");
     }
@@ -146,8 +140,11 @@ public class DownstreamServiceImp implements DownstreamService {
      * 更新下游商户资料。提交了经营区域时，先逻辑删除旧关系再写入新快照，
      * 未提交区域字段则保留原有区域配置不变。
      */
+    @Transactional(rollbackFor = Exception.class)
     public ResponseResult update(DownstreamDTO params) {
+        validateContact(params);
         Merchant downstream = new Merchant(params);
+        nameValidationService.validate(downstream);
         if (params.getType() != null) {
             downstream.setCategoryId(resolveCategoryId(params.getType()));
         }
@@ -181,7 +178,7 @@ public class DownstreamServiceImp implements DownstreamService {
 
     @Override
     /**
-     * 逻辑删除下游商户，并同步停用其经营区域和商户员工关系，防止已删除主体继续被业务选择。
+     * 逻辑删除下游商户，并同步停用其经营区域关系，防止已删除主体继续被业务选择。
      */
     public ResponseResult delete(Long id) {
         Merchant params = new Merchant();
@@ -197,7 +194,7 @@ public class DownstreamServiceImp implements DownstreamService {
         wrapper.set(MerchantArea::getIsDelete, 1);
         merchantAreaMapper.update(null, wrapper);
 
-        merchantStaffService.deleteByMerchantId(id);
+
 
         return new ResponseResult(200, "已删除" + x + "条数据");
 
@@ -258,4 +255,19 @@ public class DownstreamServiceImp implements DownstreamService {
         if (id == null) throw new BusinessException(500, "商户分类字典缺失: " + code);
         return id;
     }
+    /**
+     * 下游基础信息统一要求联系人与手机号，供新工单默认提交人和收款资料带入。
+     * 校验失败在写入主体和区域关系前终止，避免出现半完成的下游资料。
+     * @param params 来自新增或完整编辑表单的下游资料。
+     */
+    private void validateContact(DownstreamDTO params) {
+        if (params.getContact() == null || params.getContact().trim().isEmpty() || params.getContact().length() > 100) {
+            throw new BusinessException(400, "联系人不能为空且最多100字");
+        }
+        if (params.getPhone() == null || !params.getPhone().matches("^1[3-9]\\d{9}$")) {
+            throw new BusinessException(400, "联系电话必须为11位中国大陆手机号");
+        }
+        params.setContact(params.getContact().trim());
+    }
+
 }

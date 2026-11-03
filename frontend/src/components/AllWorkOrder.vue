@@ -170,6 +170,10 @@
         <span>查询结果</span>
       </div>
       <div class="header_right_button">
+        <div class="output_button" @click="batchImportRef.open()" v-if="isHasPerm('workorder:update')">
+          <i class="import_icon"></i>
+          <span class="no_select">批量导入</span>
+        </div>
         <div class="output_button" @click="handleExport">
           <i class="export_icon"></i>
           <span class="no_select">导出</span>
@@ -192,10 +196,10 @@
         <el-table-column prop="createUser" label="提交人"/>
         <el-table-column prop="areaCode" label="投保区域"/>
         <el-table-column prop="insuranceCompany" label="保险公司"/>
-        <el-table-column prop="upstreamSumAmount" label="上游政策费用"/>
-        <el-table-column prop="downstreamSumAmount" label="下游政策费用"/>
+        <el-table-column prop="upstreamPolicyFeeDisplay" label="上游政策费用"/>
+        <el-table-column prop="downstreamPolicyFeeDisplay" label="下游政策费用"/>
         <!-- <el-table-column prop="handleMerchant" label="处理机构"/> -->
-        <el-table-column prop="handleUser" label="处理人"/>
+        <el-table-column prop="handleUserDisplay" label="处理人"/>
         <el-table-column prop="workorderStatus" label="工单状态"/>
         <el-table-column prop="createTime" label="创建时间"/>
         <el-table-column prop="updateTime" label="最后跟进时间"/>
@@ -227,6 +231,7 @@
   <el-drawer v-model="drawer" :with-header="false" size="40%" v-if="drawer">
     <EditBaseWorkorder :type=type :id="id" @refresh="handleRefresh"></EditBaseWorkorder>
   </el-drawer>
+  <MerchantBatchImportDialog ref="batchImportRef" business-type="workorder" @success="handleImportSuccess" />
   <el-dialog v-model="dialog" title="变更处理人员">
     <el-form
       ref="acceptRef"
@@ -265,8 +270,11 @@
 </template>
 
 <script setup>
+import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
+import MerchantBatchImportDialog from './common/MerchantBatchImportDialog.vue';
+import { isHasPerm } from '@/utils/authenticate';
 import { selectWorkorder, getWorkorderExcel, acceptWorkorder } from '@/api/workorder';
 import { getCascadeArea } from '@/utils/ChinaCitys';
 import { formatSecondTimestamp, convertDateToSecondTimestamp } from '@/utils/time';
@@ -280,6 +288,17 @@ import { selectSystemUserOptions } from '@/api/user';
 import { selectInusranceCompanyOptions } from '@/api/upstream';
 import Message from '@/utils/message';
 import Loading from '@/utils/loading';
+
+const batchImportRef = ref();
+
+/**
+ * 工单管理页批量导入完成后回到第一页并重查当前工单列表。
+ * 保留现有筛选条件，失败明细仍由共用导入弹窗展示，便于用户修正失败行。
+ */
+const handleImportSuccess = async () => {
+  page.pageNum = 1;
+  await getData();
+};
 
 const type = ref("add");
 const id = ref(undefined);
@@ -451,7 +470,7 @@ const getAcceptUserOption = async (blurParam) => {
       if (res.code == 200){
         acceptUserOptions.value = res.data.map(item => {
           return {
-            label: `${item.name} ${item.username}`,
+            label: `${item.realName} ${item.username}`,
             value: item.id
           }
         });
@@ -538,7 +557,7 @@ const getHandleUserOpton = async (blurParam) => {
       if(res.code == 200){
         handleUserOptions.value = res.data.map(item => {
           return {
-            label: `${item.username} ${item.name}`,
+            label: `${item.username} ${item.realName}`,
             value: item.id
           }
         })
@@ -649,6 +668,7 @@ const buildSearchParams = () => {
  */
 const buildTableData = (data) => {
   data.forEach(item => {
+    Object.assign(item, buildWorkorderListDisplay(item));
     item.areaCode = getCascadeArea(item.areaCode);
     item.createTime = formatSecondTimestamp(item.createTime, 'YYYY-MM-DD');
     item.updateTime = formatSecondTimestamp(item.updateTime, 'YYYY-MM-DD');

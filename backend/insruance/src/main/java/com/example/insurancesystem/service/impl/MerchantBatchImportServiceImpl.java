@@ -1,18 +1,16 @@
 package com.example.insurancesystem.service.impl;
 
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
+import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.domain.merchant.Merchant;
 import com.example.insurancesystem.domain.merchant.MerchantArea;
 import com.example.insurancesystem.domain.merchant.MerchantCategoryCode;
-import com.example.insurancesystem.domain.merchant.MerchantStaff;
-import com.example.insurancesystem.domain.merchant.MerchantStaffRole;
 import com.example.insurancesystem.domain.merchant.importbatch.BatchImportFailure;
+import com.example.insurancesystem.domain.merchant.importbatch.BatchImportLimits;
 import com.example.insurancesystem.domain.merchant.importbatch.BatchImportResult;
 import com.example.insurancesystem.domain.merchant.importbatch.BatchTemplateValidationResult;
 import com.example.insurancesystem.mapper.MerchantAreaMapper;
 import com.example.insurancesystem.mapper.MerchantMapper;
-import com.example.insurancesystem.mapper.MerchantStaffMapper;
-import com.example.insurancesystem.mapper.MerchantStaffRoleMapper;
 import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.service.MerchantBatchImportService;
 import com.example.insurancesystem.utils.AreaConverterUtil;
@@ -41,18 +39,16 @@ import java.util.regex.Pattern;
 
 /**
  * 实现上游与下游 Excel 批量导入。
- * 工作簿结构预检只验证官方模板的稳定结构；正式导入在内存中逐行业务校验并排除失败行，随后每张业务表
- * 仅调用一次批量插入语句。下游人员依赖本次成功的下游机构，整个写入过程处于同一事务中。
+ * 工作簿结构预检只验证官方模板的稳定结构；正式导入逐行业务校验并排除失败行，
+ * 随后按500条分批写入主体与区域关系。下游联系人直接作为机构字段导入，全部批次处于同一事务。
  */
 @Service
 public class MerchantBatchImportServiceImpl implements MerchantBatchImportService {
 
     private static final int HEADER_ROW_INDEX = 3;
     private static final int DATA_START_ROW_INDEX = 4;
-    private static final int MAX_DATA_ROWS = 2000;
     private static final Pattern PHONE_PATTERN = Pattern.compile("^1[3-9]\\d{9}$");
     private static final Pattern BANK_CARD_PATTERN = Pattern.compile("^\\d{12,30}$");
-    private static final Pattern ID_NUM_PATTERN = Pattern.compile("^(?:\\d{15}|\\d{17}[0-9Xx])$");
     private static final Pattern IMPORT_WHITESPACE_PATTERN = Pattern.compile("[\\s\\u00A0\\u3000]+");
 
     private static final LinkedHashMap<String, List<String>> UPSTREAM_TEMPLATE = template(
@@ -62,24 +58,17 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
 
     private static final LinkedHashMap<String, List<String>> DOWNSTREAM_TEMPLATE = template(
             "使用说明", Collections.emptyList(),
-            "下游机构", Arrays.asList("* 下游名称", "* 下游类型", "* 所在地区", "详细地址", "* 开户银行", "* 银行卡号", "备注"),
-            "商户人员", Arrays.asList("* 下游名称", "* 人员姓名", "* 手机号码", "* 人员角色", "身份证号", "状态", "备注"),
+            "下游机构", Arrays.asList("* 下游名称", "* 下游类型", "* 所在地区", "详细地址", "* 开户银行", "* 银行卡号", "* 联系人", "* 联系电话", "备注"),
             "字段说明", Collections.emptyList());
 
     private final MerchantMapper merchantMapper;
     private final MerchantAreaMapper merchantAreaMapper;
-    private final MerchantStaffMapper merchantStaffMapper;
-    private final MerchantStaffRoleMapper merchantStaffRoleMapper;
     private final DataFormatter formatter = new DataFormatter();
 
     public MerchantBatchImportServiceImpl(MerchantMapper merchantMapper,
-                                          MerchantAreaMapper merchantAreaMapper,
-                                          MerchantStaffMapper merchantStaffMapper,
-                                          MerchantStaffRoleMapper merchantStaffRoleMapper) {
+                                          MerchantAreaMapper merchantAreaMapper) {
         this.merchantMapper = merchantMapper;
         this.merchantAreaMapper = merchantAreaMapper;
-        this.merchantStaffMapper = merchantStaffMapper;
-        this.merchantStaffRoleMapper = merchantStaffRoleMapper;
     }
 
     /**
@@ -91,7 +80,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
     }
 
     /**
-     * 打开下游工作簿并核对机构、人员两个数据 Sheet 的固定表头，不读取和评价数据行。
+     * 打开下游工作簿并核对含联系人字段的单个机构数据 Sheet 表头，不读取和评价数据行。
      */
     @Override
     public ResponseResult validateDownstreamTemplate(MultipartFile file) {
@@ -100,7 +89,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
 
     /**
      * 解析上游数据，依次验证必填项、长度、手机号、地区、业务区域以及文件内和数据库内重复名称。
-     * 通过的机构预生成主键后，商户和业务区域各以一次批量 SQL 写入；失败行不会进入事务写入集合。
+     * 通过的机构由数据库生成主键后，商户和业务区域按500条分批写入；失败行不会进入事务写入集合。
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -115,7 +104,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
             Long enterpriseId = EnterpriseContextHolder.requireEnterpriseId();
             Long userId = SystemCommonUtil.getNowUserId();
             Set<String> repeatedNames = repeatedValues(rows, 0);
-            Set<String> existingNames = existingMerchantNames(enterpriseId, rows);
+            Set<String> existingNames = existingMerchantNames(enterpriseId, rows, "UPSTREAM");
             Long categoryId = merchantMapper.selectCategoryIdByCode(MerchantCategoryCode.INSURANCE_ORG);
             if (categoryId == null) return new ResponseResult(500, "上游商户分类字典缺失");
 
@@ -133,8 +122,8 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
                 checkLength(contact, 100, "联系人", reasons);
                 checkLength(value(row, 6), 400, "备注", reasons);
                 if (!phone.isEmpty() && !PHONE_PATTERN.matcher(phone).matches()) reasons.add("联系电话必须为11位中国大陆手机号");
-                if (!name.isEmpty() && repeatedNames.contains(name)) reasons.add("机构名称在文件中重复");
-                if (!name.isEmpty() && existingNames.contains(name)) reasons.add("当前企业已存在同名机构");
+                if (!name.isEmpty() && repeatedNames.contains(name.toLowerCase(java.util.Locale.ROOT))) reasons.add("机构名称在文件中重复");
+                if (!name.isEmpty() && existingNames.contains(name.toLowerCase(java.util.Locale.ROOT))) reasons.add("当前企业已存在同名机构");
 
                 String cityCode = resolveCity(locationText, reasons);
                 List<String> areaCodes = resolveAreas(areaText, reasons);
@@ -144,6 +133,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
                 }
 
                 Merchant merchant = merchant(row, enterpriseId, userId, categoryId, cityCode);
+                merchant.setDirection("UPSTREAM");
                 merchant.setContact(contact);
                 merchant.setPhone(phone);
                 merchants.add(merchant);
@@ -152,29 +142,32 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
 
             /*
              * 商户主体必须先由数据库分配自增主键。批量 SQL 返回后再使用回填 ID 组装区域关系，既保持
-             * 一张表一次批量写入，也避免区域引用内存预生成但数据库并未采用的主键。
+             * 按500条批量写入，也避免区域引用内存预生成但数据库并未采用的主键。
              */
-            if (!merchants.isEmpty()) {
-                merchantMapper.insertImportBatch(merchants);
-                requireGeneratedIds(merchants, "上游机构");
-            }
+            insertMerchantBatches(merchants, "上游机构");
             List<MerchantArea> areas = new ArrayList<>();
             for (Merchant merchant : merchants) {
                 for (String areaCode : areaCodesByMerchantCode.get(merchant.getCode())) {
                     areas.add(area(merchant.getId(), enterpriseId, userId, areaCode));
                 }
             }
-            if (!areas.isEmpty()) merchantAreaMapper.insertBatchSomeColumn(areas);
+            /* 多区域关联也按相同批次写入，全部批次仍在本次导入事务内一起提交或回滚。 */
+            for (int offset = 0; offset < areas.size(); offset += BatchImportLimits.WRITE_BATCH_SIZE) {
+                merchantAreaMapper.insertBatchSomeColumn(new ArrayList<>(areas.subList(offset,
+                        Math.min(offset + BatchImportLimits.WRITE_BATCH_SIZE, areas.size()))));
+            }
             result.setSuccessRows(merchants.size());
             return new ResponseResult(200, "导入完成", result);
+        } catch (BusinessException exception) {
+            return new ResponseResult(exception.getCode(), exception.getMsg());
         } catch (Exception exception) {
             throw new IllegalArgumentException("读取或导入 Excel 失败: " + rootMessage(exception), exception);
         }
     }
 
     /**
-     * 解析下游机构及可选人员。机构先完成独立校验，人员随后只允许关联本次可成功插入的机构；人员错误不会
-     * 阻止其机构入库。最终按商户、人员和人员角色三张表各执行一次批量 INSERT，保持关联主键与事务一致。
+     * 按行导入下游基础信息与联系人；同一行原子校验，不再解析人员 Sheet 或创建角色关系。
+     * 失败行报告原因，有效行在同一事务内批量写入主体，自增主键继续由数据库生成。
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -184,13 +177,12 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
 
         try (Workbook workbook = openWorkbook(file)) {
             List<ExcelRow> merchantRows = readRows(workbook.getSheet("下游机构"), DOWNSTREAM_TEMPLATE.get("下游机构"));
-            List<ExcelRow> staffRows = readRows(workbook.getSheet("商户人员"), DOWNSTREAM_TEMPLATE.get("商户人员"));
             BatchImportResult result = new BatchImportResult();
-            result.setTotalRows(merchantRows.size() + staffRows.size());
+            result.setTotalRows(merchantRows.size());
             Long enterpriseId = EnterpriseContextHolder.requireEnterpriseId();
             Long userId = SystemCommonUtil.getNowUserId();
             Set<String> repeatedNames = repeatedValues(merchantRows, 0);
-            Set<String> existingNames = existingMerchantNames(enterpriseId, merchantRows);
+            Set<String> existingNames = existingMerchantNames(enterpriseId, merchantRows, "DOWNSTREAM");
             Map<String, Merchant> validMerchantByName = new LinkedHashMap<>();
 
             for (ExcelRow row : merchantRows) {
@@ -203,10 +195,14 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
                 checkLength(name, 100, "下游名称", reasons);
                 checkLength(value(row, 3), 100, "详细地址", reasons);
                 checkLength(bank, 100, "开户银行", reasons);
-                checkLength(value(row, 6), 400, "备注", reasons);
+                String contact = required(row, 6, "联系人", reasons);
+                String phone = required(row, 7, "联系电话", reasons);
+                checkLength(contact, 100, "联系人", reasons);
+                if (!PHONE_PATTERN.matcher(phone).matches()) reasons.add("联系电话必须为11位中国大陆手机号");
+                checkLength(value(row, 8), 400, "备注", reasons);
                 if (!BANK_CARD_PATTERN.matcher(bankCard).matches()) reasons.add("银行卡号必须为12至30位数字");
-                if (!name.isEmpty() && repeatedNames.contains(name)) reasons.add("下游名称在文件中重复");
-                if (!name.isEmpty() && existingNames.contains(name)) reasons.add("当前企业已存在同名下游");
+                if (!name.isEmpty() && repeatedNames.contains(name.toLowerCase(java.util.Locale.ROOT))) reasons.add("下游名称在文件中重复");
+                if (!name.isEmpty() && existingNames.contains(name.toLowerCase(java.util.Locale.ROOT))) reasons.add("当前企业已存在同名下游");
                 String categoryCode = downstreamCategory(type, reasons);
                 Long categoryId = categoryCode == null ? null : merchantMapper.selectCategoryIdByCode(categoryCode);
                 if (categoryCode != null && categoryId == null) reasons.add("下游类型对应的分类字典不存在");
@@ -217,91 +213,43 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
                 }
                 Merchant merchant = merchant(row, enterpriseId, userId, categoryId, cityCode);
                 merchant.setAddress(value(row, 3));
+                merchant.setDirection("DOWNSTREAM");
+                merchant.setContact(contact);
+                merchant.setPhone(phone);
                 merchant.setBank(bank);
                 merchant.setBankCardNum(bankCard);
                 validMerchantByName.put(name, merchant);
             }
 
             /*
-             * 下游人员依赖商户真实主键，因此先一次性插入全部有效下游，并确认 JDBC 已回填每个自增 ID。
-             * 后续人员校验与组装直接引用这些数据库主键，事务失败时主体插入也会一并回滚。
+             * 联系人已经合并到下游同一行，有效主体分批写入，不再创建任何人员及角色记录。
+             * 仍核验数据库生成主键，以保持现有批量写入失败的事务回滚行为。
              */
             List<Merchant> merchants = new ArrayList<>(validMerchantByName.values());
-            if (!merchants.isEmpty()) {
-                merchantMapper.insertImportBatch(merchants);
-                requireGeneratedIds(merchants, "下游机构");
-            }
+            insertMerchantBatches(merchants, "下游机构");
 
-            Set<String> repeatedPhones = repeatedValues(staffRows, 2);
-            Set<String> existingPhones = existingStaffPhones(enterpriseId, staffRows);
-            Set<String> contactMerchants = new HashSet<>();
-            List<MerchantStaff> staffList = new ArrayList<>();
-            List<String> staffRoleCodes = new ArrayList<>();
-            for (ExcelRow row : staffRows) {
-                List<String> reasons = new ArrayList<>();
-                String merchantName = required(row, 0, "下游名称", reasons);
-                String staffName = required(row, 1, "人员姓名", reasons);
-                String phone = required(row, 2, "手机号码", reasons);
-                String roleName = required(row, 3, "人员角色", reasons);
-                String idNum = value(row, 4).replace("'", "");
-                String statusText = value(row, 5);
-                Merchant merchant = validMerchantByName.get(merchantName);
-                if (merchant == null) reasons.add("关联的下游机构不存在或该机构行未通过校验");
-                checkLength(staffName, 100, "人员姓名", reasons);
-                checkLength(value(row, 6), 400, "备注", reasons);
-                if (!PHONE_PATTERN.matcher(phone).matches()) reasons.add("手机号码必须为11位中国大陆手机号");
-                if (!phone.isEmpty() && repeatedPhones.contains(phone)) reasons.add("手机号码在文件中重复");
-                if (!phone.isEmpty() && existingPhones.contains(phone)) reasons.add("当前企业已存在相同手机号的商户人员");
-                if (!idNum.isEmpty() && !ID_NUM_PATTERN.matcher(idNum).matches()) reasons.add("身份证号格式不正确");
-                String roleCode = roleCode(roleName, reasons);
-                Integer status = status(statusText, reasons);
-                if ("CONTACT".equals(roleCode) && contactMerchants.contains(merchantName)) reasons.add("同一下游只能导入一个联系人");
-                if (!reasons.isEmpty()) {
-                    result.addFailure(failure("商户人员", row, reasons));
-                    continue;
-                }
-                if ("CONTACT".equals(roleCode)) contactMerchants.add(merchantName);
-
-                MerchantStaff staff = new MerchantStaff();
-                staff.setEnterpriseId(enterpriseId);
-                staff.setMerchantId(merchant.getId());
-                staff.setName(staffName);
-                staff.setPhone(phone);
-                staff.setIdNum(idNum.isEmpty() ? null : idNum);
-                staff.setStatus(status);
-                staff.setRemark(value(row, 6));
-                staff.setUpdatedBy(userId);
-                staff.setIsDelete(0);
-                staffList.add(staff);
-                staffRoleCodes.add(roleCode);
-            }
-
-            /*
-             * 人员也沿用数据库自增主键。完成一次批量写入并取得所有 ID 后，才按相同列表顺序创建角色，
-             * 防止 role.staff_id 指向尚不存在或被数据库替换的标识。
-             */
-            if (!staffList.isEmpty()) {
-                merchantStaffMapper.insertImportBatch(staffList);
-                requireGeneratedIds(staffList, "商户人员");
-            }
-            List<MerchantStaffRole> roles = new ArrayList<>();
-            for (int index = 0; index < staffList.size(); index++) {
-                MerchantStaff staff = staffList.get(index);
-                MerchantStaffRole role = new MerchantStaffRole();
-                role.setEnterpriseId(enterpriseId);
-                role.setMerchantId(staff.getMerchantId());
-                role.setStaffId(staff.getId());
-                role.setRoleCode(staffRoleCodes.get(index));
-                role.setIsDefault(0);
-                role.setUpdatedBy(userId);
-                role.setIsDelete(0);
-                roles.add(role);
-            }
-            if (!roles.isEmpty()) merchantStaffRoleMapper.insertBatchSomeColumn(roles);
-            result.setSuccessRows(merchants.size() + staffList.size());
+            result.setSuccessRows(merchants.size());
             return new ResponseResult(200, "导入完成", result);
+        } catch (BusinessException exception) {
+            return new ResponseResult(exception.getCode(), exception.getMsg());
         } catch (Exception exception) {
             throw new IllegalArgumentException("读取或导入 Excel 失败: " + rootMessage(exception), exception);
+        }
+    }
+
+    /**
+     * 将校验通过的主体按500条拆分写入，避免1万行产生过长SQL或超出预编译参数数量。
+     * 每批都校验数据库自增ID已回填，区域关联继续引用同一对象；不在此方法新建事务，
+     * 任意一批失败由调用方整文件事务回滚，原有成功/失败行返回语义保持一致。
+     * @param merchants 本文件全部有效主体对象，允许为空集合。
+     * @param businessName 缺失回填主键时的业务提示名称。
+     */
+    private void insertMerchantBatches(List<Merchant> merchants, String businessName) {
+        for (int offset = 0; offset < merchants.size(); offset += BatchImportLimits.WRITE_BATCH_SIZE) {
+            List<Merchant> batch = new ArrayList<>(merchants.subList(offset,
+                    Math.min(offset + BatchImportLimits.WRITE_BATCH_SIZE, merchants.size())));
+            merchantMapper.insertImportBatch(batch);
+            requireGeneratedIds(batch, businessName);
         }
     }
 
@@ -321,6 +269,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
      */
     private String inspectTemplate(MultipartFile file, LinkedHashMap<String, List<String>> template) {
         if (file == null || file.isEmpty()) return "请选择需要上传的 Excel 文件";
+        if (file.getSize() > BatchImportLimits.MAX_FILE_BYTES) return "文件不能超过20MB";
         String fileName = file.getOriginalFilename();
         if (fileName == null || !fileName.toLowerCase().endsWith(".xlsx")) return "仅支持 .xlsx 格式的官方模板";
         try (Workbook workbook = openWorkbook(file)) {
@@ -366,7 +315,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
                 if (!value.isEmpty()) empty = false;
             }
             if (!empty) rows.add(new ExcelRow(rowIndex + 1, headers, values));
-            if (rows.size() > MAX_DATA_ROWS) throw new IllegalArgumentException("单个数据 Sheet 最多允许 " + MAX_DATA_ROWS + " 行");
+            if (rows.size() > BatchImportLimits.MAX_DATA_ROWS) throw new BusinessException(400, "单个数据 Sheet 最多允许 " + BatchImportLimits.MAX_DATA_ROWS + " 行");
         }
         return rows;
     }
@@ -395,27 +344,22 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
         return result;
     }
 
-    /** 收集文件内重复值，空单元格由必填校验负责，不纳入重复判断。 */
+    /** 收集文件内重复名称，按数据库默认不区分大小写的规则比较；空名称由必填校验负责。 */
     private Set<String> repeatedValues(List<ExcelRow> rows, int index) {
         Set<String> seen = new HashSet<>();
         Set<String> repeated = new HashSet<>();
         for (ExcelRow row : rows) {
-            String value = value(row, index);
+            String value = value(row, index).toLowerCase(java.util.Locale.ROOT);
             if (!value.isEmpty() && !seen.add(value)) repeated.add(value);
         }
         return repeated;
     }
 
     /** 一次查询文件涉及的全部名称，避免逐行访问数据库。 */
-    private Set<String> existingMerchantNames(Long enterpriseId, List<ExcelRow> rows) {
+    private Set<String> existingMerchantNames(Long enterpriseId, List<ExcelRow> rows, String direction) {
         List<String> names = rows.stream().map(row -> value(row, 0)).filter(value -> !value.isEmpty()).distinct().toList();
-        return names.isEmpty() ? Collections.emptySet() : new HashSet<>(merchantMapper.selectExistingNames(enterpriseId, names));
-    }
-
-    /** 一次查询文件涉及的全部人员手机号，避免逐行访问数据库。 */
-    private Set<String> existingStaffPhones(Long enterpriseId, List<ExcelRow> rows) {
-        List<String> phones = rows.stream().map(row -> value(row, 2)).filter(value -> !value.isEmpty()).distinct().toList();
-        return phones.isEmpty() ? Collections.emptySet() : new HashSet<>(merchantStaffMapper.selectExistingPhones(enterpriseId, phones));
+        return names.isEmpty() ? Collections.emptySet() : merchantMapper.selectExistingNames(enterpriseId, names, direction).stream()
+                .map(name -> name.toLowerCase(java.util.Locale.ROOT)).collect(java.util.stream.Collectors.toSet());
     }
 
     /** 提取必填单元格并将缺失原因追加到当前行原因集合。 */
@@ -458,24 +402,10 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
         return code;
     }
 
-    /** 将人员角色中文值转换为数据库稳定编码。 */
-    private String roleCode(String role, List<String> reasons) {
-        if ("联系人".equals(role)) return "CONTACT";
-        if ("收款人".equals(role)) return "PAYEE";
-        if ("店员".equals(role)) return "CLERK";
-        reasons.add("人员角色只能选择：联系人、收款人、店员");
-        return null;
-    }
-
-    /** 空状态按模板约定默认为启用，只接受启用或停用两个下拉值。 */
-    private Integer status(String status, List<String> reasons) {
-        if (status == null || status.isEmpty() || "启用".equals(status)) return 1;
-        if ("停用".equals(status)) return 0;
-        reasons.add("状态只能选择：启用、停用");
-        return 1;
-    }
-
-    /** 组装预生成主键和业务编码的商户，使后续区域、人员关系可在批量入库前完成关联。 */
+    /**
+     * 组装机构的企业归属、业务编号和基础资料。数据库批量插入后回填自增ID，
+     * 区域关系在主体写入完成后组装，下游联系人不再生成独立人员关系。
+     */
     private Merchant merchant(ExcelRow row, Long enterpriseId, Long userId, Long categoryId, String cityCode) {
         Merchant merchant = new Merchant();
         merchant.setEnterpriseId(enterpriseId);
@@ -512,8 +442,7 @@ public class MerchantBatchImportServiceImpl implements MerchantBatchImportServic
             Long id;
             if (entity instanceof Merchant) {
                 id = ((Merchant) entity).getId();
-            } else if (entity instanceof MerchantStaff) {
-                id = ((MerchantStaff) entity).getId();
+
             } else {
                 throw new IllegalArgumentException("不支持校验主键的导入实体: " + entity.getClass().getSimpleName());
             }

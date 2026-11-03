@@ -132,3 +132,13 @@ export function updateAcceptInsurance(data) {
   let url = `${rootUrl}/acceptInsurance`;
   return axios.put(url, data);
 }
+
+/**
+ * 保存商业、交强或全部续保处理结果，后端确定周期并验证当前工单权限。
+ * @param {string} id 工单 ID。
+ * @param {{scope:string,status:number,followUpRes:string}} data 处理范围、结果与备注。
+ * @returns {Promise} 统一响应，成功后页面同步刷新列表与提醒计数。
+ */
+export function updateRenewFollowUp(id, data) {
+  return axios.put(`${rootUrl}/renew/${id}/follow-up`, data);
+}

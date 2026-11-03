@@ -83,25 +83,9 @@ export function deleteUser(id) {
   return axios.delete(url);
 }
 
-/**
 
- * * 查询指定下游机构下的轻量用户选项，供工单分派等表单限定候选人员范围。
 
- */
-export function selectUserOptionByMerchantId(merchantId){
-  let url = `${rootUrl}/option/merchantId?id=${merchantId}`;
-  return axios.get(url);
-}
 
-/**
-
- * * 按输入关键字模糊查询当前企业可选用户，供远程搜索下拉框使用。
-
- */
-export function selectUserOption(blurParam){
-  let url = `${rootUrl}/option?blurParam=${blurParam}`;
-  return axios.get(url);
-}
 
 /**
 

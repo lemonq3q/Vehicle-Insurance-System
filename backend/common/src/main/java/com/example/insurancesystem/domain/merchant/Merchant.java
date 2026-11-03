@@ -32,6 +32,8 @@ public class Merchant implements Serializable {
 
     private Long categoryId;
 
+    private String direction;
+
     private Long enterpriseId;
 
     private String location;
@@ -65,6 +67,7 @@ public class Merchant implements Serializable {
     private Integer isDelete;
 
     public Merchant(UpstreamDTO upstream){
+        this.direction = "UPSTREAM";
         this.updateBy = upstream.getId();
         this.id = upstream.getId();
         this.code = upstream.getCode();
@@ -78,6 +81,9 @@ public class Merchant implements Serializable {
     }
 
     public Merchant(DownstreamDTO downstream){
+        this.direction = "DOWNSTREAM";
+        this.contact = downstream.getContact();
+        this.phone = downstream.getPhone();
         this.id = downstream.getId();
         this.code = downstream.getCode();
         this.name = downstream.getName();

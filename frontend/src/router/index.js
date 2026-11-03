@@ -42,7 +42,6 @@ const DownstreamMerchant = () => import('@/components/DownstreamMerchant.vue');
 /**
  * 加载下游机构员工列表。
  */
-const DownstreamUser = () => import('@/components/DownstreamUser.vue');
 /**
  * 加载工单基础资料新增或编辑表单。
  */
@@ -54,7 +53,6 @@ const EditDownstreamMerchant = () => import('@/components/EditDownstreamMerchant
 /**
  * 加载机构员工新增或编辑表单。
  */
-const EditDownstreamUser = () => import('@/components/EditDownstreamUser.vue');
 /**
  * 加载上游渠道新增或编辑表单。
  */
@@ -111,11 +109,6 @@ const routes = [
         meta: { section: '上下游管理', title: '下游管理' }
       },
       {
-        path: 'downstreamUser',
-        component: DownstreamUser,
-        meta: { section: '上下游管理', title: '商户管理' }
-      },
-      {
         path: 'editUpstream',
         component: EditUpstream,
         meta: { section: '上下游管理', title: '编辑上游' }
@@ -124,11 +117,6 @@ const routes = [
         path: 'editDownstreamMerchant',
         component: EditDownstreamMerchant,
         meta: { section: '上下游管理', title: '编辑下游' }
-      },
-      {
-        path: 'editDownstreamUser',
-        component: EditDownstreamUser,
-        meta: { section: '上下游管理', title: '编辑商户' }
       },
       {
         path: 'acceptWorkOrder',
@@ -163,7 +151,7 @@ const routes = [
       {
         path: 'renewWorkorder',
         component: RenewWorkorder,
-        meta: { title: '工单续保' }
+        meta: { title: '续保提醒' }
       }
     ]
   }

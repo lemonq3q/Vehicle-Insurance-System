@@ -58,7 +58,6 @@
         UPDATE biz_workorder_payment
         <set>
             <if test="requiredPayAmount != null">required_pay_amount=#{requiredPayAmount},</if>
-            <if test="payeeStaffId != null">payee_staff_id=#{payeeStaffId},</if>
             <if test="payName != null">payee_name=#{payName},</if>
             <if test="payIdNum != null">payee_phone=#{payIdNum},</if>
             <if test="payBank != null">merchant_bank=#{payBank},</if>
@@ -70,9 +69,9 @@
         WHERE workorder_id=#{id} AND deleted=0
     </update>
     <insert id="insertPayment">
-        INSERT INTO biz_workorder_payment(enterprise_id,workorder_id,required_pay_amount,payee_staff_id,payee_name,payee_phone,
+        INSERT INTO biz_workorder_payment(enterprise_id,workorder_id,required_pay_amount,payee_name,payee_phone,
         merchant_bank,merchant_bank_card_num,pay_remark,pay_failed_remark,deleted)
-        VALUES(#{enterpriseId},#{id},#{requiredPayAmount},#{payeeStaffId},#{payName},#{payIdNum},#{payBank},#{payBankCardNum},#{payRemark},#{payFailedRemark},0)
+        VALUES(#{enterpriseId},#{id},#{requiredPayAmount},#{payName},#{payIdNum},#{payBank},#{payBankCardNum},#{payRemark},#{payFailedRemark},0)
     </insert>
 
     <update id="updateUnderwriting">

@@ -17,7 +17,6 @@ import com.example.insurancesystem.mapper.UserMapper;
 import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.mapper.UserRoleMapper;
 import com.example.insurancesystem.mapper.TenantMemberMapper;
-import com.example.insurancesystem.service.MerchantStaffService;
 import com.example.insurancesystem.service.UserService;
 import com.example.insurancesystem.utils.SystemCommonUtil;
 import com.github.pagehelper.PageHelper;
@@ -51,8 +50,6 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private TenantMemberMapper tenantMemberMapper;
 
-    @Autowired
-    private MerchantStaffService merchantStaffService;
 
     private final String uniqueRoleName = "联系人";
 
@@ -60,10 +57,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     /**
-     * 查询商户员工列表，沿用独立员工服务中的角色与商户隔离规则。
+     * 独立商户人员入口已停用，返回明确提示并避免访问已移除的人员表。
+     * 系统用户维护使用独立的 system 接口，联系资料改在下游基础信息中编辑。
      */
     public ResponseResult select(MerchantUserSearchDTO params) {
-        return merchantStaffService.select(params);
+        return new ResponseResult(410, "商户人员功能已移除，请在下游基础信息维护联系人");
     }
 
     @Override
@@ -88,10 +86,7 @@ public class UserServiceImpl implements UserService {
      * 查询符合条件的传统商户用户数据并转换为 Excel 导出模型。
      */
     public List<MerchantUserExcelDTO> getExcel(MerchantUserSearchDTO params) {
-        List<MerchantUserDTO> merchantUserDTOList = userMapper.selectByMerchantUserSearchDTO(params);
-        return merchantUserDTOList.stream()
-                .map(MerchantUserExcelDTO::new)
-                .toList();
+        throw new com.example.insurancesystem.handler.exception.BusinessException(410, "商户人员导出已移除，请导出下游联系人资料");
     }
 
     @Override
@@ -108,25 +103,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     /**
-     * 返回指定商户下可供工单等业务表单选择的员工选项。
+     * 独立商户人员入口已停用，返回明确提示并避免访问已移除的人员表。
+     * 系统用户维护使用独立的 system 接口，联系资料改在下游基础信息中编辑。
      */
     public ResponseResult selectUserOptionsByMerchantId(Long merchantId) {
-        return merchantStaffService.selectByMerchantId(merchantId);
+        return new ResponseResult(410, "商户人员功能已移除，请在下游基础信息维护联系人");
     }
 
     @Override
     /**
-     * 按关键字查询最多一页商户员工选项；空关键字不允许触发全量人员查询。
+     * 独立商户人员入口已停用，返回明确提示并避免访问已移除的人员表。
+     * 系统用户维护使用独立的 system 接口，联系资料改在下游基础信息中编辑。
      */
     public ResponseResult selectUserOptions(String blurParam) {
-        if (blurParam == null || blurParam.isEmpty()) {
-            return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
-        }
-        MerchantUserSearchDTO search = new MerchantUserSearchDTO();
-        search.setBlurParam(blurParam);
-        search.setPageNum(1);
-        search.setPageSize(20);
-        return merchantStaffService.select(search);
+        return new ResponseResult(410, "商户人员功能已移除，请在下游基础信息维护联系人");
     }
 
     @Override
@@ -254,21 +244,21 @@ public class UserServiceImpl implements UserService {
      * 按关键字检索企业系统账号选项，空关键字直接返回空集合以避免全表查询。
      */
     public ResponseResult selectSystemUserOptions(String blurParam) {
-        if (blurParam == null || blurParam.isEmpty()) {
+        if (blurParam == null || blurParam.isBlank()) {
             return new ResponseResult(200, "不能进行全表查询", new ArrayList<>());
         }
-        List<User> userList = userMapper.selectSystemUserOptions(blurParam);
+        List<User> userList = userMapper.selectSystemUserOptions(blurParam.trim(), com.example.insurancesystem.security.EnterpriseContextHolder.requireEnterpriseId());
         return new ResponseResult(200,  userList);
     }
 
     @Override
     /**
-     * 创建人员记录。带 merchantId 时创建商户员工；否则创建企业系统账号，
+     * 创建企业系统账号；带 merchantId 的旧商户人员请求明确拒绝，
      * 使用初始密码并同步建立已启用的租户成员角色关系。
      */
     public ResponseResult insert(MerchantUserDTO params) {
         if (params.getMerchantId() != null) {
-            return merchantStaffService.insert(params);
+            return new ResponseResult(410, "商户人员功能已移除，请在下游基础信息维护联系人");
         }
         if (params.getUsername() != null){
             if (judgeRepeatPhone(params.getUsername(), -1L)){
@@ -297,12 +287,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     /**
-     * 更新人员记录。商户员工交由专用服务处理；系统账号则校验手机和邮箱唯一性，
+     * 维护系统账号并校验手机和邮箱唯一性；拒绝已废弃的商户人员请求，
      * 更新用户主体后同步调整其企业成员角色编码。
      */
     public ResponseResult update(MerchantUserDTO params) {
         if (params.getMerchantId() != null) {
-            return merchantStaffService.update(params);
+            return new ResponseResult(410, "商户人员功能已移除，请在下游基础信息维护联系人");
         }
         MerchantUserDTO current = params.getId() == null ? null : userMapper.selectMerchantUserDTOById(params.getId());
         if (current == null) return new ResponseResult(404, "更新失败，用户不存在");
@@ -358,10 +348,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     /**
-     * 删除指定商户的全部员工，由商户员工服务维护角色清理和默认收款人规则。
+     * 独立商户人员入口已停用，返回明确提示并避免访问已移除的人员表。
+     * 系统用户维护使用独立的 system 接口，联系资料改在下游基础信息中编辑。
      */
     public ResponseResult deleteByMerchantId(Long merchantId) {
-        return merchantStaffService.deleteByMerchantId(merchantId);
+        return new ResponseResult(410, "商户人员功能已移除，请在下游基础信息维护联系人");
     }
 
     /**

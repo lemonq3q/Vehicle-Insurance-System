@@ -23,6 +23,9 @@ public class WorkorderController {
     @Autowired
     private WorkorderService workorderService;
 
+    @Autowired
+    private com.example.insurancesystem.service.WorkorderBatchImportService importService;
+
     @GetMapping
     @PreAuthorize("hasAuthority('workorder:select')")
     /**
@@ -44,7 +47,7 @@ public class WorkorderController {
     @GetMapping("/renew/count")
     @PreAuthorize("hasAuthority('workorder:select')")
     /**
-     * 统计当前用户需要关注的续保工单数量，供菜单角标展示。
+     * 统计当前用户需要关注的工单数量，供菜单角标展示。
      */
     public ResponseResult selectRenewCount() {
         return workorderService.selectRenewCount();
@@ -140,4 +143,23 @@ public class WorkorderController {
     public ResponseResult delete(Long id) {
         return workorderService.delete(id);
     }
+    /**
+     * 根据用户选择的险种范围保存续保结果，不接收客户端周期，避免误处理下一年任务。
+     */
+    @PutMapping("/renew/{id}/follow-up")
+    @PreAuthorize("hasAuthority('workorder:update')")
+    public ResponseResult followUpRenewal(@PathVariable("id") Long id,
+            @RequestBody com.example.insurancesystem.domain.workorder.RenewalFollowUpRequest request) {
+        return workorderService.followUpRenewal(id, request);
+    }
+
+    /**
+     * 在工单管理页面导入无附件历史工单，模板不符整体拒绝，行级失败随数量汇总返回。
+     */
+    @PostMapping("/batch-import")
+    @PreAuthorize("hasAuthority('workorder:update')")
+    public ResponseResult importWorkorders(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return importService.importFile(file);
+    }
+
 }

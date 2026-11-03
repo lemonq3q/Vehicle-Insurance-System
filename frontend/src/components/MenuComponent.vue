@@ -18,9 +18,9 @@
         <template #title>工单管理</template>
       </el-menu-item>
 
-      <el-menu-item index="/home/renewWorkorder" v-if="isHasPerm('workorder:select')" aria-label="工单续保">
+      <el-menu-item index="/home/renewWorkorder" v-if="isHasPerm('workorder:select')" aria-label="续保提醒">
         <el-icon><Bell /></el-icon>
-        <template #title>工单续保</template>
+        <template #title>续保提醒</template>
       </el-menu-item>
 
       <p class="nav-caption" v-if="!collapsed && isHasPerm('all')">渠道管理</p>
@@ -31,7 +31,6 @@
         </template>
         <el-menu-item index="/home/upstream">上游管理</el-menu-item>
         <el-menu-item index="/home/downstreamMerchant">下游管理</el-menu-item>
-        <el-menu-item index="/home/downstreamUser">商户管理</el-menu-item>
       </el-sub-menu>
 
       <!--

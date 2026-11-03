@@ -31,7 +31,7 @@
         <el-icon class="upload-icon"><UploadFilled /></el-icon>
         <div class="el-upload__text">拖放 Excel 到这里，或 <em>点击选择文件</em></div>
         <template #tip>
-          <div class="el-upload__tip">仅支持 .xlsx，单个文件最大 20MB，请勿修改模板 Sheet、表头名称或顺序。</div>
+          <div class="el-upload__tip">仅支持 .xlsx，每次最多 {{ MAX_IMPORT_ROWS.toLocaleString() }} 条，单个文件最大 20MB，请勿修改模板 Sheet、表头名称或顺序。</div>
         </template>
       </el-upload>
     </template>
@@ -48,7 +48,7 @@
         :closable="false"
         show-icon
       />
-      <el-table v-if="result.failureRows" :data="result.failures" border stripe max-height="340" class="failure-table">
+      <el-table v-if="result.failureRows" :data="pagedFailures" border stripe max-height="340" class="failure-table">
         <el-table-column prop="sheetName" label="Sheet" width="110" align="center" />
         <el-table-column prop="rowNumber" label="行号" width="72" align="center" />
         <el-table-column label="原始数据" min-width="230" align="center" show-overflow-tooltip>
@@ -56,6 +56,17 @@
         </el-table-column>
         <el-table-column prop="reason" label="未导入原因" min-width="250" align="center" />
       </el-table>
+      <div v-if="result.failures.length" class="failure-pagination">
+        <el-pagination
+          v-model:current-page="failurePage"
+          v-model:page-size="failurePageSize"
+          :page-sizes="[20, 50, 100]"
+          :total="result.failures.length"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @size-change="resetFailurePage"
+        />
+      </div>
     </div>
     </div>
 
@@ -76,12 +87,11 @@
 /* global defineProps, defineEmits, defineExpose */
 import { computed, reactive, ref } from 'vue';
 import { UploadFilled } from '@element-plus/icons-vue';
-import { getBatchImportTemplates, submitBatchImport } from '@/api/batchImport';
-import { downloadByUrl } from '@/api/file';
+import { downloadBatchImportTemplate, submitBatchImport, MAX_IMPORT_ROWS, MAX_IMPORT_FILE_BYTES } from '@/api/batchImport';
 import Message from '@/utils/message';
 
 const props = defineProps({
-  businessType: { type: String, required: true, validator: value => ['upstream', 'downstream'].includes(value) }
+  businessType: { type: String, required: true, validator: value => ['upstream', 'downstream', 'workorder'].includes(value) }
 });
 const emit = defineEmits(['success']);
 
@@ -91,21 +101,33 @@ const selectedFile = ref(null);
 const uploadRef = ref();
 const importing = ref(false);
 const result = reactive({ totalRows: 0, successRows: 0, failureRows: 0, failures: [] });
-const templates = reactive({ upstreamUrl: '', downstreamUrl: '' });
-const businessLabel = computed(() => props.businessType === 'upstream' ? '上游机构' : '下游机构及商户人员');
+const failurePage = ref(1);
+const failurePageSize = ref(20);
+/**
+ * 后端返回完整失败明细，弹窗仅渲染当前页，避免一万条错误同时生成表格节点。
+ * 按原 Excel 行顺序切片，不改变汇总统计，也不在翻页时重新提交导入请求。
+ */
+const pagedFailures = computed(() => {
+  const start = (failurePage.value - 1) * failurePageSize.value;
+  return result.failures.slice(start, start + failurePageSize.value);
+});
+const businessLabel = computed(() => ({ upstream: '上游机构', downstream: '下游机构', workorder: '工单' })[props.businessType]);
 
 /**
- * 由列表页公开调用，打开弹窗时读取最新模板地址，使运维替换配置后无需刷新整个页面。
+ * 切换每页数量时回到第一页，防止原页码超出新页数而显示空列表。
+ * 仅调整展示位置，保留完整失败明细供继续翻页复核。
+ */
+function resetFailurePage() {
+  failurePage.value = 1;
+}
+
+/**
+ * 由列表页公开调用，打开弹窗并清理旧文件与结果，模板在点击下载时通过当前业务接口获取。
  */
 async function open() {
   resetDialog();
   visible.value = true;
-  try {
-    const response = await getBatchImportTemplates();
-    if (response?.data?.code === 200) Object.assign(templates, response.data.data || {});
-  } catch (error) {
-    Message.warning('暂时无法获取模板下载地址');
-  }
+
 }
 
 /** 文件改变后清除旧结果，用户可直接发起包含模板校验的数据导入。 */
@@ -117,7 +139,7 @@ function handleFileChange(uploadFile) {
     selectedFile.value = null;
     return;
   }
-  if (raw.size > 20 * 1024 * 1024) {
+  if (raw.size > MAX_IMPORT_FILE_BYTES) {
     Message.warning('文件不能超过 20MB');
     uploadRef.value?.clearFiles();
     selectedFile.value = null;
@@ -140,7 +162,7 @@ function handleExceed() {
 
 /**
  * 一次提交完成模板结构校验、逐行业务校验和批量入库。模板不合格时后端返回业务警告且不会写库；
- * 校验通过时展示成功统计和全部未导入行，避免用户重复点击独立校验步骤。
+ * 校验通过时展示成功统计并分页查看全部未导入行，避免用户重复点击独立校验步骤。
  */
 async function confirmImport() {
   if (!selectedFile.value) return;
@@ -150,6 +172,7 @@ async function confirmImport() {
     if (response?.data?.code !== 200) return;
     Object.assign(result, response.data.data || {});
     result.failures = response.data.data?.failures || [];
+    resetFailurePage();
     resultVisible.value = true;
     if (result.successRows > 0) emit('success', result);
   } finally {
@@ -157,12 +180,12 @@ async function confirmImport() {
   }
 }
 
-/** 使用项目已有 OSS 远程文件下载逻辑保存对应业务模板。 */
-function downloadTemplate() {
-  const url = props.businessType === 'upstream' ? templates.upstreamUrl : templates.downstreamUrl;
-  if (!url) return Message.warning('模板下载地址尚未配置');
-  const name = props.businessType === 'upstream' ? '车险系统_上游批量导入模板.xlsx' : '车险系统_下游及商户人员批量导入模板.xlsx';
-  downloadByUrl(url, name);
+/**
+ * 获取后端随当前版本发布的官方模板，复用现有请求鉴权和文件响应下载处理。
+ * 模板与导入校验一起更新，避免前端继续下载人员绑定时代的旧文件。
+ */
+async function downloadTemplate() {
+  await downloadBatchImportTemplate(props.businessType);
 }
 
 /** 把失败行字段压缩成易扫描文本，完整内容仍可通过表格 tooltip 查看。 */
@@ -180,6 +203,8 @@ function resetDialog() {
   resultVisible.value = false;
   selectedFile.value = null;
   importing.value = false;
+  failurePage.value = 1;
+  failurePageSize.value = 20;
   Object.assign(result, { totalRows: 0, successRows: 0, failureRows: 0, failures: [] });
   uploadRef.value?.clearFiles();
 }
@@ -203,6 +228,7 @@ defineExpose({ open });
 .summary-item.success strong { color: var(--el-color-success); }
 .summary-item.danger strong { color: var(--el-color-danger); }
 .failure-table { margin: 16px auto 0; }
+.failure-pagination { display: flex; justify-content: center; margin-top: 16px; overflow-x: auto; }
 .dialog-footer { display: flex; justify-content: center; gap: 8px; }
 :deep(.el-upload) { display: flex; justify-content: center; width: 100%; }
 :deep(.el-upload-dragger) { display: flex; align-items: center; justify-content: center; flex-direction: column; width: 100%; text-align: center; }

@@ -1,6 +1,5 @@
 package com.example.insurancesystem.domain.merchant;
 
-import com.example.insurancesystem.domain.user.User;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,18 +33,20 @@ public class DownstreamDTO {
 
     private String defaultAreaCode;
 
-    private String storeManager;
+    private String contact;
+
+    private String phone;
 
     private Long createTime;
 
     private List<String> businessArea;
 
-    private User user;
-
     public DownstreamDTO(Merchant merchant) {
         this.id = merchant.getId();
         this.code = merchant.getCode();
         this.name = merchant.getName();
+        this.contact = merchant.getContact();
+        this.phone = merchant.getPhone();
         this.type = merchant.getType();
         this.location = merchant.getLocation();
         this.address = merchant.getAddress();

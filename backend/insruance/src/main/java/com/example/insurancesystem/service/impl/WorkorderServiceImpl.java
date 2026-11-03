@@ -35,16 +35,6 @@ import java.util.Map;
  */
 public class WorkorderServiceImpl implements WorkorderService {
 
-    /**
-     * 工单续保的固定业务周期。每个周期从工单创建日期起按自然天累计，当前为 365 天。
-     */
-    private static final int RENEWAL_CYCLE_DAYS = 365;
-
-    /**
-     * 每个续保周期结束前的提醒窗口。当前从剩余 30 天开始提醒，并持续到周期结束当天。
-     */
-    private static final int RENEWAL_ADVANCE_DAYS = 30;
-
     @Autowired
     private WorkorderMapper workorderMapper;
 
@@ -105,8 +95,6 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult selectRenew(WorkorderSearchDTO params) {
         PageHelper.startPage(params.getPageNum(), params.getPageSize());
 
-        params.setRenewalCycleDays(RENEWAL_CYCLE_DAYS);
-        params.setRenewalAdvanceDays(RENEWAL_ADVANCE_DAYS);
 
         if(!SystemCommonUtil.hasPerm("all")){
             params.setCreateBy(SystemCommonUtil.getNowUserId());
@@ -131,9 +119,9 @@ public class WorkorderServiceImpl implements WorkorderService {
         Long nowUserId = SystemCommonUtil.getNowUserId();
         if(SystemCommonUtil.hasPerm("all")){
             Integer selfCount = workorderMapper.selectRenewCount(
-                    RENEWAL_CYCLE_DAYS, RENEWAL_ADVANCE_DAYS, nowUserId);
+                    nowUserId);
             Integer allCount = workorderMapper.selectRenewCount(
-                    RENEWAL_CYCLE_DAYS, RENEWAL_ADVANCE_DAYS, null);
+                    null);
 
             countMap.put("selfCount", selfCount);
             countMap.put("allCount", allCount);
@@ -141,7 +129,7 @@ public class WorkorderServiceImpl implements WorkorderService {
         }
         else{
             Integer selfCount = workorderMapper.selectRenewCount(
-                    RENEWAL_CYCLE_DAYS, RENEWAL_ADVANCE_DAYS, nowUserId);
+                    nowUserId);
 
             countMap.put("selfCount", selfCount);
             return new ResponseResult(200, countMap);
@@ -200,7 +188,7 @@ public class WorkorderServiceImpl implements WorkorderService {
 
     @Override
     /**
-     * 创建完整工单聚合。系统自动带出创建商户的收款资料、选择优先级最高的收款人员并自动接单，
+     * 创建完整工单聚合。系统自动带出创建商户的收款资料、使用下游联系人生成提交与收款快照并自动接单，
      * 随后写入险种、对应车辆证件和附件关系，同时把新附件标记为已关联。
      */
     public ResponseResult insert(WorkorderDTO params) {
@@ -222,31 +210,19 @@ public class WorkorderServiceImpl implements WorkorderService {
         // 自动添加商户信息
         Long createMerchantId = workorder.getCreateMerchantId();
         Merchant createMerchant = merchantMapper.selectById(createMerchantId);
-        workorder.setPayBank(createMerchant.getBank());
-        workorder.setPayBankCardNum(createMerchant.getBankCardNum());
-//        List<User> payees = userMapper.selectPayeeByMerchantId(createMerchantId);
-        List<User> payees = userMapper.selectUserByMerchantId(createMerchantId);
-        if(!payees.isEmpty()){
-            User payee = null;
-            int flag = 0;
-            for(User item : payees){
-                if(item.getRoleName().equals("收款人")){
-                    payee = item;
-                    flag = 3;
-                }
-                else if(flag <= 1 && item.getRoleName().equals("联系人")){
-                    payee = item;
-                    flag = 2;
-                }
-                else if(flag == 0){
-                    payee = item;
-                    flag = 1;
-                }
-            }
-            workorder.setPayeeStaffId(payee.getId());
-            workorder.setPayName(payee.getRealName());
-            workorder.setPayIdNum(payee.getUsername());
+        if (createMerchant == null || !EnterpriseContextHolder.requireEnterpriseId().equals(createMerchant.getEnterpriseId()) || !"DOWNSTREAM".equals(createMerchant.getDirection()) || !Integer.valueOf(0).equals(createMerchant.getIsDelete())) {
+            throw new BusinessException(400, "提交店铺不存在或不是有效下游");
         }
+        /*
+         * 提交人和收款资料在建单时形成快照。人工提交的姓名优先，未提供时使用下游联系人；
+         * 录入人始终记录当前登录账号，后续联系人变更不会覆盖历史工单及收款凭据。
+         */
+        if (workorder.getSubmitterName() == null) workorder.setSubmitterName(createMerchant.getContact());
+        validateSubmitter(workorder.getSubmitterName());
+        if (workorder.getPayName() == null) workorder.setPayName(createMerchant.getContact());
+        if (workorder.getPayIdNum() == null) workorder.setPayIdNum(createMerchant.getPhone());
+        if (workorder.getPayBank() == null) workorder.setPayBank(createMerchant.getBank());
+        if (workorder.getPayBankCardNum() == null) workorder.setPayBankCardNum(createMerchant.getBankCardNum());
         workorder.setUpdateBy(nowUserId);
         workorder.setHandleBy(nowUserId);
         workorder.setStatus(2);  // 自动接单，进入待报价阶段
@@ -314,8 +290,10 @@ public class WorkorderServiceImpl implements WorkorderService {
      * 未投保的商业险或交强险会清空对应金额；基础资料附件则以新提交列表整体替换。
      */
     public ResponseResult updateBaseInfo(WorkorderDTO params) {
+        validateSubmitter(params.getSubmitterName());
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
+        workorder.setCreateBy(null);
         workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(updateBy);
         List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();
@@ -502,25 +480,42 @@ public class WorkorderServiceImpl implements WorkorderService {
         return null;
     }
 
-    @Override
     /**
-     * 接受并分配工单，更新处理商户、处理人及流程状态。
+     * 接单、派单和续保重新分配共用入口。处理人必须是当前企业中启用的系统成员，
+     * 不再依赖商户人员；已有历史记录仅在本次明确重新分配时更新。
+     * 参数中的工单ID、处理人ID必填，处理机构和流程状态可选；跨企业或停用引用拒绝保存。
+     * 更新条件再次限定企业和未删除工单，保留原录入人及未提交的机构、流程状态。
      */
+    @Override
     public ResponseResult acceptWorkorder(WorkorderDTO params) {
-        Workorder workorder = new Workorder();
-        workorder.setId(params.getId());
-        workorder.setHandleMerchantId(params.getHandleMerchantId());
-        workorder.setHandleBy(params.getHandleBy());
-        workorder.setUpdateBy(SystemCommonUtil.getNowUserId());
-        workorder.setStatus(params.getStatus());  // 状态
-        int x = workorderMapper.updateById(workorder);
-        if (x > 0){
-            return new ResponseResult(200, "更新成功");
+        if (params == null || params.getId() == null || params.getHandleBy() == null) {
+            throw new BusinessException(400, "请选择工单和本企业处理人");
         }
-        else {
-            return new ResponseResult(400, "更新失败");
+        Long enterpriseId = EnterpriseContextHolder.requireEnterpriseId();
+        User handler = userMapper.selectSsoUser(params.getHandleBy(), enterpriseId);
+        if (handler == null || !Integer.valueOf(1).equals(handler.getStatus())
+                || !Integer.valueOf(1).equals(handler.getMemberStatus())) {
+            throw new BusinessException(400, "处理人必须是本企业启用的系统用户");
         }
+        /* 机构和人员独立校验，避免通过请求体将工单关联到其他企业的机构。 */
+        if (params.getHandleMerchantId() != null) {
+            Merchant merchant = merchantMapper.selectOne(new LambdaQueryWrapper<Merchant>()
+                    .eq(Merchant::getId, params.getHandleMerchantId())
+                    .eq(Merchant::getEnterpriseId, enterpriseId).eq(Merchant::getIsDelete, 0));
+            if (merchant == null) throw new BusinessException(400, "处理机构不属于当前企业或已失效");
+        }
+        LambdaUpdateWrapper<Workorder> update = new LambdaUpdateWrapper<Workorder>()
+                .eq(Workorder::getId, params.getId()).eq(Workorder::getEnterpriseId, enterpriseId)
+                .eq(Workorder::getIsDelete, 0)
+                .set(Workorder::getHandleBy, params.getHandleBy())
+                .set(Workorder::getUpdateBy, SystemCommonUtil.getNowUserId())
+                .set(params.getHandleMerchantId() != null, Workorder::getHandleMerchantId, params.getHandleMerchantId())
+                .set(params.getStatus() != null, Workorder::getStatus, params.getStatus());
+        int changed = workorderMapper.update(null, update);
+        if (changed == 0) throw new BusinessException(404, "工单不存在或不属于当前企业");
+        return new ResponseResult(200, "更新成功");
     }
+
 
     @Override
     /**
@@ -529,6 +524,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult updateQuotation(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
+        workorder.setCreateBy(null);
         workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(updateBy);
         workorder.computeAmount();
@@ -545,13 +541,12 @@ public class WorkorderServiceImpl implements WorkorderService {
      * 缴费、承保或物流阶段表，支持不同步骤复用同一个轻量更新接口。
      */
     public ResponseResult updateNoCascade(WorkorderDTO params) {
+        if (params.getRemindStatus() != null) throw new BusinessException(400, "请按险种范围提交续保跟进");
         Workorder workorder = new Workorder(params);
+        workorder.setCreateBy(null);
         workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(SystemCommonUtil.getNowUserId());
         int x = workorderMapper.updateById(workorder);
-        if (workorder.getRemindStatus() != null) {
-            workorderMapper.updateRenewalStatusCycle(workorder.getId());
-        }
         if (workorder.getQuotationFailedRemark() != null) saveQuote(workorder);
         if (workorder.getRequiredPayAmount() != null || workorder.getPayFailedRemark() != null) savePayment(workorder);
         if (workorder.getUnderwritingFailedRemark() != null || workorder.getAcceptInsuranceFailedRemark() != null) saveUnderwriting(workorder);
@@ -566,6 +561,7 @@ public class WorkorderServiceImpl implements WorkorderService {
     public ResponseResult acceptInsurance(WorkorderDTO params) {
         Long updateBy = SystemCommonUtil.getNowUserId();
         Workorder workorder = new Workorder(params);
+        workorder.setCreateBy(null);
         workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         workorder.setUpdateBy(updateBy);
         int x = workorderMapper.updateById(workorder);
@@ -701,6 +697,92 @@ public class WorkorderServiceImpl implements WorkorderService {
             fileWrapper.set(SystemFile::getUpdateBy, updateBy);
             systemFileMapper.update(null, fileWrapper);
         }
+    }
+
+    /**
+     * 限制直接录入的提交人快照长度；空字符串允许表示暂无提交人，不推导或修改系统录入人。
+     * @param name 来自工单表单或下游联系人的姓名。
+     * @throws BusinessException 姓名超过存储长度时在保存前终止。
+     */
+    private void validateSubmitter(String name) {
+        if (name != null && name.length() > 100) throw new BusinessException(400, "提交人最多100字");
+    }
+
+    /**
+     * 按险种原子保存续保跟进，只更新用户选择的状态，避免同时处理另一险种时覆盖对方结果。
+     * 周期取自服务器中国日期；ALL 允许提前完成另一险种本轮，仍保留未来年度提醒。
+     * @param id 当前企业内工单 ID。
+     * @param request 处理范围、结果及可选备注，不接受客户端指定周期。
+     * @return 成功提示；非法参数返回400，不存在或无权操作返回404。
+     */
+    @Override
+    public ResponseResult followUpRenewal(Long id, com.example.insurancesystem.domain.workorder.RenewalFollowUpRequest request) {
+        if (request == null || !java.util.Set.of("COMMERCIAL", "COMPULSORY", "ALL").contains(request.getScope() == null ? "" : request.getScope())
+                || request.getStatus() == null || (request.getStatus() != 1 && request.getStatus() != 2)
+                || (request.getFollowUpRes() != null && request.getFollowUpRes().length() > 1000)) {
+            return new ResponseResult(400, "续保处理范围、结果或备注不合法");
+        }
+        Long enterpriseId = EnterpriseContextHolder.requireEnterpriseId();
+        Workorder current = workorderMapper.selectOne(new LambdaQueryWrapper<Workorder>()
+                .eq(Workorder::getId, id).eq(Workorder::getEnterpriseId, enterpriseId).eq(Workorder::getIsDelete, 0));
+        Long userId = SystemCommonUtil.getNowUserId();
+        if (current == null || (!SystemCommonUtil.hasPerm("all") && !userId.equals(current.getCreateBy()))) {
+            return new ResponseResult(404, "工单不存在或无权操作");
+        }
+        java.time.LocalDate today = java.time.LocalDate.now(com.example.insurancesystem.utils.RenewalCalendar.BUSINESS_ZONE);
+        boolean all = "ALL".equals(request.getScope());
+        boolean commercial = all || "COMMERCIAL".equals(request.getScope());
+        boolean compulsory = all || "COMPULSORY".equals(request.getScope());
+        java.time.LocalDate commercialStart = com.example.insurancesystem.utils.RenewalCalendar.startDate(current.getCommercialInsuranceStartTime());
+        java.time.LocalDate compulsoryStart = com.example.insurancesystem.utils.RenewalCalendar.startDate(current.getCompulsoryInsuranceStartTime());
+        int commercialCycle = all ? com.example.insurancesystem.utils.RenewalCalendar.upcomingCycle(commercialStart, today)
+                : com.example.insurancesystem.utils.RenewalCalendar.activeCycle(commercialStart, today);
+        int compulsoryCycle = all ? com.example.insurancesystem.utils.RenewalCalendar.upcomingCycle(compulsoryStart, today)
+                : com.example.insurancesystem.utils.RenewalCalendar.activeCycle(compulsoryStart, today);
+        if ((!all && ((commercial && commercialCycle == 0) || (compulsory && compulsoryCycle == 0)))
+                || (all && commercialCycle == 0 && compulsoryCycle == 0)) {
+            return new ResponseResult(400, "所选险种无起期或尚未进入提醒周期");
+        }
+        LambdaUpdateWrapper<Workorder> update = new LambdaUpdateWrapper<Workorder>()
+                .eq(Workorder::getId, id).eq(Workorder::getEnterpriseId, enterpriseId)
+                .eq(Workorder::getIsDelete, 0).eq(Workorder::getRenewalReminderDisabled, 0)
+                .set(Workorder::getUpdateBy, userId);
+        /* 完成周期只能向前推进，重复处理不回退已经提前完成的另一轮状态。 */
+        if (commercial && commercialCycle > 0) {
+            update.set(Workorder::getCommercialRenewalStatus, request.getStatus())
+                    .setSql("commercial_renewal_cycle = GREATEST(COALESCE(commercial_renewal_cycle,0), " + commercialCycle + ")");
+        }
+        if (compulsory && compulsoryCycle > 0) {
+            update.set(Workorder::getCompulsoryRenewalStatus, request.getStatus())
+                    .setSql("compulsory_renewal_cycle = GREATEST(COALESCE(compulsory_renewal_cycle,0), " + compulsoryCycle + ")");
+        }
+        if (request.getFollowUpRes() != null) update.set(Workorder::getFollowUpRes, request.getFollowUpRes());
+        return workorderMapper.update(null, update) > 0 ? new ResponseResult(200, "已保存续保跟进")
+                : new ResponseResult(400, "工单提醒已关闭或状态已变化，请刷新");
+    }
+
+    /**
+     * 创建历史导入工单，复用全部正常聚合写入及业务编号生成后，仅恢复历史阶段与指定处理人。
+     * @param params 已通过模板、字段、机构、成员和险种校验的完整模型。
+     * @return 新工单响应；任一写入异常在调用方的独立行事务内整体回滚。
+     */
+    @Override
+    public ResponseResult insertImported(WorkorderDTO params) {
+        ResponseResult response = insert(params);
+        if (response.getCode() != 200) throw new BusinessException(response.getCode(), response.getMsg());
+        Workorder created = (Workorder) response.getData();
+        int state = 2;
+        /* 以已填写的业务阶段恢复状态，不让已经承保的历史单重新停留在待报价。 */
+        if (params.getQuotationTime() != null || params.getCommercialAmount() != null || params.getCompulsoryAmount() != null || params.getVehicleAndTaxAmount() != null) state = 4;
+        if (params.getRequiredPayAmount() != null) state = 6;
+        if (params.getUnderwritingTime() != null) state = 8;
+        if (params.getFinishTime() != null || (params.getCommercialPolicyNo() != null && !params.getCommercialPolicyNo().isBlank())
+                || (params.getCompulsoryPolicyNo() != null && !params.getCompulsoryPolicyNo().isBlank())) state = 10;
+        LambdaUpdateWrapper<Workorder> update = new LambdaUpdateWrapper<Workorder>()
+                .eq(Workorder::getId, created.getId()).eq(Workorder::getEnterpriseId, EnterpriseContextHolder.requireEnterpriseId())
+                .set(Workorder::getHandleBy, params.getHandleBy()).set(Workorder::getStatus, state);
+        workorderMapper.update(null, update);
+        return response;
     }
 
 }

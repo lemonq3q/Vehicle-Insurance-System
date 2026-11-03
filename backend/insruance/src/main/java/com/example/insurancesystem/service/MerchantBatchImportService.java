@@ -4,7 +4,7 @@ import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 定义上游、下游及其商户人员的 Excel 模板校验和正式批量导入能力。
+ * 定义含直接联系人字段的上游、下游主体的 Excel 模板校验和正式批量导入能力。
  * 模板校验与数据校验分阶段执行，防止用户仅因数据错误而被误判为使用了错误模板。
  */
 public interface MerchantBatchImportService {

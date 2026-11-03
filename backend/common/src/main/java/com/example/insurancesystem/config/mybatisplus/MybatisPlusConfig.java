@@ -26,8 +26,8 @@ public class MybatisPlusConfig {
             "biz_insurance_product",
             "biz_merchant",
             "biz_merchant_area",
-            "biz_merchant_staff",
-            "biz_merchant_staff_role",
+
+
             "biz_ocr_record",
             "biz_vehicle_certificate",
             "biz_vehicle_invoice",

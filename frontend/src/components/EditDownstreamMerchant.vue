@@ -17,6 +17,12 @@
           placeholder="请输入商家名称"
           />
         </el-form-item>
+        <el-form-item prop="contact" label="联系人">
+          <el-input v-model="downstreamInfo.contact" maxlength="100" placeholder="请输入联系人" />
+        </el-form-item>
+        <el-form-item prop="phone" label="联系电话">
+          <el-input v-model="downstreamInfo.phone" maxlength="20" placeholder="请输入联系电话" />
+        </el-form-item>
         <el-form-item label="所在地区" prop="location">
           <AreaSelect style="width: 100%;" v-model="downstreamInfo.location" placeholder="请选择所在地区" :multi="false"></AreaSelect>
         </el-form-item>
@@ -70,34 +76,8 @@
           />
         </el-form-item> -->
       </el-form>
-    <div class="search_title" style="border-bottom: 1px solid #DCDFE6; padding-bottom: 10px;" v-if="type=='add'">默认联系人信息</div>
-    <el-form
-        ref="userRef"
-        style="max-width: 700px; margin: 20px auto;"
-        :model="userInfo"
-        status-icon
-        :rules="userRules"
-        label-width="auto"
-        class="login_form"
-        v-if="type=='add'"
-      >
-        <el-form-item prop="username" label="手机号码">
-          <el-input
-          v-model="userInfo.username"
-          class="responsive-input"
-          placeholder="请输入手机号码"
-          />
-        </el-form-item>
-        <el-form-item label="用户名称" prop="realName">
-          <el-input
-          v-model="userInfo.realName"
-          class="responsive-input"
-          placeholder="请输入用户名称"
-          />
-        </el-form-item>
-      </el-form>
       <div>
-        <el-button type="primary" @click="handleSubmit(editRef, userRef)">{{ type=='add'?'新增':'更新' }}</el-button>
+        <el-button type="primary" @click="handleSubmit(editRef)">{{ type=='add'?'新增':'更新' }}</el-button>
         <el-button @click="handleReset" v-if="type=='update'">重置</el-button>
         <el-button @click="handleBack">返回</el-button>
       </div>
@@ -109,7 +89,7 @@
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
 import { useRoute } from 'vue-router';
-import { validateBankCard, validateText, validatePhoneNumber, validateIdNum } from '@/utils/validate';
+import { validateBankCard, validateText, validatePhoneNumber } from '@/utils/validate';
 // import { buildSelectorOptionByArray } from '@/utils/ChinaCitys';
 import { insertDownstream, selectDownstreamById, updateDownstream } from '@/api/downstream';
 import Message from '@/utils/message';
@@ -122,7 +102,6 @@ const type = route.query.type;
 const id = route.query.id;
 
 const editRef = ref();
-const userRef = ref();
 // const channelOptions = reactive([
 //   {
 //     label: '车爵士',
@@ -139,6 +118,8 @@ const userRef = ref();
 // ]);
 
 const rules = reactive({
+  contact: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
+  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { validator: validatePhoneNumber, trigger: 'blur' }],
   name: [
     { required: true, message: '请输入机构名称', trigger: 'blur' },
     { min: 1, max: 100, message: '输入内容过长', trigger: 'blur' },
@@ -171,22 +152,9 @@ const rules = reactive({
   ]
 });
 
-const userRules = reactive({
-  username: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { validator: validatePhoneNumber, trigger: 'blur' }
-  ],
-  realName: [
-    { required: true, message: '请输入用户名称', trigger: 'blur' },
-    { min: 1, max: 100, message: '输入内容过长', trigger: 'blur' },
-    { validator: validateText, trigger: 'blur' }
-  ],
-  idNum: [
-    { validator: validateIdNum, trigger: 'blur'}
-  ]
-});
-
 const downstreamInfo = reactive({
+  contact: '',
+  phone: '',
   name: '',
   location: [],
   type: '车商店铺',
@@ -197,19 +165,13 @@ const downstreamInfo = reactive({
   // defaultAreaCode: []
 });
 
-const userInfo = reactive({
-  username: '',
-  realName: '',
-  idNum: ''
-});
-
 const oriInfo = ref({});
 
 // const defaultAreaOption = computed(() => buildSelectorOptionByArray(downstreamInfo.businessArea));
 
 /**
 
- * * 更新模式读取指定下游机构详情；新增模式同时保留机构与首个用户两张空表单。
+ * * 更新模式读取指定下游机构详情；新增模式初始化机构与联系人基础字段。
 
  */
 onMounted(() => {
@@ -219,38 +181,24 @@ onMounted(() => {
 });
 
 /**
- * 先校验机构资料；新增时还必须校验首个机构用户，更新时只保存机构本身。
- * 两层表单均通过后才调用新增接口，避免创建没有可登录管理员的下游机构。
+ * 新增与编辑共用下游基础信息校验，联系人和手机号直接随机构提交，不再创建人员或账号。
+ * 表单校验失败不发送请求，成功后按页面模式保存机构资料。
  */
-const handleSubmit = (formEl1, formEl2) => {
-  if (!formEl1) return;
-  formEl1.validate((valid) => {
-    if(valid){
-      if (type == 'add'){
-        if(!formEl2) return;
-        formEl2.validate((valid) => {
-          if(valid){
-            addSubmit();
-          }
-        });
-      }
-      else {
-        updateSubmit();
-      }
-    }
-  });
+const handleSubmit = async (formEl) => {
+  if (!formEl || !await formEl.validate().catch(() => false)) return;
+  if (type === 'add') await addSubmit();
+  else await updateSubmit();
 };
 
 /**
 
- * * 把首个用户嵌入机构请求体后一次创建下游机构及其初始账号。
+ * * 将联系人、联系电话与机构基础信息一次保存，不维护独立人员关系。
 
  */
 const addSubmit = async () => {
   try{
     Loading.open();
     let data = buildInsertData();
-    data.user = {...userInfo};
     await insertDownstream(data).then(res=>{
       res = res.data;
       if (res.code == 200){
@@ -286,6 +234,8 @@ const buildInsertData = () => {
  */
 const buildDownstreamInfo = () => {
   downstreamInfo.name = oriInfo.value.name;
+  downstreamInfo.contact = oriInfo.value.contact;
+  downstreamInfo.phone = oriInfo.value.phone;
   downstreamInfo.type = oriInfo.value.type;
   downstreamInfo.address = oriInfo.value.address;
   downstreamInfo.bank = oriInfo.value.bank;
@@ -321,7 +271,7 @@ const getDataById = async () => {
 
 /**
 
- * * 保留机构原 ID 和编码提交资料更新，不修改新增时创建的初始用户关系。
+ * * 保留机构原 ID 和编码提交资料更新，不修改历史工单的联系人及收款资料快照。
 
  */
 const updateSubmit = async () => {
@@ -330,7 +280,6 @@ const updateSubmit = async () => {
     let data = buildInsertData();
     data.id = id;
     data.code = oriInfo.value.code;
-    console.log(data);
     await updateDownstream(data).then(res => {
       res = res.data;
       if (res.code == 200){

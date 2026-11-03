@@ -27,14 +27,7 @@ public interface WorkorderMapper extends BatchBaseMapper<Workorder> {
     /**
      * 统计到达续保周期边界的工单，可按创建人限定个人范围。
      */
-    Integer selectRenewCount(@Param("renewalCycleDays") Integer renewalCycleDays,
-                             @Param("renewalAdvanceDays") Integer renewalAdvanceDays,
-                             @Param("createBy") Long createBy);
-
-    /**
-     * 在用户处理续保提醒状态后推进该工单的提醒周期标记。
-     */
-    int updateRenewalStatusCycle(@Param("id") Long id);
+    Integer selectRenewCount(@Param("createBy") Long createBy);
 
     /**
      * 重置已经跨过有效周期的临时续保状态，使其可进入下一周期计算。

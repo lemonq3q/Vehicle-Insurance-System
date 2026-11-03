@@ -25,7 +25,7 @@ public class Workorder {
 
     private Long enterpriseId;
 
-    private Long sourceStaffId;
+    private String submitterName;
 
     private String code;
 
@@ -142,9 +142,6 @@ public class Workorder {
     private BigDecimal requiredPayAmount;
 
     @TableField(exist = false)
-    private Long payeeStaffId;
-
-    @TableField(exist = false)
     private String payName;
 
     @TableField(exist = false)
@@ -212,6 +209,11 @@ public class Workorder {
 
     private Integer status;
 
+    private Integer commercialRenewalStatus;
+    private Integer commercialRenewalCycle;
+    private Integer compulsoryRenewalStatus;
+    private Integer compulsoryRenewalCycle;
+
     private Integer remindStatus;
 
     private Integer renewalStatusCycle;
@@ -235,6 +237,7 @@ public class Workorder {
         this.organizationName = workorderDTO.getOrganizationName();
         this.socialCreditCode = workorderDTO.getSocialCreditCode();
         this.createMerchantId = workorderDTO.getCreateMerchantId();
+        this.submitterName = workorderDTO.getSubmitterName();
         this.handleMerchantId = workorderDTO.getHandleMerchantId();
         this.areaCode = workorderDTO.getAreaCode();
         this.commercialInsuranceStartTime = workorderDTO.getCommercialInsuranceStartTime();

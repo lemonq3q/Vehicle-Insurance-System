@@ -125,13 +125,20 @@
         <!-- <el-table-column prop="areaCode" label="投保区域" show-overflow-tooltip /> -->
         <el-table-column prop="insuranceCompany" label="保险公司"/>
         <!-- <el-table-column prop="handleMerchant" label="处理机构"/> -->
-        <el-table-column prop="handleUser" label="处理人"/>
+        <el-table-column prop="handleUserDisplay" label="处理人"/>
         <el-table-column prop="createTime" label="创建时间"/>
         <el-table-column prop="updateTime" label="最后跟进时间"/>
         <el-table-column prop="finishTime" label="承保时间"/>
-        <el-table-column label="续保状态">
+        <el-table-column label="提醒种类" min-width="190">
           <template #default="scope">
-            <span>{{ renderRemindStatus(scope.row.remindStatus) }}</span>
+            <el-tag v-if="scope.row.commercialReminder" type="primary">商业险续保提醒</el-tag>
+            <el-tag v-if="scope.row.compulsoryReminder" type="warning">交强险续保提醒</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="续保状态" min-width="180">
+          <template #default="scope">
+            <div>商业：{{ renderRemindStatus(scope.row.commercialRenewalStatus) }}</div>
+            <div>交强：{{ renderRemindStatus(scope.row.compulsoryRenewalStatus) }}</div>
           </template>
         </el-table-column>
         <el-table-column prop="followUpRes" label="续保备注" min-width="140"/>
@@ -159,6 +166,7 @@
       </div>
     </div>
   </div>
+
 
   <el-dialog v-model="dialog" title="变更处理人员">
     <el-form
@@ -205,8 +213,15 @@
       :rules="followRules"
       label-width="auto"
     >
-      <el-form-item prop="remindStatus" label="续保状态">
-        <el-radio-group v-model="followParams.remindStatus">
+      <el-form-item prop="scope" label="处理范围">
+        <el-radio-group v-model="followParams.scope">
+          <el-radio value="COMMERCIAL">商业险</el-radio>
+          <el-radio value="COMPULSORY">交强险</el-radio>
+          <el-radio value="ALL">两项都已完成</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item prop="status" label="处理结果">
+        <el-radio-group v-model="followParams.status">
           <el-radio :value="1">已续保</el-radio>
           <el-radio :value="2">已流失</el-radio>
         </el-radio-group>
@@ -222,9 +237,10 @@
 </template>
 
 <script setup>
+import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
-import { selectRenew, acceptWorkorder, updateNoCascade, selectRenewCount, disableRenewReminder } from '@/api/workorder';
+import { selectRenew, acceptWorkorder, updateRenewFollowUp, selectRenewCount, disableRenewReminder } from '@/api/workorder';
 import { getCascadeArea } from '@/utils/ChinaCitys';
 import { formatSecondTimestamp } from '@/utils/time';
 import { useRouter } from 'vue-router';
@@ -268,7 +284,8 @@ const acceptOrderParams = reactive({
 
 const followParams = reactive({
   id: undefined,
-  remindStatus: undefined,
+  status: undefined,
+  scope: 'ALL',
   followUpRes: ''
 });
 
@@ -279,7 +296,7 @@ const selectParams = reactive({
   handleUserId: undefined,
   areaCode: [],
   insuranceId: undefined,
-  remindStatus: ""
+  remindStatus: "0"
 });
 
 const createMerchantOptions = ref([]);
@@ -292,7 +309,8 @@ const acceptRules = {
 };
 
 const followRules = {
-  remindStatus: [{ required: true, message: '请选择续保状态', trigger: 'change' }]
+  status: [{ required: true, message: '请选择处理结果', trigger: 'change' }],
+  scope: [{ required: true, message: '请选择处理范围', trigger: 'change' }]
 };
 
 /**
@@ -399,6 +417,7 @@ const getData = async () => {
  */
 const buildTableData = (data) => {
   data.forEach(item => {
+    Object.assign(item, buildWorkorderListDisplay(item));
     item.areaCode = getCascadeArea(item.areaCode);
     item.createTime = formatSecondTimestamp(item.createTime, 'YYYY-MM-DD');
     item.updateTime = formatSecondTimestamp(item.updateTime, 'YYYY-MM-DD');
@@ -467,7 +486,8 @@ const handleAcceptUpdate = async () => {
 const handleFollow = (index, row) => {
   followDialog.value = true;
   followParams.id = row.id;
-  followParams.remindStatus = row.remindStatus === 1 || row.remindStatus === 2 ? row.remindStatus : undefined;
+  followParams.status = undefined;
+  followParams.scope = row.commercialReminder && row.compulsoryReminder ? 'ALL' : (row.commercialReminder ? 'COMMERCIAL' : 'COMPULSORY');
   followParams.followUpRes = row.followUpRes ?? '';
 }
 
@@ -487,13 +507,13 @@ const handleFollowSubmit = (formEl) => {
 
 /**
 
- * * 不级联修改工单主体，仅保存续保结果与跟进说明；成功后同步列表和全局续保角标。
+ * * 按所选险种范围保存本周期结果与跟进说明，周期由后端根据起期计算；成功后同步列表和全局续保角标。
 
  */
 const handleFollowUpdate = async () => {
   try{
     Loading.open();
-    await updateNoCascade(followParams).then(res => {
+    await updateRenewFollowUp(followParams.id, { scope: followParams.scope, status: followParams.status, followUpRes: followParams.followUpRes }).then(res => {
       res = res.data;
       if(res.code == 200){
         Message.success("更新成功");
@@ -515,7 +535,7 @@ const handleFollowUpdate = async () => {
 const handleDisableReminder = async (row) => {
   try {
     await ElMessageBox.confirm(
-      `关闭后，工单“${row.code}”以后每年都不会再进入续保提醒，是否继续？`,
+      `关闭后，工单“${row.code}”的商业险和交强险以后每年都不会再进入续保提醒，是否继续？`,
       '确认不再提醒',
       {
         confirmButtonText: '不再提醒',
@@ -613,7 +633,7 @@ const getHandleUserOpton = async (blurParam) => {
       if(res.code == 200){
         handleUserOptions.value = res.data.map(item => {
           return {
-            label: `${item.username} ${item.name}`,
+            label: `${item.username} ${item.realName}`,
             value: item.id
           }
         })
@@ -638,7 +658,7 @@ const getAcceptUserOption = async (blurParam) => {
       if(res.code == 200){
         acceptUserOptions.value = res.data.map(item => {
           return {
-            label: `${item.username} ${item.name}`,
+            label: `${item.username} ${item.realName}`,
             value: item.id
           }
         })

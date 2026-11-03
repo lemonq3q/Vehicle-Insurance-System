@@ -184,10 +184,10 @@
         <el-table-column prop="createUser" label="提交人"/>
         <el-table-column prop="areaCode" label="投保区域" show-overflow-tooltip />
         <el-table-column prop="insuranceCompany" label="保险公司"/>
-        <el-table-column prop="upstreamSumAmount" label="上游政策费用"/>
-        <el-table-column prop="downstreamSumAmount" label="下游政策费用"/>
+        <el-table-column prop="upstreamPolicyFeeDisplay" label="上游政策费用"/>
+        <el-table-column prop="downstreamPolicyFeeDisplay" label="下游政策费用"/>
         <el-table-column prop="handleMerchant" label="处理机构"/>
-        <el-table-column prop="handleUser" label="处理人"/>
+        <el-table-column prop="handleUserDisplay" label="处理人"/>
         <el-table-column prop="workorderStatus" label="工单状态"/>
         <el-table-column prop="createTime" label="创建时间"/>
         <el-table-column prop="updateTime" label="最后跟进时间"/>
@@ -221,6 +221,7 @@
 </template>
 
 <script setup>
+import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
 import { selectWorkorder, getWorkorderExcel } from '@/api/workorder';
@@ -231,7 +232,7 @@ import { getLastYearRange } from '@/utils/time';
 import EditBaseWorkorder from './EditBaseWorkorder.vue';
 import { selectDownstreamOption } from '@/api/downstream';
 import { selectUpstreamOption } from '@/api/upstream';
-import { selectUserOption } from '@/api/user';
+import { selectSystemUserOptions } from '@/api/user';
 import { selectInusranceCompanyOptions } from '@/api/upstream';
 
 const type = ref("add");
@@ -422,12 +423,12 @@ const getHandleMerchantOption = async (blurParam) => {
  */
 const getHandleUserOpton = async (blurParam) => {
   loading.handleUser = true;
-  await selectUserOption(blurParam).then(res=>{
+  await selectSystemUserOptions(blurParam).then(res=>{
     res = res.data;
     if(res.code == 200){
       handleUserOptions.value = res.data.map(item => {
         return {
-          label: `${item.username} ${item.name}`,
+          label: `${item.username} ${item.realName}`,
           value: item.id
         }
       })
@@ -527,6 +528,7 @@ const buildSearchParams = () => {
  */
 const buildTableData = (data) => {
   data.forEach(item => {
+    Object.assign(item, buildWorkorderListDisplay(item));
     item.areaCode = getCascadeArea(item.areaCode);
     item.createTime = formatSecondTimestamp(item.createTime);
     item.updateTime = formatSecondTimestamp(item.updateTime);

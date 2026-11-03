@@ -1,8 +1,8 @@
 <template>
   <div class="workorder_head_container card" style="padding: 0;">
     <div class="workorder_head_left" :style="{ backgroundColor: statusColor }">
-      <i class="img_icon" style="width: 70%;" :style="{ backgroundImage: `url(${headIcon})` }"></i>
-      <div style="color: #fff;">{{ headTitle }}</div>
+      <i class="img_icon workorder-status-icon" :style="{ backgroundImage: `url(${headIcon})` }"></i>
+      <div class="workorder-status-title">{{ headTitle }}</div>
     </div>
     <div class="workorder_head_right">
       <div class="workorder_head_right_item" style="justify-content: left; font-size: 20px;">
@@ -331,7 +331,10 @@
           <span class="detail-value" :class="{ 'detail-value--empty': isEmptyDetailValue(oriInfo.ownerPhone) }">{{ displayDetailValue(oriInfo.ownerPhone) }}</span>
         </div>
         <div class="divider"></div>
-        <!-- 投保险种 -->
+        <!--
+          详情沿用录入页和险种字典的业务分类：1 为商业险、2 为增值服务、3 为强制险。
+          强制险区展示交强险和车船税，避免将已有投保记录误展示到增值服务区。
+        -->
         <div class="workorder_detail_insurance_container" style="text-align: left; padding: 0 5px;">
           <div class="workorder_detail_insurance_table">
             <div style="font-weight: 700;">商业险投保险种</div>
@@ -345,7 +348,7 @@
           <div class="workorder_detail_insurance_table">
             <div style="font-weight: 700;">强制险投保险种</div>
             <div class="workorder_detail_insurance_table_content">
-              <div class="workorder_detail_insurance_table_item" v-for="item in info.insurance.type2" :key="item.id">
+              <div class="workorder_detail_insurance_table_item" v-for="item in info.insurance.type3" :key="item.id">
                 <div style="width: calc((100% - 10px)/2);">{{item.name }}</div>
                 <div style="width: calc((100% - 10px)/2); text-align: center;">{{ item.value }}</div>
               </div>
@@ -354,7 +357,7 @@
           <div class="workorder_detail_insurance_table">
             <div style="font-weight: 700; ">增值服务投保险种</div>
             <div class="workorder_detail_insurance_table_content">
-              <div class="workorder_detail_insurance_table_item" v-for="item in info.insurance.type3" :key="item.id">
+              <div class="workorder_detail_insurance_table_item" v-for="item in info.insurance.type2" :key="item.id">
                 <div style="width: calc((100% - 10px)/2);">{{item.name }}</div>
                 <div style="width: calc((100% - 10px)/2); text-align: center;">{{ item.value }}</div>
               </div>
@@ -3920,11 +3923,25 @@ const handleRefresh = () => {
 }
 
 .workorder_head_left {
+  /*
+   * 各流程状态共用同一张卡片，图标与文字作为整体居中。
+   * 随右侧信息区拉伸高度，避免百分比高度失效后图标和文字靠左上角。
+   */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  flex: 0 0 120px;
+  box-sizing: border-box;
+  gap: 8px;
   width: 120px;
-  height: 100%;
-  padding: 10px;
-  /* background-color: #F56C6C; */
+  min-height: 120px;
+  padding: 16px 10px;
+  text-align: center;
 }
+.workorder-status-icon { width: 70px; height: 70px; flex-shrink: 0; background-size: contain; }
+.workorder-status-title { color: #fff; line-height: 1.4; }
 
 .workorder_head_right {
   display: flex;

@@ -14,6 +14,8 @@ import com.example.insurancesystem.utils.UniqueCodeRetryUtil;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.example.insurancesystem.service.MerchantNameValidationService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,9 @@ import java.util.List;
  * 列表、详情和导出均以商户主体为基础，再聚合有效的区域关系。
  */
 public class UpstreamServiceImpl implements UpstreamService {
+    @Autowired
+    private MerchantNameValidationService nameValidationService;
+
 
     @Autowired
     private MerchantMapper upstreamMapper;
@@ -151,10 +156,12 @@ public class UpstreamServiceImpl implements UpstreamService {
     /**
      * 创建保险机构及其承保区域。机构编码由唯一约束重试机制生成，所有记录绑定当前企业和操作人。
      */
+    @Transactional(rollbackFor = Exception.class)
     public ResponseResult insert(UpstreamDTO params) {
         Long userId = SystemCommonUtil.getNowUserId();
 
         Merchant upstream = new Merchant(params);
+        nameValidationService.validate(upstream);
         upstream.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         upstream.setCategoryId(upstreamMapper.selectCategoryIdByCode(MerchantCategoryCode.INSURANCE_ORG));
         upstream.setUpdateBy(userId);
@@ -189,8 +196,10 @@ public class UpstreamServiceImpl implements UpstreamService {
      * 更新保险机构资料。提交了承保区域时，以逻辑删除旧关系、插入新关系的方式替换区域快照；
      * 未提交区域字段时只更新机构主体，保留现有承保范围。
      */
+    @Transactional(rollbackFor = Exception.class)
     public ResponseResult update(UpstreamDTO params) {
         Merchant upstream = new Merchant(params);
+        nameValidationService.validate(upstream);
         upstream.setCategoryId(upstreamMapper.selectCategoryIdByCode(MerchantCategoryCode.INSURANCE_ORG));
         upstream.setUpdateBy(SystemCommonUtil.getNowUserId());
         int x = upstreamMapper.updateById(upstream);

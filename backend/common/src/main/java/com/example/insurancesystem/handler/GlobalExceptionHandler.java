@@ -19,6 +19,18 @@ import javax.servlet.http.HttpServletRequest;
 public class GlobalExceptionHandler {
 
     /**
+     * 手工并发保存上下游时由数据库有效名称唯一索引兜底，转为可理解的业务冲突。
+     * 其他唯一约束失败仍使用通用冲突提示，响应中不泄露 SQL、索引数据或租户信息。
+     */
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    public ResponseEntity<ResponseResult> handleDuplicateKey(org.springframework.dao.DuplicateKeyException e) {
+        String message = e.getMostSpecificCause().getMessage();
+        return ResponseEntity.ok(new ResponseResult(400,
+                message != null && message.contains("uk_biz_merchant_active_name")
+                        ? "当前企业已存在同名上游机构或下游商家" : "数据已存在，请勿重复提交"));
+    }
+
+    /**
      * 处理业务层主动抛出的可预期失败，保留业务码、提示和附加数据供前端采取针对性动作。
      */
     @ExceptionHandler(BusinessException.class)

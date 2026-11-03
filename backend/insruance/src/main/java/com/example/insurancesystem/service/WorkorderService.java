@@ -75,4 +75,14 @@ public interface WorkorderService {
      * 关闭指定工单当前续保提醒。
      */
     ResponseResult disableRenewReminder(Long id);
+    /**
+     * 按商业、交强或全部范围保存周期化续保跟进，周期和企业权限由服务层校验。
+     */
+    ResponseResult followUpRenewal(Long id, com.example.insurancesystem.domain.workorder.RenewalFollowUpRequest request);
+
+    /**
+     * 复用正常建单聚合保存导入工单，按填入阶段恢复状态和匹配处理人，不创建附件。
+     */
+    ResponseResult insertImported(WorkorderDTO params);
+
 }

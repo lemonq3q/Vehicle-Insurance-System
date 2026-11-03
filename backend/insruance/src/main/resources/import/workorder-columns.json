@@ -1,0 +1,717 @@
+[
+  {
+    "label": "* 提交店铺",
+    "path": "createMerchantName",
+    "type": "text",
+    "required": true,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "提交人",
+    "path": "submitterName",
+    "type": "text",
+    "required": false,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "* 承保上游机构",
+    "path": "insuranceMerchantName",
+    "type": "text",
+    "required": true,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "处理人姓名",
+    "path": "handlerName",
+    "type": "text",
+    "required": false,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "处理人登录邮箱",
+    "path": "handlerEmail",
+    "type": "text",
+    "required": false,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "处理人证件号",
+    "path": "handlerIdNum",
+    "type": "text",
+    "required": false,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "* 车辆类别",
+    "path": "type",
+    "type": "enum",
+    "required": true,
+    "group": "基础信息",
+    "values": {
+      "旧车": 0,
+      "新车": 1
+    }
+  },
+  {
+    "label": "* 车主类别",
+    "path": "ownerType",
+    "type": "enum",
+    "required": true,
+    "group": "基础信息",
+    "values": {
+      "个人": 0,
+      "组织": 1
+    }
+  },
+  {
+    "label": "业务区域编码",
+    "path": "areaCode",
+    "type": "text",
+    "required": false,
+    "group": "基础信息",
+    "maxLength": 100
+  },
+  {
+    "label": "商业起期",
+    "path": "commercialInsuranceStartTime",
+    "type": "date",
+    "required": false,
+    "group": "基础信息"
+  },
+  {
+    "label": "交强起期",
+    "path": "compulsoryInsuranceStartTime",
+    "type": "date",
+    "required": false,
+    "group": "基础信息"
+  },
+  {
+    "label": "车主姓名",
+    "path": "ownerName",
+    "type": "text",
+    "required": false,
+    "group": "投保人信息",
+    "maxLength": 100
+  },
+  {
+    "label": "车主电话",
+    "path": "ownerPhone",
+    "type": "text",
+    "required": false,
+    "group": "投保人信息",
+    "maxLength": 20
+  },
+  {
+    "label": "车主证件号",
+    "path": "ownerIdNum",
+    "type": "text",
+    "required": false,
+    "group": "投保人信息",
+    "maxLength": 50
+  },
+  {
+    "label": "组织名称",
+    "path": "organizationName",
+    "type": "text",
+    "required": false,
+    "group": "投保人信息",
+    "maxLength": 100
+  },
+  {
+    "label": "统一社会信用代码",
+    "path": "socialCreditCode",
+    "type": "text",
+    "required": false,
+    "group": "投保人信息",
+    "maxLength": 100
+  },
+  {
+    "label": "工单备注",
+    "path": "remark",
+    "type": "text",
+    "required": false,
+    "group": "投保人信息",
+    "maxLength": 500
+  },
+  {
+    "label": "合格证厂牌型号",
+    "path": "vehicleCertificate.brandModel",
+    "type": "text",
+    "required": false,
+    "group": "合格证",
+    "maxLength": 95
+  },
+  {
+    "label": "合格证车辆类型",
+    "path": "vehicleCertificate.vehicleType",
+    "type": "text",
+    "required": false,
+    "group": "合格证",
+    "maxLength": 95
+  },
+  {
+    "label": "合格证车架号",
+    "path": "vehicleCertificate.vehicleCode",
+    "type": "text",
+    "required": false,
+    "group": "合格证",
+    "maxLength": 95
+  },
+  {
+    "label": "合格证发动机号",
+    "path": "vehicleCertificate.engineCode",
+    "type": "text",
+    "required": false,
+    "group": "合格证",
+    "maxLength": 95
+  },
+  {
+    "label": "合格证核定载客",
+    "path": "vehicleCertificate.seats",
+    "type": "integer",
+    "required": false,
+    "group": "合格证"
+  },
+  {
+    "label": "合格证整备质量",
+    "path": "vehicleCertificate.curbWeight",
+    "type": "integer",
+    "required": false,
+    "group": "合格证"
+  },
+  {
+    "label": "合格证排量",
+    "path": "vehicleCertificate.displacement",
+    "type": "integer",
+    "required": false,
+    "group": "合格证"
+  },
+  {
+    "label": "合格证核定载质量",
+    "path": "vehicleCertificate.approvedLoadCapacity",
+    "type": "integer",
+    "required": false,
+    "group": "合格证"
+  },
+  {
+    "label": "发票发票金额",
+    "path": "vehicleInvoice.invoiceAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "发票"
+  },
+  {
+    "label": "发票购方名称",
+    "path": "vehicleInvoice.buyerName",
+    "type": "text",
+    "required": false,
+    "group": "发票",
+    "maxLength": 95
+  },
+  {
+    "label": "发票购方证件号",
+    "path": "vehicleInvoice.buyerIdNum",
+    "type": "text",
+    "required": false,
+    "group": "发票",
+    "maxLength": 95
+  },
+  {
+    "label": "发票车辆类型",
+    "path": "vehicleInvoice.vehicleType",
+    "type": "text",
+    "required": false,
+    "group": "发票",
+    "maxLength": 95
+  },
+  {
+    "label": "发票厂牌型号",
+    "path": "vehicleInvoice.brandModel",
+    "type": "text",
+    "required": false,
+    "group": "发票",
+    "maxLength": 95
+  },
+  {
+    "label": "发票车架号",
+    "path": "vehicleInvoice.vehicleCode",
+    "type": "text",
+    "required": false,
+    "group": "发票",
+    "maxLength": 95
+  },
+  {
+    "label": "发票发动机号",
+    "path": "vehicleInvoice.engineCode",
+    "type": "text",
+    "required": false,
+    "group": "发票",
+    "maxLength": 95
+  },
+  {
+    "label": "发票核定载客",
+    "path": "vehicleInvoice.seats",
+    "type": "integer",
+    "required": false,
+    "group": "发票"
+  },
+  {
+    "label": "发票核定载质量",
+    "path": "vehicleInvoice.approvedLoadCapacity",
+    "type": "integer",
+    "required": false,
+    "group": "发票"
+  },
+  {
+    "label": "行驶证车牌号",
+    "path": "vehicleLicense.licensePlate",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 45
+  },
+  {
+    "label": "行驶证车辆类型",
+    "path": "vehicleLicense.vehicleType",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 95
+  },
+  {
+    "label": "行驶证所有人",
+    "path": "vehicleLicense.ownerName",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 95
+  },
+  {
+    "label": "行驶证使用性质",
+    "path": "vehicleLicense.usageNature",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 95
+  },
+  {
+    "label": "行驶证厂牌型号",
+    "path": "vehicleLicense.brandModel",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 95
+  },
+  {
+    "label": "行驶证车架号",
+    "path": "vehicleLicense.vehicleCode",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 95
+  },
+  {
+    "label": "行驶证发动机号",
+    "path": "vehicleLicense.engineCode",
+    "type": "text",
+    "required": false,
+    "group": "行驶证",
+    "maxLength": 95
+  },
+  {
+    "label": "行驶证注册日期",
+    "path": "vehicleLicense.registrationDate",
+    "type": "date",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "行驶证发证日期",
+    "path": "vehicleLicense.issueDate",
+    "type": "date",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "行驶证核定载客",
+    "path": "vehicleLicense.seats",
+    "type": "integer",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "行驶证核定载质量",
+    "path": "vehicleLicense.approvedLoadCapacity",
+    "type": "integer",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "行驶证整备质量",
+    "path": "vehicleLicense.curbWeight",
+    "type": "integer",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "行驶证是否过户",
+    "path": "vehicleLicense.isTransfer",
+    "type": "integer",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "行驶证过户日期",
+    "path": "vehicleLicense.transferDate",
+    "type": "date",
+    "required": false,
+    "group": "行驶证"
+  },
+  {
+    "label": "报价单号",
+    "path": "quotationNo",
+    "type": "text",
+    "required": false,
+    "group": "报价信息",
+    "maxLength": 100
+  },
+  {
+    "label": "商业保费",
+    "path": "commercialAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "交强保费",
+    "path": "compulsoryAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "车船税",
+    "path": "vehicleAndTaxAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "非车保费",
+    "path": "nonMotorAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "非车险名称",
+    "path": "nonMotorInsuranceName",
+    "type": "text",
+    "required": false,
+    "group": "报价信息",
+    "maxLength": 100
+  },
+  {
+    "label": "非车保障金额",
+    "path": "nonMotorCoverageAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游计费方式",
+    "path": "upstreamComputeType",
+    "type": "enum",
+    "required": false,
+    "group": "报价信息",
+    "values": {
+      "含税": 0,
+      "去税": 1
+    }
+  },
+  {
+    "label": "上游商业比例",
+    "path": "upstreamCommercialPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游交强比例",
+    "path": "upstreamCompulsoryPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游车船税比例",
+    "path": "upstreamVehicleAndVesselTaxPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游非车比例",
+    "path": "upstreamNonMotorPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游商业费用",
+    "path": "upstreamCommercialAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游交强费用",
+    "path": "upstreamCompulsoryAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游车船税费用",
+    "path": "upstreamVehicleAndVesselTaxAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "上游非车费用",
+    "path": "upstreamNonMotorAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游计费方式",
+    "path": "downstreamComputeType",
+    "type": "enum",
+    "required": false,
+    "group": "报价信息",
+    "values": {
+      "含税": 0,
+      "去税": 1
+    }
+  },
+  {
+    "label": "下游商业比例",
+    "path": "downstreamCommercialPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游交强比例",
+    "path": "downstreamCompulsoryPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游车船税比例",
+    "path": "downstreamVehicleAndVesselTaxPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游非车比例",
+    "path": "downstreamNonMotorPercentage",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游商业费用",
+    "path": "downstreamCommercialAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游交强费用",
+    "path": "downstreamCompulsoryAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游车船税费用",
+    "path": "downstreamVehicleAndVesselTaxAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "下游非车费用",
+    "path": "downstreamNonMotorAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "报价备注",
+    "path": "quotationRemark",
+    "type": "text",
+    "required": false,
+    "group": "报价信息",
+    "maxLength": 500
+  },
+  {
+    "label": "报价失败原因",
+    "path": "quotationFailedRemark",
+    "type": "text",
+    "required": false,
+    "group": "报价信息",
+    "maxLength": 500
+  },
+  {
+    "label": "报价时间",
+    "path": "quotationTime",
+    "type": "date",
+    "required": false,
+    "group": "报价信息"
+  },
+  {
+    "label": "应缴保费",
+    "path": "requiredPayAmount",
+    "type": "decimal",
+    "required": false,
+    "group": "支付信息"
+  },
+  {
+    "label": "收款人姓名",
+    "path": "payName",
+    "type": "text",
+    "required": false,
+    "group": "支付信息",
+    "maxLength": 100
+  },
+  {
+    "label": "收款人手机",
+    "path": "payIdNum",
+    "type": "text",
+    "required": false,
+    "group": "支付信息",
+    "maxLength": 100
+  },
+  {
+    "label": "收款开户行",
+    "path": "payBank",
+    "type": "text",
+    "required": false,
+    "group": "支付信息",
+    "maxLength": 100
+  },
+  {
+    "label": "收款银行卡号",
+    "path": "payBankCardNum",
+    "type": "text",
+    "required": false,
+    "group": "支付信息",
+    "maxLength": 100
+  },
+  {
+    "label": "支付备注",
+    "path": "payRemark",
+    "type": "text",
+    "required": false,
+    "group": "支付信息",
+    "maxLength": 500
+  },
+  {
+    "label": "支付失败原因",
+    "path": "payFailedRemark",
+    "type": "text",
+    "required": false,
+    "group": "支付信息",
+    "maxLength": 500
+  },
+  {
+    "label": "核保备注",
+    "path": "underwritingRemark",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 500
+  },
+  {
+    "label": "核保失败原因",
+    "path": "underwritingFailedRemark",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 500
+  },
+  {
+    "label": "核保时间",
+    "path": "underwritingTime",
+    "type": "date",
+    "required": false,
+    "group": "承保信息"
+  },
+  {
+    "label": "商业保单号",
+    "path": "commercialPolicyNo",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 100
+  },
+  {
+    "label": "交强保单号",
+    "path": "compulsoryPolicyNo",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 100
+  },
+  {
+    "label": "物流单号",
+    "path": "trackingNum",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 100
+  },
+  {
+    "label": "物流公司",
+    "path": "logisticsCompany",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 100
+  },
+  {
+    "label": "承保备注",
+    "path": "acceptInsuranceRemark",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 500
+  },
+  {
+    "label": "承保失败原因",
+    "path": "acceptInsuranceFailedRemark",
+    "type": "text",
+    "required": false,
+    "group": "承保信息",
+    "maxLength": 500
+  },
+  {
+    "label": "承保时间",
+    "path": "finishTime",
+    "type": "date",
+    "required": false,
+    "group": "承保信息"
+  }
+]

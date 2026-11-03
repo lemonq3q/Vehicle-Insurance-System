@@ -78,7 +78,8 @@
         <el-table-column prop="bankAndCardNum" label="银行卡"/>
         <!-- <el-table-column prop="businessArea" label="业务区域" show-overflow-tooltip /> -->
         <!-- <el-table-column prop="channel" label="所属渠道"/> -->
-        <el-table-column prop="storeManager" label="联系人"/>
+        <el-table-column prop="contact" label="联系人"/>
+        <el-table-column prop="phone" label="联系电话"/>
         <el-table-column prop="createTime" label="创建时间"/>
         <el-table-column label="操作" v-if="isHasPerm('merchant:update')">
           <template #default="scope">
@@ -308,7 +309,7 @@ const handleAdd = () => {
 }
 
 /**
- * 下游或商户人员成功写入后刷新机构首页，确保弹窗关闭前后列表数据保持一致。
+ * 下游及联系人基础信息成功写入后刷新机构首页，确保弹窗关闭前后列表数据保持一致。
  */
 const handleImportSuccess = () => {
   page.pageNum = 1;

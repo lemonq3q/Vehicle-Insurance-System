@@ -42,5 +42,5 @@ public interface MerchantMapper extends BatchBaseMapper<Merchant> {
      * 批量查询当前企业已存在的有效商户名称，供导入前排除数据库冲突行。
      */
     List<String> selectExistingNames(@Param("enterpriseId") Long enterpriseId,
-                                     @Param("names") List<String> names);
+                                     @Param("names") List<String> names, @Param("direction") String direction);
 }

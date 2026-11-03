@@ -2,6 +2,7 @@
   <div class="container_body card">
     <div class="title_container">
       <div class="search_title" style="margin: 0;">基础信息</div>
+      <OcrApplyButton v-if="hasOcrCandidates" class="ocr-global-apply" size="large" @click="applyAllOcrCandidates()">全部应用识别结果</OcrApplyButton>
       <div class="title_radio_container">
         <el-radio-group v-model="info.type">
           <el-radio :value="1">新车</el-radio>
@@ -39,21 +40,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item prop="createBy" label="提交人">
-          <el-select
-            style="width: 100%;"
-            v-model="info.createBy"
-            clearable
-            placeholder="请选择提交人"
-            :loading="loading.createBy"
-          >
-            <el-option
-              v-for="item in createByOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
+        <el-form-item prop="submitterName" label="提交人">
+          <el-input v-model="info.submitterName" maxlength="100" placeholder="请输入提交人" />
         </el-form-item>
         <el-form-item prop="areaCode" label="业务区域">
           <!-- <el-cascader
@@ -165,7 +153,13 @@
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item label="身份证识别信息" v-if="showFlag.idCardRecognition && info.ownerType == 0" label-position="top" class="cascade_form_container">
+        <el-form-item v-if="info.ownerType == 0" label-position="top" class="cascade_form_container">
+          <template #label>
+            <div class="ocr-section-heading">
+              <span>身份证识别信息</span>
+              <OcrApplyButton v-if="hasOcrCandidatesFor(['idCardBack'])" size="large" @click="applyAllOcrCandidates(['idCardBack'])">全部应用</OcrApplyButton>
+            </div>
+          </template>
           <el-form
           ref="idCardRef"
           status-icon
@@ -180,6 +174,7 @@
               maxlength="100"
               placeholder="请补充"
               />
+              <OcrCandidate :candidates="getOcrCandidates('ownerName')" @apply="applyOcrCandidate('ownerName', $event)" />
             </el-form-item>
             <el-form-item label="证件号码">
               <el-input
@@ -188,6 +183,7 @@
               placeholder="请补充"
               maxlength="50"
               />
+              <OcrCandidate :candidates="getOcrCandidates('ownerIdNum')" @apply="applyOcrCandidate('ownerIdNum', $event)" />
             </el-form-item>
           </el-form>
         </el-form-item>
@@ -236,7 +232,13 @@
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item label="营业执照识别信息" v-if="showFlag.businessLicenseRecognition && info.ownerType == 1" label-position="top" class="cascade_form_container">
+        <el-form-item v-if="info.ownerType == 1" label-position="top" class="cascade_form_container">
+          <template #label>
+            <div class="ocr-section-heading">
+              <span>营业执照识别信息</span>
+              <OcrApplyButton v-if="hasOcrCandidatesFor(['businessLicense'])" size="large" @click="applyAllOcrCandidates(['businessLicense'])">全部应用</OcrApplyButton>
+            </div>
+          </template>
           <el-form
           ref="idCardRef"
           status-icon
@@ -251,6 +253,7 @@
               maxlength="95"
               placeholder="请补充"
               />
+              <OcrCandidate :candidates="getOcrCandidates('organizationName')" @apply="applyOcrCandidate('organizationName', $event)" />
             </el-form-item>
             <el-form-item label="社会信用代码">
               <el-input
@@ -259,6 +262,7 @@
               placeholder="请补充"
               maxlength="95"
               />
+              <OcrCandidate :candidates="getOcrCandidates('socialCreditCode')" @apply="applyOcrCandidate('socialCreditCode', $event)" />
             </el-form-item>
           </el-form>
         </el-form-item>
@@ -349,7 +353,13 @@
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item label="行驶证识别信息" v-if="showFlag.licenseRecognition && info.type==0" label-position="top" class="cascade_form_container">
+        <el-form-item v-if="info.type==0" label-position="top" class="cascade_form_container">
+          <template #label>
+            <div class="ocr-section-heading">
+              <span>行驶证识别信息</span>
+              <OcrApplyButton v-if="hasOcrCandidatesFor(['licenseFront', 'licenseBack'])" size="large" @click="applyAllOcrCandidates(['licenseFront', 'licenseBack'])">全部应用</OcrApplyButton>
+            </div>
+          </template>
           <div class="params_container cascade_params_container cascade_form">
             <div class="param_item cascade_param_item">
               <span class="form_title cascade_form_title">车牌号</span>
@@ -358,6 +368,7 @@
                 v-model="info.vehicleLicense.licensePlate" 
                 placeholder="请补充"
                 maxlength="45"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.licensePlate')" @apply="applyOcrCandidate('vehicleLicense.licensePlate', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -367,6 +378,7 @@
                 v-model="info.vehicleLicense.vehicleType" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.vehicleType')" @apply="applyOcrCandidate('vehicleLicense.vehicleType', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -376,6 +388,7 @@
                 v-model="info.vehicleLicense.ownerName" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.ownerName')" @apply="applyOcrCandidate('vehicleLicense.ownerName', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -385,6 +398,7 @@
                 v-model="info.vehicleLicense.usageNature" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.usageNature')" @apply="applyOcrCandidate('vehicleLicense.usageNature', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -394,6 +408,7 @@
                 v-model="info.vehicleLicense.brandModel" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.brandModel')" @apply="applyOcrCandidate('vehicleLicense.brandModel', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -403,6 +418,7 @@
                 v-model="info.vehicleLicense.vehicleCode" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.vehicleCode')" @apply="applyOcrCandidate('vehicleLicense.vehicleCode', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -412,6 +428,7 @@
                 v-model="info.vehicleLicense.engineCode" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.engineCode')" @apply="applyOcrCandidate('vehicleLicense.engineCode', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -423,6 +440,7 @@
                   type="date"
                   placeholder="请补充"
                 />
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.registrationDate')" @apply="applyOcrCandidate('vehicleLicense.registrationDate', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -434,6 +452,7 @@
                   type="date"
                   placeholder="请补充"
                 />
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.issueDate')" @apply="applyOcrCandidate('vehicleLicense.issueDate', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -448,6 +467,7 @@
                     <span style="margin-right: 8px; color: #666;">座</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.seats')" @apply="applyOcrCandidate('vehicleLicense.seats', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -462,6 +482,7 @@
                     <span style="margin-right: 8px; color: #666;">kg</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.approvedLoadCapacity')" @apply="applyOcrCandidate('vehicleLicense.approvedLoadCapacity', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -476,6 +497,7 @@
                     <span style="margin-right: 8px; color: #666;">kg</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.curbWeight')" @apply="applyOcrCandidate('vehicleLicense.curbWeight', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -485,6 +507,7 @@
                   <el-radio :value="1" style="margin-right: 10px;">过户</el-radio>
                   <el-radio :value="0">非过户</el-radio>
                 </el-radio-group>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.isTransfer')" @apply="applyOcrCandidate('vehicleLicense.isTransfer', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item" v-if="info.vehicleLicense.isTransfer==1">
@@ -496,6 +519,7 @@
                   type="date"
                   placeholder="请补充"
                 />
+              <OcrCandidate :candidates="getOcrCandidates('vehicleLicense.transferDate')" @apply="applyOcrCandidate('vehicleLicense.transferDate', $event)" />
               </div>
             </div>
           </div>
@@ -545,7 +569,13 @@
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item label="合格证识别信息" v-if="showFlag.certificateRecognition && info.type==1" label-position="top" class="cascade_form_container">
+        <el-form-item v-if="info.type==1" label-position="top" class="cascade_form_container">
+          <template #label>
+            <div class="ocr-section-heading">
+              <span>合格证识别信息</span>
+              <OcrApplyButton v-if="hasOcrCandidatesFor(['certificate'])" size="large" @click="applyAllOcrCandidates(['certificate'])">全部应用</OcrApplyButton>
+            </div>
+          </template>
           <div class="params_container cascade_params_container cascade_form">
             <div class="param_item cascade_param_item">
               <span class="form_title cascade_form_title">厂牌型号</span>
@@ -554,6 +584,7 @@
                 v-model="info.vehicleCertificate.brandModel" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.brandModel')" @apply="applyOcrCandidate('vehicleCertificate.brandModel', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -563,6 +594,7 @@
                 v-model="info.vehicleCertificate.vehicleType" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.vehicleType')" @apply="applyOcrCandidate('vehicleCertificate.vehicleType', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -572,6 +604,7 @@
                 v-model="info.vehicleCertificate.vehicleCode" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.vehicleCode')" @apply="applyOcrCandidate('vehicleCertificate.vehicleCode', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -581,6 +614,7 @@
                 v-model="info.vehicleCertificate.engineCode" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.engineCode')" @apply="applyOcrCandidate('vehicleCertificate.engineCode', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -595,6 +629,7 @@
                     <span style="margin-right: 8px; color: #666;">kg</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.curbWeight')" @apply="applyOcrCandidate('vehicleCertificate.curbWeight', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -609,6 +644,7 @@
                     <span style="margin-right: 8px; color: #666;">座</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.seats')" @apply="applyOcrCandidate('vehicleCertificate.seats', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -623,6 +659,7 @@
                     <span style="margin-right: 8px; color: #666;">ml</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.displacement')" @apply="applyOcrCandidate('vehicleCertificate.displacement', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -637,6 +674,7 @@
                     <span style="margin-right: 8px; color: #666;">kg</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleCertificate.approvedLoadCapacity')" @apply="applyOcrCandidate('vehicleCertificate.approvedLoadCapacity', $event)" />
               </div>
             </div>
           </div>
@@ -686,7 +724,13 @@
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item label="购车发票识别信息" v-if="showFlag.invoiceRecognition && info.type==1" label-position="top" class="cascade_form_container">
+        <el-form-item v-if="info.type==1" label-position="top" class="cascade_form_container">
+          <template #label>
+            <div class="ocr-section-heading">
+              <span>购车发票识别信息</span>
+              <OcrApplyButton v-if="hasOcrCandidatesFor(['invoice'])" size="large" @click="applyAllOcrCandidates(['invoice'])">全部应用</OcrApplyButton>
+            </div>
+          </template>
           <div class="params_container cascade_params_container cascade_form">
             <div class="param_item cascade_param_item">
               <span class="form_title cascade_form_title">发票金额</span>
@@ -700,6 +744,7 @@
                     <span style="margin-right: 8px; color: #666;">元</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.invoiceAmount')" @apply="applyOcrCandidate('vehicleInvoice.invoiceAmount', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -709,6 +754,7 @@
                 v-model="info.vehicleInvoice.buyerName" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.buyerName')" @apply="applyOcrCandidate('vehicleInvoice.buyerName', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -718,6 +764,7 @@
                 v-model="info.vehicleInvoice.buyerIdNum" 
                 placeholder="请补充"
                 maxlength="45"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.buyerIdNum')" @apply="applyOcrCandidate('vehicleInvoice.buyerIdNum', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -727,6 +774,7 @@
                 v-model="info.vehicleInvoice.vehicleType" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.vehicleType')" @apply="applyOcrCandidate('vehicleInvoice.vehicleType', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -736,6 +784,7 @@
                 v-model="info.vehicleInvoice.brandModel" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.brandModel')" @apply="applyOcrCandidate('vehicleInvoice.brandModel', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -745,6 +794,7 @@
                 v-model="info.vehicleInvoice.vehicleCode" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.vehicleCode')" @apply="applyOcrCandidate('vehicleInvoice.vehicleCode', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -754,6 +804,7 @@
                 v-model="info.vehicleInvoice.engineCode" 
                 placeholder="请补充"
                 maxlength="95"/>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.engineCode')" @apply="applyOcrCandidate('vehicleInvoice.engineCode', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -768,6 +819,7 @@
                     <span style="margin-right: 8px; color: #666;">座</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.seats')" @apply="applyOcrCandidate('vehicleInvoice.seats', $event)" />
               </div>
             </div>
             <div class="param_item cascade_param_item">
@@ -782,6 +834,7 @@
                     <span style="margin-right: 8px; color: #666;">kg</span>
                   </template>
                 </el-input>
+              <OcrCandidate :candidates="getOcrCandidates('vehicleInvoice.approvedLoadCapacity')" @apply="applyOcrCandidate('vehicleInvoice.approvedLoadCapacity', $event)" />
               </div>
             </div>
           </div>
@@ -953,7 +1006,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, watch, defineProps, defineEmits } from 'vue';
+import { computed, nextTick, reactive, ref, onMounted, watch, defineProps, defineEmits } from 'vue';
 import { validatePhoneNumber, validFileSize } from '@/utils/validate';
 import { insertWorkorder, selectWorkorderById, updateWorkorderBaseInfo } from '@/api/workorder';
 import Message from '@/utils/message';
@@ -963,12 +1016,14 @@ import { jsonStrToObj, transNumStrToNum } from '@/utils/convert';
 import { downloadByUrl, uploadToOss } from '@/api/file';
 import { isNumber } from '@/utils/validate';
 import { selectDownstreamOption } from '@/api/downstream';
-import { selectUserOptionByMerchantId } from '@/api/user';
+import { selectDownstreamById } from '@/api/downstream';
 // import { selectInusranceCompanyOptions } from '@/api/upstream';
 // import { selectAreaByMerhcantId } from '@/api/merchant';
 import { getCascadeAreaCode } from '@/utils/ChinaCitys';
 import { convertDateToSecondTimestamp } from '@/utils/time';
-import { extractNonEmptyProps } from '@/utils/convert';
+import { normalizeOcrCandidates, consumeOcrCandidates, fillEmptyOcrFields } from '@/utils/ocrCandidates';
+import OcrCandidate from './OcrCandidate.vue';
+import OcrApplyButton from './OcrApplyButton.vue';
 import AreaSelect from './AreaSelect.vue';
 import { selectInsuranceCompanyByAreaCode } from '@/api/merchant';
 import Loading from '@/utils/loading';
@@ -1019,7 +1074,6 @@ const dialogImageUrl = ref("");
 
 const loading = reactive({
   createMerchant: false,
-  createBy: false,
   insurance: false,
   area: false
 });
@@ -1047,11 +1101,6 @@ const insuranceOptions = ref({
 const showFlag = reactive({
   dialogVisible: false,
   insuranceVisible: false,
-  idCardRecognition: false,
-  licenseRecognition: false,
-  certificateRecognition: false,
-  invoiceRecognition: false,
-  businessLicenseRecognition: false
 });
 
 const file = reactive({
@@ -1068,9 +1117,7 @@ const rules = reactive({
   createMerchantId: [
     { required: true, message: '请选择提交店铺', trigger: 'blur' }
   ],
-  createBy: [
-    // { required: true, message: '请选择提交人', trigger: 'blur' }
-  ],
+  submitterName: [{ max: 100, message: '提交人最多100字', trigger: 'blur' }],
   areaCode: [
     { required: true, message: '请选择业务区域', trigger: 'blur' }
   ],
@@ -1097,7 +1144,7 @@ const info = reactive({
   ownerType: 0,
   type: 1,
   createMerchantId: undefined,
-  createBy: undefined,
+  submitterName: '',
   areaCode: [],
   ownerPhone: "",
   ownerIdNum: "",
@@ -1147,9 +1194,88 @@ const info = reactive({
 
 const oriInfo = ref({});
 
+/**
+ * 将各张证件的候选与人工表单分开保存；正副页保留独立来源。
+ * 上传令牌阻止重传、移除或撤销后的迟到响应污染当前编辑，候选不随工单提交。
+ */
+const ocrResults = reactive({});
+const ocrUploadVersions = {};
+const ocrSources = {
+  idCardBack: '身份证', businessLicense: '营业执照', licenseFront: '行驶证正页',
+  licenseBack: '行驶证副页', certificate: '合格证', invoice: '发票'
+};
+
+/**
+ * 按车主和车辆类型过滤来源，避免切换场景后应用隐藏证件的信息。
+ * @param {string} source 上传证件标识。
+ * @returns {boolean} 是否属于当前录入场景，不改变表单。
+ */
+const isActiveOcrSource = (source) => {
+  if (source === 'idCardBack') return info.ownerType === 0;
+  if (source === 'businessLicense') return info.ownerType === 1;
+  if (source === 'licenseFront' || source === 'licenseBack') return info.type === 0;
+  return info.type === 1;
+};
+
+/**
+ * 接收当前证件识别结果，空字段自动补齐，已填写字段保留候选供人工复核。
+ * @param {string} source 通过上传版本检查后的证件来源。
+ * @param {object} values 已完成字段白名单和日期转换的候选映射。
+ * @returns {void} 更新表单和待确认候选；隐藏场景只保留候选，避免迟到响应写入其他场景。
+ */
+const receiveOcrCandidates = (source, values) => {
+  ocrResults[source] = isActiveOcrSource(source) ? fillEmptyOcrFields(info, values) : values;
+};
+
+/**
+ * 读取原字段的全部识别来源，仅生成候选展示，不覆盖已有信息。
+ * @param {string} path 工单表单字段路径。
+ * @returns {Array} 含来源名称及原类型值的候选集合。
+ */
+const getOcrCandidates = (path) => Object.keys(ocrSources)
+  .filter(source => isActiveOcrSource(source) && ocrResults[source]?.[path] !== undefined)
+  .map(source => ({ source, label: ocrSources[source], value: ocrResults[source][path] }));
+
+const hasOcrCandidates = computed(() => Object.keys(ocrResults)
+  .some(source => isActiveOcrSource(source) && Object.keys(ocrResults[source]).length > 0));
+
+/**
+ * 用户点击应用后才更新对应字段；复制日期避免候选和表单共享可变对象。
+ * @param {string} path 字段白名单生成的工单路径。
+ * @param {*} value 用户选定的非空候选，保留表单所需类型。
+ * @returns {void} 修改当前编辑并消费该字段的所有来源候选，用户仍需保存工单。
+ */
+const applyOcrCandidate = (path, value) => {
+  const parts = path.split('.');
+  const target = parts.length === 2 ? info[parts[0]] : info;
+  target[parts[parts.length - 1]] = value instanceof Date ? new Date(value.getTime()) : value;
+  consumeOcrCandidates(ocrResults, path);
+};
+
+/**
+ * 控制各识别信息区的全部应用按钮，仅在该区仍有未确认候选时显示。
+ * @param {string[]} sources 区块对应的证件来源，行驶证包含正副两页。
+ * @returns {boolean} 是否存在当前车辆/车主场景可应用的候选。
+ */
+const hasOcrCandidatesFor = (sources) => sources.some(source => isActiveOcrSource(source)
+  && Object.keys(ocrResults[source] || {}).length > 0);
+
+/**
+ * 应用当前场景全部有效候选；正副页冲突时优先正页，与候选显示顺序一致。
+ * 缺失字段不清空，应用后的候选立即移除；字段仍可人工编辑，不触发提交。
+ * @param {string[]} sources 可选的证件来源范围，未提供时应用当前场景全部证件。
+ */
+const applyAllOcrCandidates = (sources) => {
+  const paths = new Set(Object.values(ocrResults).flatMap(values => Object.keys(values)));
+  paths.forEach(path => {
+    const candidate = getOcrCandidates(path).find(item => !sources || sources.includes(item.source));
+    if (candidate) applyOcrCandidate(path, candidate.value);
+  });
+};
+
 // const areaOptions = ref([]);
 
-const createByOptions = ref([]);
+
 
 /**
  * 初始化工单编辑器：始终加载险种定义，更新模式额外并行查询工单详情，随后把持久化数据还原为表单状态。
@@ -1174,57 +1300,12 @@ onMounted(async () => {
 });
 
 /**
- * 清除证件文件关联、预览列表和所有 OCR 成功标记，供编辑撤销或重新回填前恢复干净状态。
+ * 清除证件文件关联、预览列表和所有 OCR 候选，供编辑撤销或重新回填前恢复干净状态。
  * 这里只重置上传相关状态，不直接清空工单主体表单。
  */
 const reset = () => {
-  workorderFileId.idCardFrontId = undefined;
-  workorderFileId.idCardBackId = undefined;
-  workorderFileId.licenseFrontId = undefined;
-  workorderFileId.licenseBackId = undefined;
-  workorderFileId.certificateId = undefined;
-  workorderFileId.invoiceId = undefined;
-
+  Object.keys(file).forEach(source => clearUploadState(source));
   showFlag.dialogVisible = false;
-  // showFlag.insuranceVisible = false;
-  showFlag.idCardRecognition = false;
-  showFlag.licenseRecognition = false;
-  showFlag.certificateRecognition = false;
-  showFlag.invoiceRecognition = false;
-  showFlag.businessLicenseRecognition = false;
-
-  file.idCardBack = [];
-  file.idCardFront = [];
-  file.certificate = [];
-  file.invoice = [];
-  file.licenseFront = [];
-  file.licenseBack = [];
-}
-
-/**
-
- * * 根据工单创建机构查询可作为提交人的机构用户；机构未选择时清空候选人，防止跨机构沿用旧人员。
-
- */
-const getUserOptionByMerchantId = async () => {
-  loading.createBy = true;
-  if (info.createMerchantId == null || info.createMerchantId == undefined){
-    loading.createBy = false;
-    createByOptions.value = [];
-    return;
-  }
-  await selectUserOptionByMerchantId(info.createMerchantId).then(res=>{
-    res = res.data;
-    if (res.code == 200){
-      createByOptions.value = res.data.map(item => {
-        return {
-          label: `${item.name} ${item.username}`,
-          value: item.id
-        }
-      });
-    }
-  });
-  loading.createBy = false;
 }
 
 // const getAreaOptionByMerchantId = async () => {
@@ -1289,33 +1370,21 @@ const getInsuranceCompanyOption = async () => {
 }
 
 /**
- * 监听创建机构变化并刷新提交人范围。新增状态默认选择返回的首位人员；编辑初次回填时保留原提交人，
- * 通过 pageStatus 跳过一次自动覆盖，避免异步选项加载破坏历史数据。
+ * 切换提交店铺后从下游主体带入联系人字符串；编辑初始化保留历史提交人快照。
+ * 异步返回须与当前选店一致，防止快速切换店铺后错误覆盖，用户可在带入后自由编辑。
  */
-watch(
-  () => info.createMerchantId, 
-  async () => {
-    await getUserOptionByMerchantId();
-    // 当 newValue 变化时，主动调用获取提交人选项的方法
-    if (pageStatus.value == 'ready'){
-      if(Array.isArray(createByOptions.value) && createByOptions.value.length > 0){
-        info.createBy = createByOptions.value[0].value;
-      }
-      else{
-        info.createBy = undefined;
-      }
-    }
-    else {
-      pageStatus.value = 'ready';
-    }
-    
-    // getAreaOptionByMerchantId();
-  },
-  {
-    immediate: true, // 立即执行一次（页面挂载后，若有默认值则直接请求）
-    deep: false // 基本类型，无需深度监听
+watch(() => info.createMerchantId, async (merchantId) => {
+  if (pageStatus.value !== 'ready') {
+    pageStatus.value = 'ready';
+    return;
   }
-);
+  if (!merchantId) { info.submitterName = ''; return; }
+  const originalName = info.submitterName;
+  const res = await selectDownstreamById(merchantId);
+  if (info.createMerchantId === merchantId && info.submitterName === originalName && res.data.code === 200) {
+    info.submitterName = res.data.data.contact || '';
+  }
+});
 
 /**
 
@@ -1626,8 +1695,8 @@ const buildInfo = () => {
   info.ownerName = oriInfo.value.ownerName;
   info.organizationName = oriInfo.value.organizationName;
   info.socialCreditCode = oriInfo.value.socialCreditCode;
-  info.commercialInsuranceStartTime = new Date(oriInfo.value.commercialInsuranceStartTime * 1000);
-  info.compulsoryInsuranceStartTime = new Date(oriInfo.value.compulsoryInsuranceStartTime * 1000);
+  info.commercialInsuranceStartTime = oriInfo.value.commercialInsuranceStartTime == null ? null : new Date(oriInfo.value.commercialInsuranceStartTime * 1000);
+  info.compulsoryInsuranceStartTime = oriInfo.value.compulsoryInsuranceStartTime == null ? null : new Date(oriInfo.value.compulsoryInsuranceStartTime * 1000);
   info.remark = oriInfo.value.remark;
   
   info.createMerchantId = oriInfo.value.createMerchantId;
@@ -1642,7 +1711,7 @@ const buildInfo = () => {
     value: oriInfo.value.insuranceMerchantId
   }];
 
-  info.createBy = oriInfo.value.createBy;
+  info.submitterName = oriInfo.value.submitterName || '';
   info.areaCode = getCascadeAreaCode(oriInfo.value.areaCode);
 
   if (oriInfo.value.vehicleLicense != null && oriInfo.value.vehicleLicense != undefined){
@@ -1664,20 +1733,7 @@ const buildInfo = () => {
     info.vehicleCertificate = {...oriInfo.value.vehicleCertificate};
   }
 
-  if (oriInfo.value.ownerType == 0){
-    showFlag.idCardRecognition = true;
-  }
-  else {
-    showFlag.businessLicenseRecognition = true;
-  }
-  if (oriInfo.value.type == 0){
-    showFlag.licenseRecognition = true;
-  }
-  else {
-    showFlag.certificateRecognition = true;
-    showFlag.invoiceRecognition = true;
-  }
-  if (oriInfo.value.workorderFileList != null && oriInfo.value.workorderFileList != undefined){
+if (oriInfo.value.workorderFileList != null && oriInfo.value.workorderFileList != undefined){
     oriInfo.value.workorderFileList.forEach(item => {
        if (item.type == 'idCardFront'){
         file.idCardFront = [{
@@ -1754,6 +1810,8 @@ const buildInfo = () => {
     }
     });
   }
+
+  nextTick(() => { pageStatus.value = 'ready'; });
 
 }
 
@@ -1876,6 +1934,9 @@ const handleOcrFileUpload = async (uploadFile, ocrType) => {
 
  */
 const clearUploadState = (type) => {
+  ocrUploadVersions[type] = (ocrUploadVersions[type] || 0) + 1;
+  delete ocrResults[type];
+  loadingFlag[type] = false;
   const fileIdMap = {
     idCardFront: 'idCardFrontId',
     idCardBack: 'idCardBackId',
@@ -1894,26 +1955,11 @@ const clearUploadState = (type) => {
 
 /**
 
- * * 统一回滚失败证件的文件状态和 OCR 成功标记，并向用户展示具体错误原因。
+ * * 统一回滚失败证件的文件状态和候选，保留人工已录入字段，并向用户展示具体错误原因。
 
  */
 const handleUploadFail = (type, message = '图片上传失败，请重新上传') => {
   clearUploadState(type);
-  if (type == 'idCardBack'){
-    showFlag.idCardRecognition = false;
-  }
-  if (type == 'licenseFront' || type == 'licenseBack'){
-    showFlag.licenseRecognition = false;
-  }
-  if (type == 'certificate'){
-    showFlag.certificateRecognition = false;
-  }
-  if (type == 'invoice'){
-    showFlag.invoiceRecognition = false;
-  }
-  if (type == 'businessLicense'){
-    showFlag.businessLicenseRecognition = false;
-  }
   Message.error(message);
 }
 
@@ -1923,6 +1969,8 @@ const handleUploadFail = (type, message = '图片上传失败，请重新上传'
 
  */
 const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.idCardFront = (ocrUploadVersions.idCardFront || 0) + 1;
+  delete ocrResults.idCardFront;
   const validFiles = validFileSize(uploadFiles);
   file.idCardFront = validFiles;
   if (validFiles.length == 0){
@@ -1931,23 +1979,27 @@ const handleIdCardFrontChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.idCardFront = true;
     const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    if (ocrUploadVersions.idCardFront !== version) return;
     workorderFileId.idCardFrontId = fileInfo.id;
     file.idCardFront = [uploadFileItem];
   }
   catch(error){
+    if (ocrUploadVersions.idCardFront !== version) return;
     handleUploadFail('idCardFront', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.idCardFront = false;
+    if (ocrUploadVersions.idCardFront === version) loadingFlag.idCardFront = false;
   }
 }
 
 /**
 
- * * 上传身份证人像面并执行身份证 OCR，成功后保存文件 ID 并回填车主姓名和身份证号。
+ * * 上传身份证人像面并执行身份证 OCR，成功后保存文件 ID 并生成姓名与证件号候选。
 
  */
 const handleIdCardBackChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.idCardBack = (ocrUploadVersions.idCardBack || 0) + 1;
+  delete ocrResults.idCardBack;
   const validFiles = validFileSize(uploadFiles);
   file.idCardBack = validFiles;
   if (validFiles.length == 0){
@@ -1956,35 +2008,37 @@ const handleIdCardBackChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.idCardBack = true;
     const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "idCard");
+    if (ocrUploadVersions.idCardBack !== version) return;
     workorderFileId.idCardBackId = fileInfo.id;
     file.idCardBack = [uploadFileItem];
     buildIdCardInfo(recognitionData);
   }
   catch(error){
+    if (ocrUploadVersions.idCardBack !== version) return;
     handleUploadFail('idCardBack', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.idCardBack = false;
+    if (ocrUploadVersions.idCardBack === version) loadingFlag.idCardBack = false;
   }
 }
 
 /**
-
- * * 将身份证 OCR 的姓名和号码写入个人车主字段，并标记页面已经完成身份证识别。
-
+ * 接收本次证件的非空 OCR 结果，空字段自动补齐，已有内容保留候选供人工应用。
+ * 日期由统一转换处理，行驶证正副页分别保留来源，不覆盖识别期间新增的手工内容。
  */
 const buildIdCardInfo = (data) => {
-  info.ownerName = data.name;
-  info.ownerIdNum = data.idNum;
-  showFlag.idCardRecognition = true;
+  receiveOcrCandidates('idCardBack', normalizeOcrCandidates(data, { name: 'ownerName', idNum: 'ownerIdNum' }));
+
 }
 
 /**
 
- * * 上传行驶证正页并执行车辆行驶证 OCR，成功后回填车辆登记资料。
+ * * 上传行驶证正页并执行车辆行驶证 OCR，成功后展示车辆登记候选。
 
  */
 const handleLicenseFrontChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.licenseFront = (ocrUploadVersions.licenseFront || 0) + 1;
+  delete ocrResults.licenseFront;
   const validFiles = validFileSize(uploadFiles);
   file.licenseFront = validFiles;
   if (validFiles.length == 0){
@@ -1993,24 +2047,28 @@ const handleLicenseFrontChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.licenseFront = true;
     const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleLicense");
+    if (ocrUploadVersions.licenseFront !== version) return;
     workorderFileId.licenseFrontId = fileInfo.id;
     file.licenseFront = [uploadFileItem];
-    buildLicenseInfo(recognitionData);
+    buildLicenseInfo(recognitionData, 'licenseFront');
   }
   catch(error){
+    if (ocrUploadVersions.licenseFront !== version) return;
     handleUploadFail('licenseFront', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.licenseFront = false;
+    if (ocrUploadVersions.licenseFront === version) loadingFlag.licenseFront = false;
   }
 }
 
 /**
 
- * * 上传行驶证副页并使用同一行驶证 OCR 规则补充车辆核定载重、尺寸等资料。
+ * * 上传行驶证副页并使用同一行驶证 OCR 规则保留车辆核定载重、尺寸等候选。
 
  */
 const handleLicenseBackChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.licenseBack = (ocrUploadVersions.licenseBack || 0) + 1;
+  delete ocrResults.licenseBack;
   const validFiles = validFileSize(uploadFiles);
   file.licenseBack = validFiles;
   if (validFiles.length == 0){
@@ -2019,44 +2077,37 @@ const handleLicenseBackChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.licenseBack = true;
     const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleLicense");
+    if (ocrUploadVersions.licenseBack !== version) return;
     workorderFileId.licenseBackId = fileInfo.id;
     file.licenseBack = [uploadFileItem];
-    buildLicenseInfo(recognitionData);
+    buildLicenseInfo(recognitionData, 'licenseBack');
   }
   catch(error){
+    if (ocrUploadVersions.licenseBack !== version) return;
     handleUploadFail('licenseBack', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.licenseBack = false;
+    if (ocrUploadVersions.licenseBack === version) loadingFlag.licenseBack = false;
   }
 }
 
 /**
- * 把 OCR 返回的秒级登记、发证和过户时间恢复为 Date，只用非空字段覆盖当前行驶证表单。
- * 这样分别识别正副页时不会用缺失字段清空另一页已经识别或人工填写的内容。
+ * 接收本次证件的非空 OCR 结果，空字段自动补齐，已有内容保留候选供人工应用。
+ * 日期由统一转换处理，行驶证正副页分别保留来源，不覆盖识别期间新增的手工内容。
  */
-const buildLicenseInfo = (data) => {
-  if (data.registrationDate != null && data.registrationDate != undefined){
-    data.registrationDate = new Date(data.registrationDate*1000);
-  } 
-  
-  if (data.issueDate != null && data.issueDate != undefined){
-    data.issueDate = new Date(data.issueDate*1000);
-  }
+const buildLicenseInfo = (data, source) => {
+  receiveOcrCandidates(source, normalizeOcrCandidates(data, info.vehicleLicense, 'vehicleLicense'));
 
-  if (data.transferDate != null && data.transferDate != undefined){
-    data.transferDate = new Date(data.transferDate*1000);
-  }
-  Object.assign(info.vehicleLicense, extractNonEmptyProps(data));
-  showFlag.licenseRecognition = true;
 }
 
 /**
 
- * * 上传车辆合格证并执行合格证 OCR，保存文件关联后回填车型、车架号及车辆参数。
+ * * 上传车辆合格证并执行合格证 OCR，保存文件关联后保留车型、车架号及车辆参数候选。
 
  */
 const handleCertificateChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.certificate = (ocrUploadVersions.certificate || 0) + 1;
+  delete ocrResults.certificate;
   const validFiles = validFileSize(uploadFiles);
   file.certificate = validFiles;
   if (validFiles.length == 0){
@@ -2065,34 +2116,37 @@ const handleCertificateChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.certificate = true;
     const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleCertificate");
+    if (ocrUploadVersions.certificate !== version) return;
     workorderFileId.certificateId = fileInfo.id;
     file.certificate = [uploadFileItem];
     buildCertificateInfo(recognitionData);
   }
   catch(error){
+    if (ocrUploadVersions.certificate !== version) return;
     handleUploadFail('certificate', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.certificate = false;
+    if (ocrUploadVersions.certificate === version) loadingFlag.certificate = false;
   }
 }
 
 /**
-
- * * 使用合格证 OCR 结果替换合格证表单，并显示识别成功状态供用户复核。
-
+ * 接收本次证件的非空 OCR 结果，空字段自动补齐，已有内容保留候选供人工应用。
+ * 日期由统一转换处理，行驶证正副页分别保留来源，不覆盖识别期间新增的手工内容。
  */
 const buildCertificateInfo = (data) => {
-  info.vehicleCertificate = data;
-  showFlag.certificateRecognition = true;
+  receiveOcrCandidates('certificate', normalizeOcrCandidates(data, info.vehicleCertificate, 'vehicleCertificate'));
+
 }
 
 /**
 
- * * 上传机动车发票并执行发票 OCR，成功后回填购车金额、买方和车辆识别资料。
+ * * 上传机动车发票并执行发票 OCR，成功后保留购车金额、买方和车辆资料候选。
 
  */
 const handleInvoiceChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.invoice = (ocrUploadVersions.invoice || 0) + 1;
+  delete ocrResults.invoice;
   const validFiles = validFileSize(uploadFiles);
   file.invoice = validFiles;
   if (validFiles.length == 0){
@@ -2101,34 +2155,37 @@ const handleInvoiceChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.invoice = true;
     const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "vehicleInvoice");
+    if (ocrUploadVersions.invoice !== version) return;
     workorderFileId.invoiceId = fileInfo.id;
     file.invoice = [uploadFileItem];
     buildInvoiceInfo(recognitionData);
   }
   catch(error){
+    if (ocrUploadVersions.invoice !== version) return;
     handleUploadFail('invoice', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.invoice = false;
+    if (ocrUploadVersions.invoice === version) loadingFlag.invoice = false;
   }
 }
 
 /**
-
- * * 使用发票 OCR 结果更新发票录入区域，并标记该证件已完成识别。
-
+ * 接收本次证件的非空 OCR 结果，空字段自动补齐，已有内容保留候选供人工应用。
+ * 日期由统一转换处理，行驶证正副页分别保留来源，不覆盖识别期间新增的手工内容。
  */
 const buildInvoiceInfo = (data) => {
-  info.vehicleInvoice = data;
-  showFlag.invoiceRecognition = true;
+  receiveOcrCandidates('invoice', normalizeOcrCandidates(data, info.vehicleInvoice, 'vehicleInvoice'));
+
 }
 
 /**
 
- * * 企业车主上传营业执照后执行 OCR，保存文件关联并回填企业名称和统一社会信用代码。
+ * * 企业车主上传营业执照后执行 OCR，保存文件关联并保留企业名称和统一社会信用代码候选。
 
  */
 const handleBusinessLicenseChange = async (uploadFile, uploadFiles) => {
+  const version = ocrUploadVersions.businessLicense = (ocrUploadVersions.businessLicense || 0) + 1;
+  delete ocrResults.businessLicense;
   const validFiles = validFileSize(uploadFiles);
   file.businessLicense = validFiles;
   if (validFiles.length == 0){
@@ -2137,27 +2194,27 @@ const handleBusinessLicenseChange = async (uploadFile, uploadFiles) => {
   try{
     loadingFlag.businessLicense = true;
     const { fileInfo, recognitionData, uploadFileItem } = await handleOcrFileUpload(uploadFile, "businessLicense");
+    if (ocrUploadVersions.businessLicense !== version) return;
     workorderFileId.businessLicenseId = fileInfo.id;
     file.businessLicense = [uploadFileItem];
     buildBusinessLicenseInfo(recognitionData);
   }
   catch(error){
+    if (ocrUploadVersions.businessLicense !== version) return;
     handleUploadFail('businessLicense', error.message || '图片上传失败，请重新上传');
   }
   finally{
-    loadingFlag.businessLicense = false;
+    if (ocrUploadVersions.businessLicense === version) loadingFlag.businessLicense = false;
   }
 }
 
 /**
-
- * * 将营业执照识别结果写入企业车主字段，并标记识别完成。
-
+ * 接收本次证件的非空 OCR 结果，空字段自动补齐，已有内容保留候选供人工应用。
+ * 日期由统一转换处理，行驶证正副页分别保留来源，不覆盖识别期间新增的手工内容。
  */
 const buildBusinessLicenseInfo = (data) => {
-  info.organizationName = data.organizationName;
-  info.socialCreditCode = data.socialCreditCode;
-  showFlag.businessLicenseRecognition = true;
+  receiveOcrCandidates('businessLicense', normalizeOcrCandidates(data, { organizationName: 'organizationName', socialCreditCode: 'socialCreditCode' }));
+
 }
 
 /**
@@ -2268,5 +2325,38 @@ const routeToDetail = (id) => {
 
 
 <style scoped>
-
+/* 候选增加高度时，字段名仍对齐第一行输入框，不随整块内容垂直居中。 */
+.cascade_param_item { align-items: flex-start; }
+.cascade_form_title { line-height: 32px; align-self: flex-start; }
+.cascade_form_content { min-width: 0; }
+.cascade_form :deep(.el-form-item) { align-items: flex-start; }
+.cascade_form :deep(.el-form-item__content) { align-content: flex-start; }
+/* OCR复核区域使用无边框输入，保留原字段编辑和键盘操作。 */
+.cascade_form :deep(.el-input__wrapper),
+.cascade_form :deep(.el-input__wrapper:hover),
+.cascade_form :deep(.el-input__wrapper.is-focus) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  padding-left: 0;
+  padding-right: 0;
+}
+.cascade_form :deep(.el-input__inner) { border: 0; }
+/*
+ * 批量应用放入识别区标题，按钮出现时不额外挤占正文行。
+ * 身份证与营业执照固定两列表单轨道，候选只在各自输入区内增长高度，不按内容重新分列。
+ */
+.ocr-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 32px; }
+.ocr-section-heading > span { min-width: 0; }
+.cascade_form_container > :deep(.el-form-item__label),
+.cascade_form_container > :deep(.el-form-item__label-wrap) { width: 100%; height: auto; }
+.cascade_form.el-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; width: 100%; }
+.cascade_form.el-form :deep(.el-form-item) { min-width: 0; width: 100%; margin: 0; }
+.cascade_form :deep(.el-form-item__content) { min-width: 0; }
+.cascade_form.el-form :deep(.el-form-item__content) { flex: 1; width: 0; }
+.cascade_form :deep(.el-input) { min-width: 0; max-width: 100%; width: 100%; }
+.ocr-global-apply { margin-left: auto; }
+@media (max-width: 640px) {
+  .cascade_form.el-form { grid-template-columns: minmax(0, 1fr); }
+}
 </style>

@@ -29,6 +29,8 @@ public class WorkorderDTO {
 
     private Long createMerchantId;
 
+    private String submitterName;
+
     private String createMerchantName;
 
     private String createMerchantCode;
@@ -165,7 +167,27 @@ public class WorkorderDTO {
 
     private String handleUserPhone;
 
+    /**
+     * 处理账号的绑定邮箱、微信昵称与登录账号，仅供姓名缺失时选择展示身份。
+     * 保持handleUserName为真实姓名，不把邮箱或微信身份覆盖进姓名字段。
+     */
+    private String handleUserEmail;
+
+    private String handleUserWechatNickname;
+
+    private String handleUserUsername;
+
     private Integer status;
+
+    private Integer commercialRenewalStatus;
+    private Integer commercialRenewalCycle;
+    private Integer compulsoryRenewalStatus;
+    private Integer compulsoryRenewalCycle;
+
+    private Boolean commercialReminder;
+    private Boolean compulsoryReminder;
+    private Integer commercialActiveCycle;
+    private Integer compulsoryActiveCycle;
 
     private Integer remindStatus;
 
@@ -209,6 +231,7 @@ public class WorkorderDTO {
      * 计算工单列表和详情展示所需的全部派生字段，包括车辆标识、上下游机构、经办人、状态、费用合计和最终车主名称。
      */
     public void compute(){
+        computeRenewal();
         this.vehicleId = computeVehicleId();
         this.createMerchant = computeCreateMerchant();
         this.handleMerchant = computeHandleMerchant();
@@ -389,4 +412,22 @@ public class WorkorderDTO {
         }
         return organizationName;
     }
+    /**
+     * 以各自起期计算当前提醒周期和显示状态，历史已处理标记只对所属周期有效。
+     * 不更改持久化完成周期；下个年度自然恢复未处理，无需依赖定时任务准时运行。
+     */
+    private void computeRenewal() {
+        java.time.LocalDate today = java.time.LocalDate.now(com.example.insurancesystem.utils.RenewalCalendar.BUSINESS_ZONE);
+        commercialActiveCycle = com.example.insurancesystem.utils.RenewalCalendar.activeCycle(
+                com.example.insurancesystem.utils.RenewalCalendar.startDate(commercialInsuranceStartTime), today);
+        compulsoryActiveCycle = com.example.insurancesystem.utils.RenewalCalendar.activeCycle(
+                com.example.insurancesystem.utils.RenewalCalendar.startDate(compulsoryInsuranceStartTime), today);
+        if (commercialRenewalCycle == null || commercialRenewalCycle < commercialActiveCycle) commercialRenewalStatus = 0;
+        if (compulsoryRenewalCycle == null || compulsoryRenewalCycle < compulsoryActiveCycle) compulsoryRenewalStatus = 0;
+        if (commercialRenewalStatus == null) commercialRenewalStatus = 0;
+        if (compulsoryRenewalStatus == null) compulsoryRenewalStatus = 0;
+        commercialReminder = commercialActiveCycle > 0 && commercialRenewalStatus == 0 && !Integer.valueOf(1).equals(renewalReminderDisabled);
+        compulsoryReminder = compulsoryActiveCycle > 0 && compulsoryRenewalStatus == 0 && !Integer.valueOf(1).equals(renewalReminderDisabled);
+    }
+
 }

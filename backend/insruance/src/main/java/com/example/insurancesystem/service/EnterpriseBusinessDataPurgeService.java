@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 /**
  * 清空指定企业在车险在线库和对象存储中产生的全部业务资料。
- * 清理范围仅包括企业私有的上下游商户、商户人员、工单及阶段明细、车辆资料、OCR 记录、
+ * 清理范围仅包括企业私有的上下游主体及联系人、工单及阶段明细、车辆资料、OCR 记录、
  * 文件元数据和 OSS 对象。企业险种目录 biz_insurance_product 属于可重复录单的基础配置，
  * 清理后仍须保留；工单险种明细 biz_workorder_insurance 则随所属工单一同归档，避免孤儿记录。
  * 租户成员、用户、订阅、余额、订单等 SaaS 域数据不在本服务的表清单中。
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Service
 public class EnterpriseBusinessDataPurgeService {
     /**
-     * 数据迁移采用从工单关联明细到主体、从商户人员到商户、最后到文件元数据的固定顺序。
+     * 数据迁移采用从工单关联明细到主体、从商户区域到商户、最后到文件元数据的固定顺序。
      * 每个在线表都必须存在同名 _archive 表；当前表没有声明级联外键，但该顺序可兼容后续增加约束。
      */
     private static final List<String> ARCHIVE_TABLES = List.of(
@@ -33,7 +33,7 @@ public class EnterpriseBusinessDataPurgeService {
             "biz_vehicle_license", "biz_vehicle_invoice", "biz_vehicle_certificate",
             "biz_workorder_quote", "biz_workorder_commission", "biz_workorder_payment",
             "biz_workorder_underwriting", "biz_workorder_logistics", "biz_workorder",
-            "biz_merchant_staff_role", "biz_merchant_area", "biz_merchant_staff", "biz_merchant",
+            "biz_merchant_area", "biz_merchant",
             "biz_ocr_record", "sys_file"
     );
 
@@ -112,7 +112,7 @@ public class EnterpriseBusinessDataPurgeService {
                         + "JOIN information_schema.columns a ON a.table_schema=s.table_schema "
                         + "AND a.table_name=? AND a.column_name=s.column_name "
                         + "WHERE s.table_schema=DATABASE() AND s.table_name=? "
-                        + "AND s.extra NOT LIKE '%GENERATED%' AND a.extra NOT LIKE '%GENERATED%' "
+                        + "AND COALESCE(s.generation_expression,'')='' AND COALESCE(a.generation_expression,'')='' "
                         + "ORDER BY s.ordinal_position",
                 String.class, archiveTable, sourceTable);
         if (columns.isEmpty()) {

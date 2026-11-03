@@ -4,6 +4,11 @@
 
     <resultMap id="WorkorderDTOResultMap" type="com.example.insurancesystem.domain.workorder.WorkorderDTO">
         <id column="id" property="id"/>
+        <result column="submitter_name" property="submitterName"/>
+        <result column="commercial_renewal_status" property="commercialRenewalStatus"/>
+        <result column="commercial_renewal_cycle" property="commercialRenewalCycle"/>
+        <result column="compulsory_renewal_status" property="compulsoryRenewalStatus"/>
+        <result column="compulsory_renewal_cycle" property="compulsoryRenewalCycle"/>
         <result column="code" property="code"/>
         <result column="type" property="type"/>
         <result column="owner_type" property="ownerType"/>
@@ -76,6 +81,9 @@
         <result column="handle_by" property="handleBy"/>
         <result column="handle_user_name" property="handleUserName"/>
         <result column="handle_user_phone" property="handleUserPhone"/>
+        <result column="handle_user_email" property="handleUserEmail"/>
+        <result column="handle_user_wechat_nickname" property="handleUserWechatNickname"/>
+        <result column="handle_user_username" property="handleUserUsername"/>
         <result column="status" property="status"/>
         <result column="remind_status" property="remindStatus"/>
         <result column="renewal_status_cycle" property="renewalStatusCycle"/>
@@ -143,29 +151,44 @@
         </association>
     </resultMap>
 
-    <!--
-      续保以创建日为起点按固定天数循环。当前周期截止天数为：
-      max(ceil(已过天数 / 周期天数), 1) * 周期天数。
-      截止天数减已过天数得到本周期剩余天数，仅当剩余 0—提前提醒天数时进入提醒窗口。
-      该算法使第一个 365 天周期在第 335 天进入 30 天提醒窗口；创建当天剩余 365 天，不会误提醒。
-    -->
+    <!-- 各险种按原始起期计算已开始的年度提醒周期；在同一派生数据源统一列表和去重计数。 -->
+    <sql id="renewalWorkorderFrom">
+        FROM (SELECT rw.*,
+            CASE WHEN rw.commercial_insurance_start_time IS NULL THEN 0 ELSE GREATEST(0,
+                CASE WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)))) + 1) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)))) + 1
+                     WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))))) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))))
+                     ELSE (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)))) - 1 END) END AS commercial_active_cycle,
+            CASE WHEN rw.compulsory_insurance_start_time IS NULL THEN 0 ELSE GREATEST(0,
+                CASE WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)))) + 1) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)))) + 1
+                     WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))))) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))))
+                     ELSE (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)))) - 1 END) END AS compulsory_active_cycle
+            FROM biz_workorder rw) w
+    </sql>
+    <sql id="commercialPending">
+        (w.commercial_active_cycle &gt; 0 AND (COALESCE(w.commercial_renewal_cycle, 0) &lt; w.commercial_active_cycle OR COALESCE(w.commercial_renewal_status, 0) = 0))
+    </sql>
+    <sql id="compulsoryPending">
+        (w.compulsory_active_cycle &gt; 0 AND (COALESCE(w.compulsory_renewal_cycle, 0) &lt; w.compulsory_active_cycle OR COALESCE(w.compulsory_renewal_status, 0) = 0))
+    </sql>
     <sql id="renewalCycleDueCondition">
-        #{renewalCycleDays} &gt; 0
-        AND #{renewalAdvanceDays} &gt;= 0
-        AND #{renewalAdvanceDays} &lt; #{renewalCycleDays}
-        AND DATEDIFF(CURDATE(), DATE(w.created_at)) &gt;= 0
-        AND (
-            GREATEST(
-                CEIL(DATEDIFF(CURDATE(), DATE(w.created_at)) / #{renewalCycleDays}),
-                1
-            ) * #{renewalCycleDays}
-            - DATEDIFF(CURDATE(), DATE(w.created_at))
-        ) BETWEEN 0 AND #{renewalAdvanceDays}
+        (<include refid="commercialPending"/> OR <include refid="compulsoryPending"/>)
+    </sql>
+    <sql id="renewalListCondition">
+        <choose>
+            <when test="remindStatus == null">(w.commercial_active_cycle &gt; 0 OR w.compulsory_active_cycle &gt; 0)</when>
+            <when test="remindStatus == 0"><include refid="renewalCycleDueCondition"/></when>
+            <otherwise>
+                ((w.commercial_active_cycle &gt; 0 AND w.commercial_renewal_cycle &gt;= w.commercial_active_cycle AND w.commercial_renewal_status = #{remindStatus})
+                OR (w.compulsory_active_cycle &gt; 0 AND w.compulsory_renewal_cycle &gt;= w.compulsory_active_cycle AND w.compulsory_renewal_status = #{remindStatus}))
+            </otherwise>
+        </choose>
     </sql>
 
     <sql id="normalizedWorkorderColumns">
         w.id, w.code, w.owner_type, w.type,
-        w.create_merchant_id, w.handle_merchant_id, w.area_code, w.insurance_merchant_id,
+        w.commercial_renewal_status, w.commercial_renewal_cycle,
+        w.compulsory_renewal_status, w.compulsory_renewal_cycle,
+        w.create_merchant_id, w.submitter_name, w.handle_merchant_id, w.area_code, w.insurance_merchant_id,
         w.remark, w.owner_phone, w.owner_id_num, w.owner_name,
         w.organization_name, w.social_credit_code,
         w.commercial_insurance_start_time, w.compulsory_insurance_start_time,
@@ -243,12 +266,15 @@
         cm.name AS create_merchant_name, cm.code AS create_merchant_code,
         hm.name AS handle_merchant_name, hm.code AS handle_merchant_code,
         im.name AS insurance_merchant_name, im.code AS insurance_merchant_code,
-        cu.real_name AS create_user_name, COALESCE(cu.phone, cu.username) AS create_user_phone,
-        hu.real_name AS handle_user_name, COALESCE(hu.phone, hu.username) AS handle_user_phone
+        w.submitter_name AS create_user_name, NULL AS create_user_phone,
+        <!-- 真实姓名与回退身份分别返回，列表按需选取，兼容原有电话和组合文本字段。 -->
+        hu.real_name AS handle_user_name, COALESCE(hu.phone, hu.username) AS handle_user_phone,
+        hu.email AS handle_user_email, hu.wechat_nickname AS handle_user_wechat_nickname,
+        hu.username AS handle_user_username
     </sql>
 
     <sql id="normalizedWorkorderFrom">
-        FROM biz_workorder w
+        <include refid="renewalWorkorderFrom"/>
         LEFT JOIN biz_workorder_quote q
             ON q.workorder_id = w.id AND q.deleted = 0
         LEFT JOIN biz_workorder_commission upc
@@ -298,17 +324,12 @@
         <if test="areaCode != null and areaCode != ''">AND w.area_code = #{areaCode}</if>
         <if test="insuranceId != null">AND w.insurance_merchant_id = #{insuranceId}</if>
         <if test="status != null">AND w.status = #{status}</if>
-        <if test="remindStatus != null">
-            <choose>
-                <when test="remindStatus == 0">AND COALESCE(w.remind_status, 0) = 0</when>
-                <otherwise>AND w.remind_status = #{remindStatus}</otherwise>
-            </choose>
-        </if>
+
     </sql>
 
     <select id="selectRenewCount" resultType="java.lang.Integer">
         SELECT COUNT(DISTINCT w.id)
-        FROM biz_workorder w
+        <include refid="renewalWorkorderFrom"/>
         WHERE w.deleted = 0
           AND w.renewal_reminder_disabled = 0
           AND <include refid="renewalCycleDueCondition"/>
@@ -345,35 +366,15 @@
         <where>
             w.deleted = 0
             AND w.renewal_reminder_disabled = 0
-            AND <include refid="renewalCycleDueCondition"/>
+            AND <include refid="renewalListCondition"/>
             <include refid="commonSearchConditions"/>
         </where>
-        ORDER BY (
-            GREATEST(
-                CEIL(DATEDIFF(CURDATE(), DATE(w.created_at)) / #{renewalCycleDays}),
-                1
-            ) * #{renewalCycleDays}
-            - DATEDIFF(CURDATE(), DATE(w.created_at))
-        ) ASC, w.created_at ASC
+        ORDER BY w.created_at ASC, w.id ASC
     </select>
 
-    <update id="updateRenewalStatusCycle">
-        UPDATE biz_workorder
-        SET renewal_status_cycle = CASE
-            WHEN TIMESTAMPADD(YEAR, GREATEST(YEAR(CURDATE()) - YEAR(DATE(created_at)), 1), DATE(created_at)) &gt;= CURDATE()
-                THEN GREATEST(YEAR(CURDATE()) - YEAR(DATE(created_at)), 1)
-            ELSE GREATEST(YEAR(CURDATE()) - YEAR(DATE(created_at)), 1) + 1
-        END
-        WHERE id = #{id} AND deleted = 0
-    </update>
-
+    <!-- 新续保状态按各自周期读取，不依赖凌晨任务重置；保留旧任务入口清理旧展示字段。 -->
     <update id="resetExpiredRenewalStatuses">
-        UPDATE biz_workorder
-        SET remind_status = 0,
-            updated_at = updated_at
-        WHERE deleted = 0
-          AND COALESCE(remind_status, 0) IN (1, 2)
-          AND renewal_status_cycle &gt; 0
-          AND CURDATE() &gt; TIMESTAMPADD(YEAR, renewal_status_cycle, DATE(created_at))
+        UPDATE biz_workorder SET remind_status = 0, updated_at = updated_at
+        WHERE deleted = 0 AND COALESCE(remind_status, 0) != 0
     </update>
 </mapper>

@@ -185,10 +185,10 @@
         <el-table-column prop="createUser" label="提交人"/>
         <el-table-column prop="areaCode" label="投保区域" show-overflow-tooltip />
         <el-table-column prop="insuranceCompany" label="保险公司"/>
-        <el-table-column prop="upstreamSumAmount" label="上游政策费用"/>
-        <el-table-column prop="downstreamSumAmount" label="下游政策费用"/>
+        <el-table-column prop="upstreamPolicyFeeDisplay" label="上游政策费用"/>
+        <el-table-column prop="downstreamPolicyFeeDisplay" label="下游政策费用"/>
         <el-table-column prop="handleMerchant" label="处理机构"/>
-        <el-table-column prop="handleUser" label="处理人"/>
+        <el-table-column prop="handleUserDisplay" label="处理人"/>
         <el-table-column prop="workorderStatus" label="工单状态"/>
         <el-table-column prop="createTime" label="创建时间"/>
         <el-table-column prop="updateTime" label="最后跟进时间"/>
@@ -249,7 +249,9 @@
         <el-select
           style="width: 100%;"
           v-model="acceptOrderParams.handleBy"
-          placeholder="请选择处理人员"
+          placeholder="输入姓名或登录邮箱选择处理人"
+          filterable remote clearable
+          :remote-method="getAcceptUserOption"
           :loading="loading.acceptUser"
         >
           <el-option
@@ -268,7 +270,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, watch } from 'vue';
+import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
+import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
 import { selectWorkorder, getWorkorderExcel, acceptWorkorder } from '@/api/workorder';
 import { getCascadeArea } from '@/utils/ChinaCitys';
@@ -277,9 +280,8 @@ import { useRouter } from 'vue-router';
 import { getLastYearRange } from '@/utils/time';
 import { selectDownstreamOption } from '@/api/downstream';
 import { selectUpstreamOption } from '@/api/upstream';
-import { selectUserOption } from '@/api/user';
+import { selectSystemUserOptions } from '@/api/user';
 import { selectInusranceCompanyOptions } from '@/api/upstream';
-import { selectUserOptionByMerchantId } from '@/api/user';
 import Message from '@/utils/message';
 
 const acceptRef = ref();
@@ -397,47 +399,20 @@ const rules = reactive({
 })
 
 /**
-
- * * 根据接单机构查询该机构下可选处理人员；机构为空时清空人员选项，防止提交上一机构的用户。
-
+ * 按关键字选择当前企业有效系统用户，处理机构与人员不再通过已删除的商户人员体系绑定。
+ * 空关键字由后端返回空集合；加载失败仍恢复控件状态，现有工单处理人保留在初始化选项中。
  */
-const getUserOptionByMerchantId = async () => {
+const getAcceptUserOption = async (blurParam) => {
   loading.acceptUser = true;
-  if (acceptOrderParams.handleMerchantId == null || acceptOrderParams.handleMerchantId == undefined){
-    loading.acceptUser = false;
-    acceptUserOptions.value = [];
-    return;
-  }
-  await selectUserOptionByMerchantId(acceptOrderParams.handleMerchantId).then(res=>{
-    res = res.data;
-    if (res.code == 200){
-      acceptUserOptions.value = res.data.map(item => {
-        return {
-          label: `${item.name} ${item.username}`,
-          value: item.id
-        }
-      });
+  try {
+    const response = await selectSystemUserOptions(blurParam);
+    if (response.data.code === 200) {
+      acceptUserOptions.value = response.data.data.map(item => ({
+        label: `${item.realName || ''} ${item.email || item.username || ''}`, value: item.id
+      }));
     }
-  });
-  loading.acceptUser = false;
-}
-
-/**
-
- * * 监听接单机构变化并即时刷新所属人员，确保机构与负责人始终属于同一业务范围。
-
- */
-watch(
-  () => acceptOrderParams.handleMerchantId, 
-  () => {
-    getUserOptionByMerchantId();
-  },
-  {
-    immediate: true, // 立即执行一次（页面挂载后，若有默认值则直接请求）
-    deep: false // 基本类型，无需深度监听
-  }
-);
-
+  } finally { loading.acceptUser = false; }
+};
 
 /**
 
@@ -525,12 +500,12 @@ const getHandleMerchantOption = async (blurParam) => {
  */
 const getHandleUserOpton = async (blurParam) => {
   loading.handleUser = true;
-  await selectUserOption(blurParam).then(res=>{
+  await selectSystemUserOptions(blurParam).then(res=>{
     res = res.data;
     if(res.code == 200){
       handleUserOptions.value = res.data.map(item => {
         return {
-          label: `${item.username} ${item.name}`,
+          label: `${item.username} ${item.realName}`,
           value: item.id
         }
       })
@@ -607,6 +582,7 @@ const handleAccept = (index, row) => {
   if (row.status == 1){
     acceptOrderParams.handleMerchantId = undefined;
     acceptOrderParams.handleBy = undefined;
+    acceptUserOptions.value = [];
     acceptOrderParams.status = 2;
   }
   else {
@@ -617,7 +593,7 @@ const handleAccept = (index, row) => {
       label: `${row.handleMerchantCode} ${row.handleMerchantName}`,
       value: row.handleMerchantId
     }];
-    getUserOptionByMerchantId();
+    acceptUserOptions.value = row.handleBy ? [{ label: row.handleUserName || row.handleUser || '历史处理人', value: row.handleBy }] : [];
   }
 }
 
@@ -676,6 +652,7 @@ const buildSearchParams = () => {
  */
 const buildTableData = (data) => {
   data.forEach(item => {
+    Object.assign(item, buildWorkorderListDisplay(item));
     item.areaCode = getCascadeArea(item.areaCode);
     item.createTime = formatSecondTimestamp(item.createTime);
     item.updateTime = formatSecondTimestamp(item.updateTime);

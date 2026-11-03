@@ -16,12 +16,12 @@
     -->
     <insert id="insertImportBatch" useGeneratedKeys="true" keyProperty="list.id" keyColumn="id">
         INSERT INTO biz_merchant
-        (enterprise_id, code, name, category_id, location, address, contact, phone,
+        (enterprise_id, code, name, category_id, direction, location, address, contact, phone,
          bank, bank_card_num, channel, service_phone, default_area_code,
          created_at, updated_at, updated_by, deleted)
         VALUES
         <foreach collection="list" item="merchant" separator=",">
-            (#{merchant.enterpriseId}, #{merchant.code}, #{merchant.name}, #{merchant.categoryId},
+            (#{merchant.enterpriseId}, #{merchant.code}, #{merchant.name}, #{merchant.categoryId}, #{merchant.direction},
              #{merchant.location}, #{merchant.address}, #{merchant.contact},
              #{merchant.phone}, #{merchant.bank}, #{merchant.bankCardNum}, #{merchant.channel},
              #{merchant.servicePhone}, #{merchant.defaultAreaCode}, NOW(), NOW(),
@@ -31,7 +31,7 @@
 
     <select id="selectExistingNames" resultType="java.lang.String">
         SELECT name FROM biz_merchant
-        WHERE enterprise_id = #{enterpriseId} AND deleted = 0
+        WHERE enterprise_id = #{enterpriseId} AND deleted = 0 AND direction = #{direction}
           AND name IN
           <foreach collection="names" item="name" open="(" separator="," close=")">
               #{name}
@@ -58,15 +58,9 @@
 
     <select id="selectByDownstreamSearchDTO" resultType="com.example.insurancesystem.domain.merchant.DownstreamDTO">
         SELECT m.id, m.code, m.name, c.name AS type, m.location, m.address, m.bank, m.bank_card_num,
-               m.channel, m.default_area_code, contact.name AS store_manager,
+               m.channel, m.default_area_code, m.contact, m.phone,
                UNIX_TIMESTAMP(m.created_at) AS create_time
         <include refid="activeMerchant"/>
-        LEFT JOIN (
-            SELECT s.merchant_id, s.name
-            FROM biz_merchant_staff s
-            JOIN biz_merchant_staff_role sr ON sr.staff_id = s.id AND sr.role_code = 'CONTACT' AND sr.deleted = 0
-            WHERE s.deleted = 0
-        ) contact ON contact.merchant_id = m.id
         <where>
             c.direction = 'DOWNSTREAM' AND m.deleted = 0
             <if test="id != null">AND m.id = #{id}</if>

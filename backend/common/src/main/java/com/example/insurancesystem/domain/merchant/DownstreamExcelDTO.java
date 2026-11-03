@@ -42,7 +42,10 @@ public class DownstreamExcelDTO {
 //    private String channel;
 
     @ExcelProperty("联系人")
-    private String storeManager;
+    private String contact;
+
+    @ExcelProperty("联系电话")
+    private String phone;
 
     @ExcelProperty("创建时间")
     private String createTime;
@@ -70,7 +73,8 @@ public class DownstreamExcelDTO {
 //                .map(AreaConverterUtil::areaCodeConvert)
 //                .collect(Collectors.joining(" , "));
 //        this.channel = downstreamDTO.getChannel();
-        this.storeManager = downstreamDTO.getStoreManager();
+        this.contact = downstreamDTO.getContact();
+        this.phone = downstreamDTO.getPhone();
         if (downstreamDTO.getCreateTime() != null) {
             this.createTime = TimeConvertUtil.timestampConvert(downstreamDTO.getCreateTime());
         }

@@ -2,3 +2,38 @@
 /.agent/
 /AGENTS.md
 /.codex-template-work/
+
+# Local tools, dependencies and build output across all subprojects.
+/.agents/
+**/target/
+**/node_modules/
+**/dist/
+**/.idea/
+**/.vscode/
+
+# Python migration helpers generate these caches locally.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local environment overrides; keep configuration examples versioned.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.log
+.DS_Store
+Thumbs.db
+
+# Generated reports, database backups and verification snapshots.
+# Application templates and maintained scripts live outside these directories.
+/outputs/
+/backups/
+
+# Full database exports contain business data; retain schema and migration SQL.
+/base_conf/database/*_full.sql
+/base_conf/database/*_full_*.sql
+/base_conf/database/*_backup.sql

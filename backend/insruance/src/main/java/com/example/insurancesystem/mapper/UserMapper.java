@@ -33,25 +33,13 @@ public interface UserMapper extends BatchBaseMapper<User> {
      */
     List<Long> selectUserIdsByEnterprise(Long enterpriseId);
 
-    /**
-     * 按人员筛选条件查询兼容旧页面的商户用户聚合模型。
-     */
-    List<MerchantUserDTO> selectByMerchantUserSearchDTO(MerchantUserSearchDTO merchantUserSearchDTO);
 
     /**
      * 查询单个用户及其企业或商户角色详情。
      */
     MerchantUserDTO selectMerchantUserDTOById(Long id);
 
-    /**
-     * 查询指定商户和历史角色下的用户主键，用于兼容旧角色关系。
-     */
-    Long selectUserByRoleAndMerchantId(Long roleId, Long merchantId);
 
-    /**
-     * 查询商户中可承担收款职责的用户。
-     */
-    List<User> selectPayeeByMerchantId(Long merchantId);
 
     /**
      * 分页条件查询当前企业已纳入管理的系统账号。
@@ -66,10 +54,13 @@ public interface UserMapper extends BatchBaseMapper<User> {
     /**
      * 按关键字查询可供选择的企业系统账号。
      */
-    List<User> selectSystemUserOptions(String blurParam);
+    List<User> selectSystemUserOptions(@Param("blurParam") String blurParam, @Param("enterpriseId") Long enterpriseId);
 
     /**
-     * 查询商户全部有效人员，供工单自动选择收款人时按角色优先级判断。
+     * 仅在当前企业有效成员中匹配所有非空身份条件，多人满足时按用户ID升序取首个。
+     * 参数由工单导入提供，邮箱使用登录邮箱，不以用户名或手机号替代。
      */
-    List<User> selectUserByMerchantId(Long merchantId);
+    Long selectImportHandler(@Param("enterpriseId") Long enterpriseId, @Param("name") String name,
+                             @Param("email") String email, @Param("idNum") String idNum);
+
 }

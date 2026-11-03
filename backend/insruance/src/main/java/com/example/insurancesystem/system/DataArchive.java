@@ -18,7 +18,7 @@ public class DataArchive {
     private static final List<String> ARCHIVE_TABLES = List.of(
             "tenant_user", "tenant_enterprise", "tenant_member",
             "auth_role", "auth_permission", "auth_role_permission",
-            "biz_merchant", "biz_merchant_area", "biz_merchant_staff", "biz_merchant_staff_role",
+            "biz_merchant", "biz_merchant_area",
             "biz_insurance_product", "biz_ocr_record", "sys_file", "biz_workorder", "biz_workorder_quote",
             "biz_workorder_commission", "biz_workorder_payment", "biz_workorder_underwriting",
             "biz_workorder_logistics", "biz_vehicle_license", "biz_vehicle_invoice",
@@ -61,7 +61,8 @@ public class DataArchive {
     }
 
     /**
-     * 根据源表和归档表共有列动态生成迁移语句，兼容两张表在演进过程中存在字段差异。
+     * 根据源表和归档表共有的可写列迁移记录，兼容字段差异并排除有效名称等生成列。
+     * 生成列由归档表按行重新计算，不能显式INSERT，否则会使删除主体的定时归档失败。
      */
     private void archiveTable(String sourceTable) {
         String archiveTable = sourceTable + "_archive";
@@ -69,7 +70,8 @@ public class DataArchive {
                 "SELECT s.column_name FROM information_schema.columns s " +
                         "JOIN information_schema.columns a ON a.table_schema=s.table_schema " +
                         "AND a.table_name=? AND a.column_name=s.column_name " +
-                        "WHERE s.table_schema=DATABASE() AND s.table_name=? ORDER BY s.ordinal_position",
+                        "WHERE s.table_schema=DATABASE() AND s.table_name=? " +
+                        "AND COALESCE(s.generation_expression,'')='' AND COALESCE(a.generation_expression,'')='' ORDER BY s.ordinal_position",
                 String.class, archiveTable, sourceTable);
         if (columns.isEmpty()) return;
         String columnSql = columns.stream().map(column -> "`" + column + "`").collect(Collectors.joining(","));
