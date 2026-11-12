@@ -50,8 +50,8 @@
                 <td>¥{{ money(item.priceAmount ?? item.payableAmount) }}</td>
                 <td>{{ adjustmentText(item) }}</td>
                 <td>{{ workorderOverageText(item) }}</td>
-                <td>¥{{ item.payableAmount }}</td>
-                <td>¥{{ item.paidAmount }}</td>
+                <td>¥{{ money(item.payableAmount) }}</td>
+                <td>¥{{ money(item.paidAmount) }}</td>
                 <td>{{ item.autoRenew ? '是' : '否' }}</td>
                 <td><span class="portal-tag" :class="{ warn: [1, 6].includes(item.status) }">{{ statusName('order', item.status) }}</span></td>
                 <td>{{ item.failureReason || '-' }}</td>
@@ -73,6 +73,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getSubscriptionOrders } from '@/api/portal';
@@ -113,7 +114,7 @@ export default {
      * 将套餐价格、退款、抵扣及超额费用统一格式化为两位小数。
      */
     money(value) {
-      return Number(value || 0).toFixed(2);
+      return formatAmount(value ?? 0, '0.00');
     },
     /**
      * 套餐变更优先展示退款，其次展示余额抵扣；没有费用调整时显示占位符。

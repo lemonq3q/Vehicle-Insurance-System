@@ -25,7 +25,7 @@ import java.time.format.ResolverStyle;
 import java.util.*;
 
 /**
- * 导入无附件的历史工单，按统一93列契约解析，并在当前企业内匹配上下游和处理人。
+ * 导入无附件的历史工单，按新版101列或旧101/93列契约解析，并在当前企业内匹配上下游和处理人。
  * 每行先校验后交给独立事务保存，失败行保留原始文字与原因；本服务不启用整文件事务或跨企业匹配。
  * 随请求创建局部解析器，避免 DataFormatter 在并发上传之间共享状态。
  */
@@ -63,7 +63,7 @@ public class WorkorderBatchImportService {
                 .eq(Insurance::getEnterpriseId, enterpriseId).eq(Insurance::getIsDelete, 0));
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheet("工单");
-            validateHeaders(sheet);
+            List<WorkorderImportSchema.Column> columns = validateHeaders(sheet);
             DataFormatter formatter = new DataFormatter(Locale.CHINA);
             List<Row> rows = new ArrayList<>();
             /* 先检查整文件规模，再保存任何行，避免超限文件只导入前半部分。 */
@@ -74,9 +74,9 @@ public class WorkorderBatchImportService {
             BatchImportResult result = new BatchImportResult();
             result.setTotalRows(rows.size());
             for (Row row : rows) {
-                Map<String, String> raw = rawRow(row, formatter);
+                Map<String, String> raw = rawRow(row, formatter, columns);
                 try {
-                    WorkorderDTO workorder = parseRow(row, formatter, enterpriseId, products);
+                    WorkorderDTO workorder = parseRow(row, formatter, enterpriseId, products, columns);
                     writer.write(workorder);
                     result.setSuccessRows(result.getSuccessRows() + 1);
                 } catch (BusinessException | IllegalArgumentException exception) {
@@ -99,16 +99,25 @@ public class WorkorderBatchImportService {
      * 精确核对所有列和顺序，拒绝旧模板或额外附件列，防止长表字段错位。
      * @param sheet 固定业务数据 Sheet。
      */
-    private void validateHeaders(Sheet sheet) {
+    private List<WorkorderImportSchema.Column> validateHeaders(Sheet sheet) {
         if (sheet == null || sheet.getRow(3) == null) throw new BusinessException(400, "缺少工单Sheet或第四行表头");
         Row header = sheet.getRow(3);
         DataFormatter formatter = new DataFormatter(Locale.CHINA);
-        if (header.getLastCellNum() != schema.getColumns().size()) throw new BusinessException(400, "模板列数不符，请下载新版模板");
-        for (int i = 0; i < schema.getColumns().size(); i++) {
-            if (!schema.getColumns().get(i).label().equals(formatter.formatCellValue(header.getCell(i)).trim())) {
-                throw new BusinessException(400, "第" + (i + 1) + "列表头不符，请勿修改模板列顺序");
-            }
+        int size = header.getLastCellNum();
+        if (size == schema.getColumns().size() && matchesHeaders(header, formatter, schema.getColumns(), size)) return schema.getColumns();
+        if ((size == schema.getLegacyColumns().size() || size == 93)
+                && matchesHeaders(header, formatter, schema.getLegacyColumns(), size)) return schema.getLegacyColumns();
+        throw new BusinessException(400, "模板表头或列顺序不符，请下载新版模板");
+    }
+
+    /**
+     * 逐列确认模板版本，不凭列数猜测字段含义，尤其防止新旧101列顺序互相误读。
+     */
+    private boolean matchesHeaders(Row header, DataFormatter formatter, List<WorkorderImportSchema.Column> columns, int size) {
+        for (int i = 0; i < size; i++) {
+            if (!columns.get(i).label().equals(formatter.formatCellValue(header.getCell(i)).trim())) return false;
         }
+        return true;
     }
 
     /**
@@ -126,10 +135,10 @@ public class WorkorderBatchImportService {
      * 保留失败行的原始显示内容以便用户修正，不将识别条件或证件内容写入日志。
      * @return 以官方列名为键的行文字。
      */
-    private Map<String, String> rawRow(Row row, DataFormatter formatter) {
+    private Map<String, String> rawRow(Row row, DataFormatter formatter, List<WorkorderImportSchema.Column> columns) {
         Map<String, String> result = new LinkedHashMap<>();
-        for (int i = 0; i < schema.getColumns().size(); i++) {
-            result.put(schema.getColumns().get(i).label().replace("* ", ""), formatter.formatCellValue(row.getCell(i)).trim());
+        for (int i = 0; i < columns.size(); i++) {
+            result.put(columns.get(i).label().replace("* ", ""), formatter.formatCellValue(row.getCell(i)).trim());
         }
         return result;
     }
@@ -138,11 +147,12 @@ public class WorkorderBatchImportService {
      * 将单行白名单字段转换为聚合 DTO，机构仅按同企业同方向名称精确匹配。
      * 处理人至少提供一项身份条件，非空条件全部参与 AND，稳定选最小用户ID，不使用当前账号冒充处理人。
      */
-    private WorkorderDTO parseRow(Row row, DataFormatter formatter, Long enterpriseId, List<Insurance> products) {
+    private WorkorderDTO parseRow(Row row, DataFormatter formatter, Long enterpriseId, List<Insurance> products,
+                                  List<WorkorderImportSchema.Column> columns) {
         Map<String, Object> fields = new LinkedHashMap<>();
         Map<String, String> identity = new HashMap<>();
-        for (int i = 0; i < schema.getColumns().size(); i++) {
-            WorkorderImportSchema.Column column = schema.getColumns().get(i);
+        for (int i = 0; i < columns.size(); i++) {
+            WorkorderImportSchema.Column column = columns.get(i);
             Object value = parseCell(row.getCell(i), column, formatter);
             if (column.path().startsWith("handler")) {
                 if (value != null) identity.put(column.path(), value.toString());
@@ -227,16 +237,25 @@ public class WorkorderBatchImportService {
     }
 
     /**
-     * 校验跨字段业务关系，保费有值必须有对应起期，车主按个人或组织维护有效名称。
-     * 不导入附件或伪造OCR文件；日期信息与报价、支付、承保字段独立存入各聚合表。
+     * 校验跨字段业务关系，保费有值必须有对应起期，新增保单终期与起期需保持先后关系，车主按个人或组织维护有效名称。
+     * 不导入附件或伪造OCR文件；三种起期、保单及支付承保信息写主表，金额和政策写 quote。
      */
     private void validateBusiness(WorkorderDTO dto) {
         if (dto.getOwnerType() == 0 && (dto.getOwnerName() == null || dto.getOwnerName().isBlank())) throw new BusinessException(400, "个人车主必须填写车主姓名");
         if (dto.getOwnerType() == 1 && (dto.getOrganizationName() == null || dto.getOrganizationName().isBlank())) throw new BusinessException(400, "组织车主必须填写组织名称");
         if (dto.getOwnerPhone() != null && !dto.getOwnerPhone().matches("^1[3-9]\\d{9}$")) throw new BusinessException(400, "车主电话格式不正确");
-        if (dto.getCommercialInsuranceStartTime() == null && dto.getCompulsoryInsuranceStartTime() == null) throw new BusinessException(400, "至少填写商业起期或交强起期");
+        if (dto.getCommercialInsuranceStartTime() == null && dto.getCompulsoryInsuranceStartTime() == null && dto.getNonMotorInsuranceStartTime() == null) throw new BusinessException(400, "至少填写商业、交强或非车险中的一种起期");
         if (positive(dto.getCommercialAmount()) && dto.getCommercialInsuranceStartTime() == null) throw new BusinessException(400, "有商业保费时必须填写商业起期");
         if ((positive(dto.getCompulsoryAmount()) || positive(dto.getVehicleAndTaxAmount())) && dto.getCompulsoryInsuranceStartTime() == null) throw new BusinessException(400, "有交强保费或车船税时必须填写交强起期");
+        if (dto.getNonMotorAmount() != null && dto.getNonMotorInsuranceStartTime() == null)
+            throw new BusinessException(400, "有非车险保费时必须填写非车险起期");
+        org.springframework.beans.BeanWrapper model = new org.springframework.beans.BeanWrapperImpl(dto);
+        /* 新增保单终期允许历史缺失；一旦填写则必须有对应起期且严格晚于起期。 */
+        for (String prefix : List.of("commercial", "compulsory", "nonMotor")) {
+            Long start = (Long) model.getPropertyValue(prefix + "InsuranceStartTime");
+            Long end = (Long) model.getPropertyValue(prefix + "InsuranceEndTime");
+            if (end != null && (start == null || end <= start)) throw new BusinessException(400, "保单终期必须晚于对应起期");
+        }
         if (dto.getVehicleLicense() != null && dto.getVehicleLicense().getIsTransfer() != null
                 && dto.getVehicleLicense().getIsTransfer() != 0 && dto.getVehicleLicense().getIsTransfer() != 1) throw new BusinessException(400, "是否过户只能填写0或1");
     }

@@ -1,6 +1,7 @@
 package com.example.insurancesystem.mapper;
 
 import com.example.insurancesystem.domain.workorder.WorkorderSearchDTO;
+import com.example.insurancesystem.utils.RenewalCalendar;
 import java.io.InputStream;
 import java.util.Locale;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
@@ -9,6 +10,7 @@ import org.apache.ibatis.session.Configuration;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -43,5 +45,27 @@ class WorkorderMapperRenewalSqlTest {
         /* 租户拦截器通过同一SQL解析器补充企业条件，验证长周期表达式可被其解析。 */
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> net.sf.jsqlparser.parser.CCJSqlParserUtil.parse(sql));
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> net.sf.jsqlparser.parser.CCJSqlParserUtil.parse(count));
+    }
+
+    /** Mapper 在执行时绑定当前周期月数，避免 SQL 固定一年而页面状态按测试配置计算。 */
+    @Test
+    void renewalQueryBindsConfiguredCycleMonths() {
+        Configuration configuration = new Configuration();
+        String resource = "mapper/WorkorderMapper.xml";
+        try (InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(resource)) {
+            assertTrue(input != null);
+            new XMLMapperBuilder(input, configuration, resource, configuration.getSqlFragments()).parse();
+        } catch (Exception exception) { throw new AssertionError(exception); }
+        RenewalCalendar.configureCycleMonths(1);
+        try {
+            BoundSql list = configuration.getMappedStatement("com.example.insurancesystem.mapper.WorkorderMapper.selectRenewByWorkorderSearchDTO")
+                    .getBoundSql(new WorkorderSearchDTO());
+            BoundSql count = configuration.getMappedStatement("com.example.insurancesystem.mapper.WorkorderMapper.selectRenewCount")
+                    .getBoundSql(java.util.Collections.singletonMap("createBy", null));
+            assertEquals(1, list.getAdditionalParameter("cycleMonths"));
+            assertEquals(1, count.getAdditionalParameter("cycleMonths"));
+        } finally {
+            RenewalCalendar.configureCycleMonths(12);
+        }
     }
 }

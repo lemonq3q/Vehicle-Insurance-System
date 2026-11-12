@@ -18,6 +18,13 @@ import java.nio.charset.StandardCharsets;
  */
 @RestController
 public class ImportTemplateController {
+    private final com.example.insurancesystem.service.WorkorderImportTemplateService workorderTemplate;
+
+    /** 复用统一导入契约生成工单新版模板，其他业务仍下载现有官方资源。 */
+    public ImportTemplateController(com.example.insurancesystem.service.WorkorderImportTemplateService workorderTemplate) {
+        this.workorderTemplate = workorderTemplate;
+    }
+
     /**
      * 下载上游、下游或工单模板，使用统一文件响应机制。
      * @param businessType 固定业务标识。
@@ -36,6 +43,10 @@ public class ImportTemplateController {
         }
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition", "attachment;filename*=utf-8''" + URLEncoder.encode(title + ".xlsx", StandardCharsets.UTF_8).replace("+", "%20"));
+        if ("workorder".equals(businessType)) {
+            workorderTemplate.write(response.getOutputStream());
+            return;
+        }
         try (InputStream input = new ClassPathResource("import/" + businessType + ".xlsx").getInputStream()) {
             input.transferTo(response.getOutputStream());
         }

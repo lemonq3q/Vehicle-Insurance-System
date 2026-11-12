@@ -8,7 +8,9 @@ const assert = require('assert');
 const source = fs.readFileSync(path.join(__dirname, '../src/views/enterprise/EnterpriseFinancePage.vue'), 'utf8');
 const script = source.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/^import .*;\r?$/gm, '').replace('export default', 'return');
 // 测试环境仅加载组件脚本，导入的视图组件不参与格式化逻辑。
-const component = new Function('PageHeader', 'AppPagination', 'EnterpriseNav', 'ElConfigProvider', 'ElDatePicker', 'zhCn', script)({}, {}, {}, {}, {}, {});
+const moneySource = fs.readFileSync(path.join(__dirname, '../../shared/money.js'), 'utf8').replace(/export function /g, 'function ');
+const formatAmount = new Function(`${moneySource}\nreturn formatMoney;`)();
+const component = new Function('formatAmount', 'PageHeader', 'AppPagination', 'EnterpriseNav', 'ElConfigProvider', 'ElDatePicker', 'zhCn', script)(formatAmount, {}, {}, {}, {}, {}, {});
 const context = { active: 'recharge-orders', ...component.methods };
 for (const [status, label] of [[1,'待支付'],[2,'已支付'],[3,'已取消'],[4,'支付失败'],[5,'已过期'],[6,'已关闭'],[7,'支付处理中'],[8,'已部分退款'],[9,'已完全退款']]) {
   assert.strictEqual(context.statusText({status}), label);

@@ -59,6 +59,14 @@ body { background: var(--insurance-bg); color: var(--insurance-text); }
 .home .output_button { color: var(--insurance-secondary); }
 .home .output_button:hover,
 .home .file_download_text { color: var(--insurance-primary); }
+.home .form_text.file_download_text {
+  color: var(--insurance-primary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: inherit;
+  cursor: pointer;
+}
+.home .form_text.file_download_text:hover { color: #3b82f6; }
 .home .cascade_form_container {
   background: #f4f7fe;
   border-color: #d7e3f8;

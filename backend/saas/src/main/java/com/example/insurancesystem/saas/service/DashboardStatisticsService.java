@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.example.insurancesystem.utils.RenewalCalendar;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -28,10 +30,10 @@ public class DashboardStatisticsService {
             "COALESCE(SUM(CASE WHEN stat_date>=? AND stat_date<? THEN profit_amount ELSE 0 END),0) previous_profit " +
             "FROM monitor_enterprise_daily_usage WHERE enterprise_id=? AND stat_date>=? AND stat_date<? AND is_finalized=1";
     private static final String RENEWAL_SQL =
-            "SELECT COUNT(DISTINCT w.id) FROM biz_workorder w WHERE w.enterprise_id=? AND w.deleted=0 " +
-            "AND w.renewal_reminder_disabled=0 AND DATEDIFF(CURDATE(),DATE(w.created_at))>=0 " +
-            "AND (GREATEST(CEIL(DATEDIFF(CURDATE(),DATE(w.created_at))/365),1)*365-" +
-            "DATEDIFF(CURDATE(),DATE(w.created_at))) BETWEEN 0 AND ?";
+            "SELECT commercial_insurance_start_time,compulsory_insurance_start_time," +
+            "commercial_renewal_cycle,commercial_renewal_status,compulsory_renewal_cycle,compulsory_renewal_status " +
+            "FROM biz_workorder WHERE enterprise_id=? AND deleted=0 AND renewal_reminder_disabled=0 " +
+            "AND (commercial_insurance_start_time IS NOT NULL OR compulsory_insurance_start_time IS NOT NULL)";
 
     private final JdbcTemplate jdbcTemplate;
     private final PortalContextService context;
@@ -63,8 +65,25 @@ public class DashboardStatisticsService {
                 Date.valueOf(currentStart), Date.valueOf(nextStart),
                 Date.valueOf(previousStart), Date.valueOf(currentStart),
                 enterpriseId, Date.valueOf(previousStart), Date.valueOf(nextStart));
-        Long renewalCount = jdbcTemplate.queryForObject(RENEWAL_SQL, Long.class, enterpriseId, 30);
-        Long renewalDueThisWeek = jdbcTemplate.queryForObject(RENEWAL_SQL, Long.class, enterpriseId, 7);
+        long[] renewalCounts = new long[2];
+        /*
+         * 门户按实际商业/交强起期计算，不再把工单创建时间当作保险日期。
+         * 两险种任一待续保只计一张工单；完成当前周期的险种不重复提醒，非车险不参与。
+         */
+        jdbcTemplate.query(RENEWAL_SQL, (RowCallbackHandler) rows -> {
+            Long commercial = rows.getObject("commercial_insurance_start_time", Long.class);
+            Long compulsory = rows.getObject("compulsory_insurance_start_time", Long.class);
+            int commercialCycle = rows.getInt("commercial_renewal_cycle");
+            int compulsoryCycle = rows.getInt("compulsory_renewal_cycle");
+            int commercialStatus = rows.getInt("commercial_renewal_status");
+            int compulsoryStatus = rows.getInt("compulsory_renewal_status");
+            if (needsRenewal(commercial, commercialCycle, commercialStatus, today, 30)
+                    || needsRenewal(compulsory, compulsoryCycle, compulsoryStatus, today, 30)) renewalCounts[0]++;
+            if (needsRenewal(commercial, commercialCycle, commercialStatus, today, 7)
+                    || needsRenewal(compulsory, compulsoryCycle, compulsoryStatus, today, 7)) renewalCounts[1]++;
+        }, enterpriseId);
+        long renewalCount = renewalCounts[0];
+        long renewalDueThisWeek = renewalCounts[1];
 
         long currentWorkorders = number(monthly.get("current_workorders"));
         long previousWorkorders = number(monthly.get("previous_workorders"));
@@ -77,8 +96,8 @@ public class DashboardStatisticsService {
         result.put("currentMonthProcessedWorkorders", currentWorkorders);
         result.put("previousMonthProcessedWorkorders", previousWorkorders);
         result.put("workorderComparison", comparison(BigDecimal.valueOf(currentWorkorders), BigDecimal.valueOf(previousWorkorders)));
-        result.put("renewalReminderCount", renewalCount == null ? 0L : renewalCount);
-        result.put("renewalDueThisWeek", renewalDueThisWeek == null ? 0L : renewalDueThisWeek);
+        result.put("renewalReminderCount", renewalCount);
+        result.put("renewalDueThisWeek", renewalDueThisWeek);
         result.put("currentMonthNewCustomers", currentCustomers);
         result.put("previousMonthNewCustomers", previousCustomers);
         result.put("customerComparison", comparison(BigDecimal.valueOf(currentCustomers), BigDecimal.valueOf(previousCustomers)));
@@ -87,6 +106,25 @@ public class DashboardStatisticsService {
         result.put("profitComparison", comparison(currentProfit, previousProfit));
         result.put("updatedThrough", today.minusDays(1).toString());
         return result;
+    }
+
+    /**
+     * 依据主表起期和独立跟进周期判断门户指定天数内的待续保事项，按配置自然月处理闰年。
+     * @param seconds 该险种 Unix 秒起期，无值不回退到创建日。
+     * @param handledCycle 最近处理周期。
+     * @param status 0未处理，1已续保，2已流失；已处理本轮不重复计入。
+     * @param today 中国业务日期。
+     * @param days 门户30天或7天窗口，边界日包含。
+     * @return 该险种是否需要处理；调用者将两个险种按工单去重。
+     */
+    static boolean needsRenewal(Long seconds, int handledCycle, int status, LocalDate today, int days) {
+        LocalDate start = RenewalCalendar.startDate(seconds);
+        if (start == null) return false;
+        int cycle = RenewalCalendar.upcomingCycle(start, today);
+        if (handledCycle >= cycle && status != 0) return false;
+        long remaining = java.time.temporal.ChronoUnit.DAYS.between(today,
+                start.plusMonths((long) RenewalCalendar.getCycleMonths() * cycle));
+        return remaining >= 0 && remaining <= days;
     }
 
     /**

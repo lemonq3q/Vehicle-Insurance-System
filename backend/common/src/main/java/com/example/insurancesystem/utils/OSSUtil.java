@@ -34,6 +34,18 @@ public class OSSUtil {
     private final static String BUCKET_NAME = "lemonqwq";
 
     /**
+     * 确认浏览器直传对象确实已写入私有 Bucket。
+     * 文件记录在签名阶段已创建，OCR 调用前必须检查对象存在，避免对尚未上传的占位记录发起模型请求。
+     *
+     * @param objectName 数据库保存的 OSS 对象键
+     * @return 对象是否存在；OSS 不可用时向调用方抛出异常
+     */
+    public static boolean objectExists(String objectName) {
+        return objectName != null && !objectName.isBlank()
+                && OSSClientSingleton.getInstance().doesObjectExist(BUCKET_NAME, objectName);
+    }
+
+    /**
      * 将 MultipartFile 暂存到本地临时文件后上传到指定 OSS 对象键。供应商拒绝、网络异常或本地文件异常返回 false，
      * 调用方据此决定事务与错误提示；成功后临时文件登记为 JVM 退出时删除。
      */

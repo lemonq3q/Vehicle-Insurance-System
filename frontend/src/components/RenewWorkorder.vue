@@ -135,10 +135,14 @@
             <el-tag v-if="scope.row.compulsoryReminder" type="warning">交强险续保提醒</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="续保状态" min-width="180">
+        <el-table-column label="商业险状态" min-width="110">
           <template #default="scope">
-            <div>商业：{{ renderRemindStatus(scope.row.commercialRenewalStatus) }}</div>
-            <div>交强：{{ renderRemindStatus(scope.row.compulsoryRenewalStatus) }}</div>
+            <el-tag :type="renewalStatusTagType(scope.row.commercialRenewalStatus)">{{ renderRemindStatus(scope.row.commercialRenewalStatus) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="交强险状态" min-width="110">
+          <template #default="scope">
+            <el-tag :type="renewalStatusTagType(scope.row.compulsoryRenewalStatus)">{{ renderRemindStatus(scope.row.compulsoryRenewalStatus) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="followUpRes" label="续保备注" min-width="140"/>
@@ -213,15 +217,16 @@
       :rules="followRules"
       label-width="auto"
     >
-      <el-form-item prop="scope" label="处理范围">
-        <el-radio-group v-model="followParams.scope">
-          <el-radio value="COMMERCIAL">商业险</el-radio>
-          <el-radio value="COMPULSORY">交强险</el-radio>
-          <el-radio value="ALL">两项都已完成</el-radio>
+      <el-form-item v-if="followParams.commercialInCycle" prop="commercialStatus" label="商业险处理">
+        <el-radio-group v-model="followParams.commercialStatus">
+          <el-radio :value="0">未处理</el-radio>
+          <el-radio :value="1">已续保</el-radio>
+          <el-radio :value="2">已流失</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item prop="status" label="处理结果">
-        <el-radio-group v-model="followParams.status">
+      <el-form-item v-if="followParams.compulsoryInCycle" prop="compulsoryStatus" label="交强险处理">
+        <el-radio-group v-model="followParams.compulsoryStatus">
+          <el-radio :value="0">未处理</el-radio>
           <el-radio :value="1">已续保</el-radio>
           <el-radio :value="2">已流失</el-radio>
         </el-radio-group>
@@ -237,8 +242,10 @@
 </template>
 
 <script setup>
+import { useWorkorderListRefresh } from '@/utils/workorderNavigation';
 import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
-import { reactive, ref, onMounted } from 'vue';
+import { buildRenewalFollowUpState, buildRenewalFollowUpRequest } from '@/utils/renewalFollowUp';
+import { reactive, ref, onMounted, nextTick } from 'vue';
 import AreaSelect from './AreaSelect.vue';
 import { selectRenew, acceptWorkorder, updateRenewFollowUp, selectRenewCount, disableRenewReminder } from '@/api/workorder';
 import { getCascadeArea } from '@/utils/ChinaCitys';
@@ -284,9 +291,14 @@ const acceptOrderParams = reactive({
 
 const followParams = reactive({
   id: undefined,
-  status: undefined,
-  scope: 'ALL',
-  followUpRes: ''
+  commercialInCycle: false,
+  compulsoryInCycle: false,
+  commercialStatus: undefined,
+  compulsoryStatus: undefined,
+  followUpRes: '',
+  originalCommercialStatus: undefined,
+  originalCompulsoryStatus: undefined,
+  originalFollowUpRes: ''
 });
 
 const selectParams = reactive({
@@ -309,8 +321,8 @@ const acceptRules = {
 };
 
 const followRules = {
-  status: [{ required: true, message: '请选择处理结果', trigger: 'change' }],
-  scope: [{ required: true, message: '请选择处理范围', trigger: 'change' }]
+  commercialStatus: [{ required: true, message: '请选择商业险处理结果', trigger: 'change' }],
+  compulsoryStatus: [{ required: true, message: '请选择交强险处理结果', trigger: 'change' }]
 };
 
 /**
@@ -323,6 +335,13 @@ const renderRemindStatus = (val) => {
   if (val === 2) return '已流失';
   return '未处理';
 }
+
+/**
+ * 按续保处理结果选择与提醒标签一致的状态标签色，未知值按未处理展示。
+ * @param {number} val 服务端返回的险种状态。
+ * @returns {string} Element Plus 标签类型。
+ */
+const renewalStatusTagType = (val) => val === 1 ? 'success' : val === 2 ? 'danger' : 'info';
 
 /**
 
@@ -388,15 +407,21 @@ const buildSearchParams = () => {
   }
 }
 
-/**
-
- * * 查询续保窗口工单，同步总数并转换展示字段；finally 确保请求异常后表格仍可继续操作。
-
+/*
+ * 记录最近一次实际提交的查询，返回后刷新时不把尚未点击查询的输入误当作新筛选。
+ * 参数已由原buildSearchParams规范化，只保存当前页面内存副本，不写入浏览器存储。
  */
-const getData = async () => {
+let lastSearchParams = null;
+/**
+ * 使用现有接口刷新当前分页，正常查询读取表单，详情保存后的恢复查询使用最近已提交的参数。
+ * @param {boolean|number} restoreQuery 仅显式true复用参数，分页组件传入的数值事件仍按新页码查询。
+ * @returns {Promise<void>} 查询及表格更新结束后完成，不清空未提交筛选输入或重置当前页码。
+ */
+const getData = async (restoreQuery = false) => {
   try{
     loading.table = true;
-    let params = buildSearchParams();
+    let params = restoreQuery === true && lastSearchParams ? { ...lastSearchParams } : buildSearchParams();
+    lastSearchParams = { ...params };
     await selectRenew(params).then(res => {
       res = res.data;
       if(res.code == 200){
@@ -436,6 +461,7 @@ const handleDetail = (index, row) => {
   sessionStorage.setItem('workorderId', row.id);
   router.push({
     path: '/home/detailWorkorder',
+    query: { id: String(row.id), returnTo: router.currentRoute.value.fullPath }
   });
 };
 
@@ -480,15 +506,18 @@ const handleAcceptUpdate = async () => {
 
 /**
 
- * * 打开续保跟进弹窗并回填已有结果；只有已续保或已流失才作为有效已处理状态回显。
+ * * 按当前周期显示险种，已处理的本期结果也回填以便复核或修改；未到周期的险种不出现。
 
  */
 const handleFollow = (index, row) => {
+  const state = buildRenewalFollowUpState(row);
+  if (!state.commercialInCycle && !state.compulsoryInCycle) {
+    Message.warning('当前工单尚未进入续保提醒周期');
+    return;
+  }
   followDialog.value = true;
-  followParams.id = row.id;
-  followParams.status = undefined;
-  followParams.scope = row.commercialReminder && row.compulsoryReminder ? 'ALL' : (row.commercialReminder ? 'COMMERCIAL' : 'COMPULSORY');
-  followParams.followUpRes = row.followUpRes ?? '';
+  Object.assign(followParams, state);
+  nextTick(() => followRef.value?.clearValidate());
 }
 
 /**
@@ -507,13 +536,18 @@ const handleFollowSubmit = (formEl) => {
 
 /**
 
- * * 按所选险种范围保存本周期结果与跟进说明，周期由后端根据起期计算；成功后同步列表和全局续保角标。
+ * * 一次提交当前提醒周期内的各险种结果及备注，周期由后端根据起期计算；成功后同步列表和角标。
 
  */
 const handleFollowUpdate = async () => {
+  const request = buildRenewalFollowUpRequest(followParams);
+  if (!request) {
+    Message.info('续保状态和备注未发生变化');
+    return;
+  }
   try{
     Loading.open();
-    await updateRenewFollowUp(followParams.id, { scope: followParams.scope, status: followParams.status, followUpRes: followParams.followUpRes }).then(res => {
+    await updateRenewFollowUp(followParams.id, request).then(res => {
       res = res.data;
       if(res.code == 200){
         Message.success("更新成功");
@@ -529,13 +563,13 @@ const handleFollowUpdate = async () => {
 }
 
 /**
- * 经明确二次确认后永久关闭该工单后续年度续保提醒。
+ * 经明确二次确认后永久关闭该工单后续周期的续保提醒。
  * 取消确认被视为正常退出；成功后同时刷新当前列表和页头统计，其他异常继续抛出。
  */
 const handleDisableReminder = async (row) => {
   try {
     await ElMessageBox.confirm(
-      `关闭后，工单“${row.code}”的商业险和交强险以后每年都不会再进入续保提醒，是否继续？`,
+      `关闭后，工单“${row.code}”的商业险和交强险以后都不会再进入续保提醒，是否继续？`,
       '确认不再提醒',
       {
         confirmButtonText: '不再提醒',
@@ -694,6 +728,10 @@ const getInsuranceCompanyOption = async (blurParam) => {
     loading.insuranceCompany = false;
   }
 }
+/*
+ * 详情只读返回直接复用缓存；详情成功保存后仅重查最后已提交的筛选和页码，并恢复滚动位置。
+ */
+useWorkorderListRefresh(() => getData(true));
 </script>
 
 <style scoped>

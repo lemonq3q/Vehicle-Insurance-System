@@ -31,8 +31,7 @@ public class EnterpriseBusinessDataPurgeService {
     private static final List<String> ARCHIVE_TABLES = List.of(
             "biz_workorder_file", "biz_workorder_insurance",
             "biz_vehicle_license", "biz_vehicle_invoice", "biz_vehicle_certificate",
-            "biz_workorder_quote", "biz_workorder_commission", "biz_workorder_payment",
-            "biz_workorder_underwriting", "biz_workorder_logistics", "biz_workorder",
+            "biz_workorder_quote", "biz_workorder_logistics", "biz_workorder",
             "biz_merchant_area", "biz_merchant",
             "biz_ocr_record", "sys_file"
     );

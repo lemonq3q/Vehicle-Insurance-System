@@ -8,6 +8,7 @@
 **/target/
 **/node_modules/
 **/dist/
+**/dist-dev/
 **/.idea/
 **/.vscode/
 
@@ -24,6 +25,16 @@ venv/
 !.env.example
 !.env.sample
 !.env.template
+# Public frontend deployment profiles contain no credentials.
+!frontend/.env.dev
+!systemportal/.env.dev
+!monitor-frontend/.env.dev
+!frontend/.env.development
+!frontend/.env.production
+!systemportal/.env.development
+!systemportal/.env.production
+!monitor-frontend/.env.development
+!monitor-frontend/.env.production
 *.log
 .DS_Store
 Thumbs.db
@@ -37,3 +48,6 @@ Thumbs.db
 /base_conf/database/*_full.sql
 /base_conf/database/*_full_*.sql
 /base_conf/database/*_backup.sql
+/docs/db/*_full.sql
+/docs/db/*_full_*.sql
+/docs/db/*_backup.sql

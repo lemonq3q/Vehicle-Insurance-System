@@ -1,6 +1,7 @@
 <template><div ref="chart" class="chart" role="img" :aria-label="ariaLabel"></div></template>
 
 <script>
+import { formatMoney } from '@/utils/money';
 import * as echarts from 'echarts/core';
 import { LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
@@ -14,7 +15,8 @@ export default {
     labels: { type: Array, required: true },
     series: { type: Array, required: true },
     ariaLabel: { type: String, default: '趋势图表' },
-    type: { type: String, default: 'line' }
+    type: { type: String, default: 'line' },
+    money: { type: Boolean, default: false }
   },
   /**
    * DOM 就绪后创建 ECharts 实例、完成首次绘制，并通过 ResizeObserver 适配卡片或侧栏宽度变化。
@@ -36,16 +38,19 @@ export default {
   methods: {
     /**
      * 将标签和多组业务序列转换为统一趋势图配置。组件可在折线和柱状模式间复用，并为首序列提供更明显面积层次。
+     * money由金额图表入口显式启用，使提示和坐标轴金额统一到分；计数图表保留原始数量格式。
      */
     render() {
       const colors = ['#2563eb', '#d97706', '#059669', '#7c3aed', '#dc2626'];
       this.chart.setOption({
         color: colors,
-        tooltip: { trigger: 'axis', backgroundColor: '#0f172a', borderWidth: 0, textStyle: { color: '#fff' } },
+        tooltip: { trigger: 'axis', backgroundColor: '#0f172a', borderWidth: 0, textStyle: { color: '#fff' },
+          valueFormatter: this.money ? value => `¥${formatMoney(value, '-', { group: true })}` : undefined },
         legend: { top: 0, right: 0, icon: 'roundRect', itemWidth: 12, textStyle: { color: '#475569' } },
         grid: { left: 12, right: 12, top: 42, bottom: 8, containLabel: true },
         xAxis: { type: 'category', data: this.labels, boundaryGap: this.type === 'bar', axisLine: { lineStyle: { color: '#cbd5e1' } }, axisLabel: { color: '#64748b' } },
-        yAxis: { type: 'value', splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }, axisLabel: { color: '#64748b' } },
+        yAxis: { type: 'value', splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } },
+          axisLabel: { color: '#64748b', formatter: this.money ? value => formatMoney(value, '-', { group: true }) : undefined } },
         series: this.series.map((item, index) => ({
           ...item,
           type: item.type || this.type,

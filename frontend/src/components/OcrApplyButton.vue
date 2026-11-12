@@ -12,7 +12,7 @@
 import { defineProps, defineEmits } from 'vue';
 
 /**
- * OCR逐项和批量确认共用的操作按钮，统一内边距、文字居中与悬停反馈。
+ * OCR逐项和批量确认共用紧凑操作按钮，通过减少内边距缩小按钮，保留清晰字号和悬停反馈。
  * 仅向编辑器传递点击事件，不维护识别或表单状态；large用于标题旁的全部应用操作。
  */
 defineProps({ size: { type: String, default: 'small' } });
@@ -27,22 +27,23 @@ defineEmits(['click']);
   flex-shrink: 0;
   box-sizing: border-box;
   height: auto;
-  min-height: 26px;
+  min-height: 24px;
+  min-width: 0;
   margin: 0;
-  padding: 4px 10px;
+  padding: 2px 6px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--el-color-primary);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 16px;
   text-align: center;
   vertical-align: middle;
   transition: background-color .16s ease;
 }
 .ocr-apply-button.el-button.ocr-apply-button--large {
-  min-height: 32px;
-  padding: 6px 14px;
+  min-height: 28px;
+  padding: 4px 8px;
   font-size: 14px;
   line-height: 18px;
 }

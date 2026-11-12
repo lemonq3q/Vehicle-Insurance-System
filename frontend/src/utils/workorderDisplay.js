@@ -1,3 +1,5 @@
+import { formatMoney } from './money';
+
 /**
  * 从接口的可选身份字段提取有效展示文本；空白、null和未返回字段均视为缺失。
  * @param {*} value 接口字段值。
@@ -38,14 +40,14 @@ export function hasCompletedQuotation(row) {
 
 /**
  * 仅将已报价工单缺失的费用转换为展示零；已有金额（包括零、负值和精确字符串）
- * 原样保留，不重新计算、不取绝对值、不进行浮点金额运算，也不写回原始费用字段。
+ * 统一显示到分，不重新计算、不取绝对值，也不写回原始费用字段。
  * @param {object} row 当前工单，用于判定是否完成报价。
  * @param {number|string|null} amount 接口返回的上下游政策费用合计。
- * @returns {number|string} 已有金额、展示用0，或未报价时的空字符串。
+ * @returns {string} 两位小数金额、展示用0.00，或未报价时的空字符串。
  */
 export function formatWorkorderPolicyFee(row, amount) {
-  if (displayText(amount) !== '') return amount;
-  return hasCompletedQuotation(row) ? 0 : '';
+  if (displayText(amount) !== '') return formatMoney(amount);
+  return hasCompletedQuotation(row) ? '0.00' : '';
 }
 
 /**

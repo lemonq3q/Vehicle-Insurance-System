@@ -839,22 +839,6 @@
             </div>
           </div>
         </el-form-item>
-        <el-form-item prop="commercialInsuranceStartTime" label="商业险起保日期">
-          <el-date-picker
-            style="width: 100%;"
-            v-model="info.commercialInsuranceStartTime"
-            type="date"
-            placeholder="请选择商业险起保日期"
-          />
-        </el-form-item>
-        <el-form-item prop="compulsoryInsuranceStartTime" label="交强险起保日期">
-          <el-date-picker
-            style="width: 100%;"
-            v-model="info.compulsoryInsuranceStartTime"
-            type="date"
-            placeholder="请选择交强险起保日期"
-          />
-        </el-form-item>
         <el-form-item style="width: 100%;">
           <div class="table_form_container">
             <div class="table_form_item" style="background-color: #F9F8F8;">
@@ -1126,12 +1110,6 @@ const rules = reactive({
     { min: 1, max: 100, message: '输入内容过长', trigger: 'blur' },
     { validator: validatePhoneNumber, trigger: 'blur' }
   ],
-  commercialInsuranceStartTime: [
-    { required: true, message: '请选择商业险起保日期', trigger: 'blur' }
-  ],
-  compulsoryInsuranceStartTime: [
-    { required: true, message: '请选择交强险起保日期', trigger: 'blur' }
-  ],
   insuranceMerchantId: [
     { required: true, message: '请选择保险公司', trigger: 'blur' }
   ],
@@ -1149,8 +1127,9 @@ const info = reactive({
   ownerPhone: "",
   ownerIdNum: "",
   ownerName: "",
-  commercialInsuranceStartTime: new Date(),
-  compulsoryInsuranceStartTime: new Date(),
+  commercialInsuranceStartTime: null,
+  compulsoryInsuranceStartTime: null,
+  nonMotorInsuranceStartTime: null,
   insuranceMerchantId: undefined,
   remark: "",
   vehicleLicense: {
@@ -1610,8 +1589,13 @@ const buildInsertData = () => {
   }
 
   data.areaCode = info.areaCode[1];
-  data.commercialInsuranceStartTime = convertDateToSecondTimestamp(info.commercialInsuranceStartTime);
-  data.compulsoryInsuranceStartTime = convertDateToSecondTimestamp(info.compulsoryInsuranceStartTime);
+  /*
+   * 创建阶段尚未取得保单起期，不预填当天日期；编辑历史工单时保留已有日期。
+   * 三类保单的实际起期在承保资料中录入，空值交由接口按未填写处理。
+   */
+  data.commercialInsuranceStartTime = info.commercialInsuranceStartTime == null ? null : convertDateToSecondTimestamp(info.commercialInsuranceStartTime);
+  data.compulsoryInsuranceStartTime = info.compulsoryInsuranceStartTime == null ? null : convertDateToSecondTimestamp(info.compulsoryInsuranceStartTime);
+  data.nonMotorInsuranceStartTime = info.nonMotorInsuranceStartTime == null ? null : convertDateToSecondTimestamp(info.nonMotorInsuranceStartTime);
 
   let workorderFileList = [];
   if(info.ownerType == 0){
@@ -1697,6 +1681,7 @@ const buildInfo = () => {
   info.socialCreditCode = oriInfo.value.socialCreditCode;
   info.commercialInsuranceStartTime = oriInfo.value.commercialInsuranceStartTime == null ? null : new Date(oriInfo.value.commercialInsuranceStartTime * 1000);
   info.compulsoryInsuranceStartTime = oriInfo.value.compulsoryInsuranceStartTime == null ? null : new Date(oriInfo.value.compulsoryInsuranceStartTime * 1000);
+  info.nonMotorInsuranceStartTime = oriInfo.value.nonMotorInsuranceStartTime == null ? null : new Date(oriInfo.value.nonMotorInsuranceStartTime * 1000);
   info.remark = oriInfo.value.remark;
   
   info.createMerchantId = oriInfo.value.createMerchantId;

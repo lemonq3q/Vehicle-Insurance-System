@@ -1,0 +1,13 @@
+# Deploy to /etc/systemd/system/idatag_dev.target on the test server.
+[Unit]
+Description=iDatag Development Backend Services
+Wants=idatag_dev@coordinator.service
+Wants=idatag_dev@insruance.service
+Wants=idatag_dev@monitor.service
+Wants=idatag_dev@saas.service
+After=network-online.target
+Wants=network-online.target
+
+[Install]
+WantedBy=multi-user.target
+

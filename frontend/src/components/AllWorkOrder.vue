@@ -270,6 +270,7 @@
 </template>
 
 <script setup>
+import { useWorkorderListRefresh } from '@/utils/workorderNavigation';
 import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
@@ -604,6 +605,7 @@ const handleDetail = (index, row) => {
   sessionStorage.setItem('workorderId', row.id);
   router.push({
     path: '/home/detailWorkorder',
+    query: { id: String(row.id), returnTo: router.currentRoute.value.fullPath }
   });
 };
 
@@ -617,14 +619,21 @@ const handleSearch = () => {
   getData();
 }
 
-/**
- * 组装当前筛选条件查询工单分页数据，并在写入表格前转换地区与日期字段。
- * 表格加载态在请求成功或异常时都会通过 finally 关闭。
+/*
+ * 记录最近一次实际提交的查询，返回后刷新时不把尚未点击查询的输入误当作新筛选。
+ * 参数已由原buildSearchParams规范化，只保存当前页面内存副本，不写入浏览器存储。
  */
-const getData = async () => {
+let lastSearchParams = null;
+/**
+ * 使用现有接口刷新当前分页，正常查询读取表单，详情保存后的恢复查询使用最近已提交的参数。
+ * @param {boolean|number} restoreQuery 仅显式true复用参数，分页组件传入的数值事件仍按新页码查询。
+ * @returns {Promise<void>} 查询及表格更新结束后完成，不清空未提交筛选输入或重置当前页码。
+ */
+const getData = async (restoreQuery = false) => {
   try{
     loading.table = true;
-    let params = buildSearchParams();
+    let params = restoreQuery === true && lastSearchParams ? { ...lastSearchParams } : buildSearchParams();
+    lastSearchParams = { ...params };
     console.log(params);
     await selectWorkorder(params).then(res => {
       res = res.data;
@@ -662,17 +671,26 @@ const buildSearchParams = () => {
 }
 
 /**
+ * 工单管理表格保留接口秒级时间的完整精度，并在日期与时分秒之间换行。
+ * 空值仍显示为空白；表格单元格已有 pre-line 样式，可直接呈现两行且不改变接口数据。
+ * @param {number} timestamp 工单列表接口返回的 Unix 秒时间戳。
+ * @returns {string} 两行本地日期时间文本，或空字符串。
+ */
+const formatWorkorderTableTime = (timestamp) => formatSecondTimestamp(timestamp).replace(' ', '\n');
 
- * * 将工单地区编码和创建、跟进、承保时间转换为表格使用的简短日期文本。
-
+/**
+ * 为工单管理列表组装地区、处理人、费用及三列完整时间的展示值。
+ * 原始列表来自工单查询接口；仅转换当前表格行，不修改后端保存的时间精度。
+ * @param {Array} data 工单列表接口返回的当前页数据。
+ * @returns {void} 更新当前页的表格数据。
  */
 const buildTableData = (data) => {
   data.forEach(item => {
     Object.assign(item, buildWorkorderListDisplay(item));
     item.areaCode = getCascadeArea(item.areaCode);
-    item.createTime = formatSecondTimestamp(item.createTime, 'YYYY-MM-DD');
-    item.updateTime = formatSecondTimestamp(item.updateTime, 'YYYY-MM-DD');
-    item.finishTime = formatSecondTimestamp(item.finishTime, 'YYYY-MM-DD');
+    item.createTime = formatWorkorderTableTime(item.createTime);
+    item.updateTime = formatWorkorderTableTime(item.updateTime);
+    item.finishTime = formatWorkorderTableTime(item.finishTime);
   });
   tableData.value = data;
 }
@@ -743,6 +761,10 @@ const handleAcceptUpdate = async () => {
     Loading.close();
   }
 }
+/*
+ * 详情只读返回直接复用缓存；详情成功保存后仅重查最后已提交的筛选和页码，并恢复滚动位置。
+ */
+useWorkorderListRefresh(() => getData(true));
 </script>
 
 

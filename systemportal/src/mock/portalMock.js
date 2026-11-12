@@ -1,3 +1,4 @@
+import { formatMoney, sumMoney, moneyShortfall, multiplyMoney } from '@/utils/money';
 const currentUser = {
   id: 10001,
   username: 'linxf',
@@ -578,7 +579,7 @@ function addDays(value, days) {
  * 将 mock 金额按人民币两位小数收敛，防止 JavaScript 浮点误差进入余额和订单断言。
  */
 function roundMoney(value) {
-  return Number(Number(value || 0).toFixed(2));
+  return Number(formatMoney(value ?? 0, '0.00'));
 }
 
 /**
@@ -602,14 +603,14 @@ function calculateSubscriptionOrder(planId, periodCount) {
   const minimumPeriodCount = orderType === 'CHANGE_PLAN'
     ? Math.max(1, Math.ceil(remainingDays / plan.durationDays))
     : 1;
-  const priceAmount = validPeriodCount ? roundMoney(plan.price * count) : 0;
+  const priceAmount = validPeriodCount ? Number(multiplyMoney(plan.price, count)) : 0;
   const remainingPeriodCount = currentPlan ? remainingDays / currentPlan.durationDays : 0;
   const creditAmount = orderType === 'CHANGE_PLAN'
-    ? roundMoney(remainingPeriodCount * currentPlan.price)
+    ? Number(multiplyMoney(currentPlan.price, remainingDays, currentPlan.durationDays))
     : 0;
   const workorderOverageCount = 0;
   const workorderOverageAmount = 0;
-  const differenceAmount = roundMoney(priceAmount - creditAmount + workorderOverageAmount);
+  const differenceAmount = Number(sumMoney([priceAmount, -creditAmount, workorderOverageAmount]));
   const payableAmount = Math.max(0, differenceAmount);
   const refundAmount = Math.max(0, roundMoney(-differenceAmount));
   const memberCount = members.filter(item => item.enterpriseId === currentEnterpriseId && item.status === 1).length;
@@ -638,7 +639,7 @@ function calculateSubscriptionOrder(planId, periodCount) {
     payableAmount,
     refundAmount,
     balanceAmount: wallet.balanceAmount,
-    shortfallAmount: Math.max(0, roundMoney(payableAmount - wallet.balanceAmount)),
+    shortfallAmount: Number(moneyShortfall(payableAmount, wallet.balanceAmount)),
     startAt: formatDateTime(effectiveStart),
     endAt: formatDateTime(effectiveEnd),
     memberCount,
@@ -1077,7 +1078,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
     const plan = preview.plan;
     const balanceBefore = wallet.balanceAmount;
     const balanceChange = preview.refundAmount > 0 ? preview.refundAmount : -preview.payableAmount;
-    wallet.balanceAmount = roundMoney(balanceBefore + balanceChange);
+    wallet.balanceAmount = Number(sumMoney([balanceBefore, balanceChange]));
     wallet.updatedAt = formatDateTime(MOCK_NOW);
 
     const order = {
@@ -1128,7 +1129,7 @@ export function mockRequest({ url, method = 'GET', data = {}, params = {} }) {
         relatedOrderId: order.id,
         relatedSubscriptionId: subscription?.id || null,
         remark: preview.workorderOverageAmount > 0
-          ? `改订${plan.name}（含超额工单费 ¥${preview.workorderOverageAmount}，${preview.workorderOverageCount} 单）`
+          ? `改订${plan.name}（含超额工单费 ¥${formatMoney(preview.workorderOverageAmount)}，${preview.workorderOverageCount} 单）`
           : isRefund ? `改订${plan.name}退回剩余价值` : `${preview.orderType === 'CHANGE_PLAN' ? '改订' : '订阅'}${plan.name}`,
         createdAt: formatDateTime(MOCK_NOW)
       };

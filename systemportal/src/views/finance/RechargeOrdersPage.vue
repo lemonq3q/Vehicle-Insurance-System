@@ -43,7 +43,7 @@
             <tbody>
               <tr v-for="item in rows" :key="item.id">
                 <td>{{ item.rechargeNo }}</td>
-                <td>¥{{ item.amount }}</td>
+                <td>¥{{ money(item.amount) }}</td>
                 <td>{{ channelName(item.payChannel) }}</td>
                 <td>{{ item.payTradeNo || '-' }}</td>
                 <td><span class="portal-tag recharge-status" :class="`recharge-status-${item.status}`">{{ statusName('recharge', item.status) }}</span></td>
@@ -66,6 +66,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getRechargeOrders } from '@/api/portal';
@@ -95,6 +96,11 @@ export default {
     this.loadData();
   },
   methods: {
+    /**
+     * 将接口原始金额转为两位小数展示，保留字符串精度及负号；缺失金额沿用财务零值占位。
+     * 仅格式化列表单元格，不改写分页响应、流水方向或订单支付状态。
+     */
+    money(value) { return formatAmount(value ?? 0, '0.00'); },
     statusName: getStatusName,
     /**
      * 将支付渠道枚举转换为列表中的紧凑文案，未知渠道直接展示代码。

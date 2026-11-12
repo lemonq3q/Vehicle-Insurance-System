@@ -1,3 +1,4 @@
+import { workorderPolicyMockRequest } from '@/mock/workorderPolicyMock';
 import axios, { EXCEL_MIME_TYPE } from "./config";
 import { buildObjectParams } from "@/utils/params";
 
@@ -45,6 +46,7 @@ export function disableRenewReminder(id) {
 
  */
 export function selectWorkorderById(id){
+  if (process.env.VUE_APP_WORKORDER_POLICY_MOCK === 'true') return workorderPolicyMockRequest('detail', id);
   let url = `${rootUrl}/${id}`;
   return axios.get(url);
 }
@@ -109,6 +111,7 @@ export function acceptWorkorder(data) {
 
  */
 export function updateQuotation(data) {
+  if (process.env.VUE_APP_WORKORDER_POLICY_MOCK === 'true') return workorderPolicyMockRequest('quotation', data);
   let url = `${rootUrl}/quotation`;
   return axios.put(url, data);
 }
@@ -129,14 +132,15 @@ export function updateNoCascade(data) {
 
  */
 export function updateAcceptInsurance(data) {
+  if (process.env.VUE_APP_WORKORDER_POLICY_MOCK === 'true') return workorderPolicyMockRequest('acceptInsurance', data);
   let url = `${rootUrl}/acceptInsurance`;
   return axios.put(url, data);
 }
 
 /**
- * 保存商业、交强或全部续保处理结果，后端确定周期并验证当前工单权限。
+ * 按当前提醒险种分别保存续保结果，后端确定周期并验证当前工单权限。
  * @param {string} id 工单 ID。
- * @param {{scope:string,status:number,followUpRes:string}} data 处理范围、结果与备注。
+ * @param {{commercialStatus?:number,compulsoryStatus?:number,followUpRes?:string}} data 各险种结果与备注。
  * @returns {Promise} 统一响应，成功后页面同步刷新列表与提醒计数。
  */
 export function updateRenewFollowUp(id, data) {

@@ -17,6 +17,9 @@ function loadState() {
   return context.module.exports;
 }
 const stateHelpers = loadState();
+const moneySource = fs.readFileSync(path.join(__dirname, '../shared/money.js'), 'utf8')
+  .replace(/export function /g, 'function ');
+const moneyHelpers = new Function(`${moneySource}\nreturn { formatMoney, moneyShortfall, compareMoney, formatPercentage };`)();
 
 /**
  * 编译真实 SFC 模板并使用 Vue 服务端渲染检查首帧内容，保留页面数据和条件判断。
@@ -27,12 +30,12 @@ const stateHelpers = loadState();
 function component(relative) {
   const filename = path.join(__dirname, '../systemportal/src', relative);
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'));
-  const context = { module: { exports: {} }, ...stateHelpers };
+  const context = { module: { exports: {} }, ...stateHelpers, ...moneyHelpers, formatAmount: moneyHelpers.formatMoney };
   const placeholder = { render: () => Vue.h('span') };
   const source = descriptor.script.content.replace(/^import (.*?) from ['"].*?['"];\r?$/gm, (line, names) => {
     const entries = names.startsWith('{') ? names.slice(1, -1).split(',') : [names];
     for (const entry of entries) {
-      const name = entry.trim();
+      const name = entry.trim().split(/\s+as\s+/).pop();
       if (!(name in context)) context[name] = /^[A-Z]/.test(name) ? placeholder : () => '';
     }
     return '';

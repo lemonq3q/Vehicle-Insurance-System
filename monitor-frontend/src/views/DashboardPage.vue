@@ -18,7 +18,7 @@
 
     <section class="panel dashboard-section revenue-panel">
       <header class="panel-header"><div><h2>系统充值流水</h2><p>近 12 个月已支付充值订单金额，不受其他图表时间范围影响</p></div><span class="tag success">按月统计</span></header>
-      <div class="panel-body chart-body"><LineChart v-if="rechargeTrend" :labels="pointLabels(rechargeTrend)" :series="[{ name: '充值流水', data: pointValues(rechargeTrend), area: false }]" type="bar" aria-label="近十二个月系统充值流水柱状图"/><div v-else class="chart-loading">{{ rechargeError || '正在加载充值流水…' }}</div></div>
+      <div class="panel-body chart-body"><LineChart v-if="rechargeTrend" :labels="pointLabels(rechargeTrend)" :series="[{ name: '充值流水', data: pointValues(rechargeTrend), area: false }]" type="bar" money aria-label="近十二个月系统充值流水柱状图"/><div v-else class="chart-loading">{{ rechargeError || '正在加载充值流水…' }}</div></div>
     </section>
 
     <section class="usage-grid">
@@ -41,6 +41,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount, formatPercentage } from '@/utils/money';
 import PageHeader from '@/components/PageHeader.vue';
 import LineChart from '@/components/LineChart.vue';
 import { dashboardApi } from '@/api/monitor';
@@ -82,12 +83,12 @@ export default {
     /** 将计数格式化为中文千分位，后端 BigDecimal 或字符串均可安全转换。 */
     formatNumber(value) { return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 0 }); },
     /** 将已支付充值额格式化为人民币两位小数。 */
-    formatMoney(value) { return `¥${Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; },
+    formatMoney(value) { return `¥${formatAmount(value ?? 0, '0.00', { group: true })}`; },
     /** 将环比方向转换为包含语义的文字，避免仅依赖颜色表达变化。 */
     trendText(comparison = {}) {
       if (comparison.direction === 'NEW') return '较上月新增';
       if (comparison.direction === 'FLAT') return '与上月持平';
-      return `较上月${comparison.direction === 'UP' ? '增加' : '减少'} ${comparison.rate || 0}%`;
+      return `较上月${comparison.direction === 'UP' ? '增加' : '减少'} ${formatPercentage(comparison.rate)}%`;
     },
     /** 为上涨、下降和中性环比分配状态类，文字本身仍保留方向。 */
     trendClass(comparison = {}) { return { down: comparison.direction === 'DOWN', neutral: ['FLAT', 'NEW'].includes(comparison.direction) }; },

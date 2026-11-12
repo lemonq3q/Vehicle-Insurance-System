@@ -12,6 +12,7 @@ import com.example.insurancesystem.domain.workorder.*;
 import com.example.insurancesystem.handler.exception.BusinessException;
 import com.example.insurancesystem.mapper.*;
 import com.example.insurancesystem.service.InsuranceService;
+import com.example.insurancesystem.service.WorkorderPolicyValidator;
 import com.example.insurancesystem.service.WorkorderService;
 import com.example.insurancesystem.security.EnterpriseContextHolder;
 import com.example.insurancesystem.utils.OSSUtil;
@@ -26,12 +27,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.ArrayList;
 
 @Service
 @Transactional
 /**
  * 负责车险工单从录入、报价、缴费、承保到物流和续保提醒的完整聚合生命周期。
- * 工单主体、险种、车辆证件、附件及拆分后的业务阶段表在事务中保持同步。
+ * 工单主体、金额表、险种、车辆证件和附件在事务中保持同步；已合并阶段不再写旧表。
  */
 public class WorkorderServiceImpl implements WorkorderService {
 
@@ -164,7 +169,7 @@ public class WorkorderServiceImpl implements WorkorderService {
         }
         WorkorderDTO workorderDTO = workorderDTOList.get(0);
 
-        if(!SystemCommonUtil.hasPerm("all") && !workorderDTO.getHandleBy().equals(SystemCommonUtil.getNowUserId())){
+        if(!SystemCommonUtil.hasPerm("all") && !Objects.equals(workorderDTO.getHandleBy(), SystemCommonUtil.getNowUserId())){
             return new ResponseResult(403, "你无权访问此资源");
         }
 
@@ -182,6 +187,7 @@ public class WorkorderServiceImpl implements WorkorderService {
         });
 
         workorderDTO.setWorkorderFileList(workorderFileList);
+        workorderDTO.compute();
 
         return new ResponseResult(200, workorderDTO);
     }
@@ -287,58 +293,37 @@ public class WorkorderServiceImpl implements WorkorderService {
     @Override
     /**
      * 更新工单基础资料、险种和车辆证件。车辆类型切换时逻辑删除另一类型证件，
-     * 未投保的商业险或交强险会清空对应金额；基础资料附件则以新提交列表整体替换。
+     * 基础资料不再清空保单金额或政策；基础资料附件仍以新提交列表整体替换。
      */
     public ResponseResult updateBaseInfo(WorkorderDTO params) {
         validateSubmitter(params.getSubmitterName());
+        Workorder current = requireStageWorkorder(params);
         Long updateBy = SystemCommonUtil.getNowUserId();
-        Workorder workorder = new Workorder(params);
-        workorder.setCreateBy(null);
-        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
-        workorder.setUpdateBy(updateBy);
+        Workorder workorder = new Workorder();
+        workorder.setId(current.getId()); workorder.setEnterpriseId(current.getEnterpriseId()); workorder.setUpdateBy(updateBy);
+        org.springframework.beans.BeanWrapper input = new org.springframework.beans.BeanWrapperImpl(params);
+        org.springframework.beans.BeanWrapper output = new org.springframework.beans.BeanWrapperImpl(workorder);
+        /*
+         * 基础资料白名单与保单、支付和政策隔离，防止抽屉回传旧详情覆盖新承保资料。
+         * 进入待承保后起期由完整保单表单维护；此前仍允许录入续保客户的预填起期。
+         */
+        for (String property : List.of("type", "ownerType", "organizationName", "socialCreditCode", "createMerchantId",
+                "submitterName", "handleMerchantId", "areaCode", "insuranceMerchantId", "remark", "ownerPhone", "ownerIdNum", "ownerName")) {
+            output.setPropertyValue(property, input.getPropertyValue(property));
+        }
+        if (current.getStatus() < 8) {
+            workorder.setCommercialInsuranceStartTime(params.getCommercialInsuranceStartTime());
+            workorder.setCompulsoryInsuranceStartTime(params.getCompulsoryInsuranceStartTime());
+            workorder.setNonMotorInsuranceStartTime(params.getNonMotorInsuranceStartTime());
+        }
         List<WorkorderInsurance> workorderInsuranceList = params.getWorkorderInsuranceList();
         workorderInsuranceMapper.batchUpdateByWorkorderId(workorderInsuranceList, workorder.getId(), updateBy);
 
-        List<Insurance> insuranceList = insuranceService.selectAll().getData();
-        int type1Count = 0;
-        int type3Count = 0;
-        for(WorkorderInsurance item : workorderInsuranceList){
-            if(!item.getOptionJson().equals("不投保") && !item.getOptionJson().equals("不需要")){
-                Insurance insurance = insuranceList.stream()
-                        .filter(insurance1 -> insurance1.getId().equals(item.getInsuranceId()))
-                        .findFirst()
-                        .orElse(null);
-                if(insurance != null && insurance.getType() == 1){
-                    type1Count++;
-                }
-                else if(insurance != null && insurance.getType() == 3){
-                    type3Count++;
-                }
-            }
-        }
-
-        if(type1Count == 0){
-            workorder.setCommercialAmount(null);
-            workorder.setUpstreamCommercialAmount(null);
-            workorder.setUpstreamCommercialPercentage(null);
-            workorder.setDownstreamCommercialAmount(null);
-            workorder.setDownstreamCommercialPercentage(null);
-        }
-        if(type3Count == 0){
-            workorder.setCompulsoryAmount(null);
-            workorder.setUpstreamCompulsoryAmount(null);
-            workorder.setUpstreamCompulsoryPercentage(null);
-            workorder.setDownstreamCompulsoryAmount(null);
-            workorder.setDownstreamCompulsoryPercentage(null);
-            workorder.setVehicleAndTaxAmount(null);
-            workorder.setUpstreamVehicleAndVesselTaxPercentage(null);
-            workorder.setUpstreamVehicleAndVesselTaxAmount(null);
-            workorder.setDownstreamVehicleAndVesselTaxAmount(null);
-            workorder.setDownstreamVehicleAndVesselTaxPercentage(null);
-        }
-
+        /*
+         * 基础资料只维护投保需求，不按字典选项清除保单事实及已确认政策。
+         * 取消保单必须在承保表单明确提交完整险种列表，避免基础资料保存造成历史金额丢失。
+         */
         int x = workorderMapper.updateById(workorder);
-        saveAggregate(workorder);
 
         if (params.getType() == 0){
             LambdaUpdateWrapper<VehicleCertificate> certificateWrapper = new LambdaUpdateWrapper<>();
@@ -517,71 +502,159 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
 
-    @Override
     /**
-     * 保存报价和佣金数据，先计算金额派生值，再同步报价阶段聚合表并替换报价附件。
+     * 报价入口仅保存报价附件、反馈和服务器报价时间，不接收保单、保费和政策字段。
+     * 工单行锁保护阶段推进；编辑较早阶段时保持已有后续状态，不清空承保资料。
+     * @param params 报价完整附件列表和反馈；原页面成功目标状态为 8。
+     * @return 统一成功响应，权限/文件或状态校验失败时事务整体回滚。
      */
+    @Override
     public ResponseResult updateQuotation(WorkorderDTO params) {
-        Long updateBy = SystemCommonUtil.getNowUserId();
-        Workorder workorder = new Workorder(params);
-        workorder.setCreateBy(null);
-        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
-        workorder.setUpdateBy(updateBy);
-        workorder.computeAmount();
-        int x = workorderMapper.updateById(workorder);
-        saveQuoteAndCommission(workorder);
-
+        Workorder current = requireStageWorkorder(params);
+        if (params.getStatus() == null || !List.of(4, 6, 8, 10).contains(params.getStatus()))
+            throw new BusinessException(400, "报价状态不正确");
+        validateStageFiles(params, List.of("quotation"));
+        Workorder update = new Workorder();
+        update.setId(current.getId());
+        update.setEnterpriseId(current.getEnterpriseId());
+        update.setUpdateBy(SystemCommonUtil.getNowUserId());
+        update.setQuotationRemark(WorkorderPolicyValidator.text(params.getQuotationRemark(), 500, false));
+        update.setQuotationTime(System.currentTimeMillis() / 1000);
+        update.setStatus(Math.max(current.getStatus(), params.getStatus() == 10 ? 8 : params.getStatus()));
+        workorderAggregateMapper.updateMainStage(update);
+        saveQuote(update);
         updateFile(params, List.of("quotation"));
-        return new ResponseResult(200, "已更新" + x + "条数据");
+        return new ResponseResult(200, "反馈成功");
     }
 
-    @Override
     /**
-     * 执行无需级联车辆基础资料的流程字段更新，并根据实际提交字段同步续保、报价、
-     * 缴费、承保或物流阶段表，支持不同步骤复用同一个轻量更新接口。
+     * 原失败反馈和支付确认仍使用轻量接口，按状态白名单构建更新，避免越过承保校验。
+     * 支付确认的原金额独立保存，不能写入保单应付派生字段或更改保单和政策。
+     * @param params 工单 ID、目标状态与该阶段资料。
+     * @return 成功响应，非法状态或字段长度/金额失败返回业务异常并回滚。
      */
+    @Override
     public ResponseResult updateNoCascade(WorkorderDTO params) {
-        if (params.getRemindStatus() != null) throw new BusinessException(400, "请按险种范围提交续保跟进");
-        Workorder workorder = new Workorder(params);
-        workorder.setCreateBy(null);
-        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
-        workorder.setUpdateBy(SystemCommonUtil.getNowUserId());
-        int x = workorderMapper.updateById(workorder);
-        if (workorder.getQuotationFailedRemark() != null) saveQuote(workorder);
-        if (workorder.getRequiredPayAmount() != null || workorder.getPayFailedRemark() != null) savePayment(workorder);
-        if (workorder.getUnderwritingFailedRemark() != null || workorder.getAcceptInsuranceFailedRemark() != null) saveUnderwriting(workorder);
-        if (workorder.getTrackingNum() != null || workorder.getLogisticsCompany() != null) saveLogistics(workorder);
-        return new ResponseResult(200, "已更新" + x + "条数据");
+        Workorder current = requireStageWorkorder(params);
+        if (params.getRemindStatus() != null || params.getStatus() == null)
+            throw new BusinessException(400, "请使用对应业务入口");
+        int status = params.getStatus();
+        Set<Integer> allowed = switch (status) {
+            case 3 -> Set.of(2, 3);
+            case 5 -> Set.of(4, 5);
+            case 7, 8 -> Set.of(6, 7);
+            case 9 -> Set.of(8, 9);
+            default -> Set.of();
+        };
+        if (!allowed.contains(current.getStatus())) throw new BusinessException(400, "工单状态已变化，请刷新后重试");
+        Workorder update = new Workorder();
+        update.setId(current.getId()); update.setEnterpriseId(current.getEnterpriseId());
+        update.setUpdateBy(SystemCommonUtil.getNowUserId()); update.setStatus(status);
+        if (status == 3) update.setQuotationFailedRemark(WorkorderPolicyValidator.text(params.getQuotationFailedRemark(), 500, true));
+        if (status == 5) update.setUnderwritingFailedRemark(WorkorderPolicyValidator.text(params.getUnderwritingFailedRemark(), 500, true));
+        if (status == 7) update.setPayFailedRemark(WorkorderPolicyValidator.text(params.getPayFailedRemark(), 500, true));
+        if (status == 9) update.setAcceptInsuranceFailedRemark(WorkorderPolicyValidator.text(params.getAcceptInsuranceFailedRemark(), 500, true));
+        if (status == 8) {
+            WorkorderPolicyValidator.money(params.getRequiredPayAmount(), true, new java.math.BigDecimal("9999999999.99"));
+            update.setRequiredPayAmount(params.getRequiredPayAmount());
+            update.setPayName(WorkorderPolicyValidator.text(params.getPayName(), 100, false));
+            update.setPayIdNum(WorkorderPolicyValidator.text(params.getPayIdNum(), 20, false));
+            update.setPayBank(WorkorderPolicyValidator.text(params.getPayBank(), 100, false));
+            update.setPayBankCardNum(WorkorderPolicyValidator.text(params.getPayBankCardNum(), 100, false));
+            update.setPayRemark(WorkorderPolicyValidator.text(params.getPayRemark(), 500, false));
+        }
+        workorderAggregateMapper.updateMainStage(update);
+        if (status == 3) saveQuote(update);
+        return new ResponseResult(200, "反馈成功");
     }
 
-    @Override
     /**
-     * 保存承保结果，同步缴费与核保阶段聚合数据，并整体替换商业险、交强险等承保附件。
+     * 原子保存三类保单、金额政策和收款反馈，随后将工单置为承保完成。
+     * 完整快照允许取消险种并显式清空原字段；非车险单证统一为可多选的其他单证类型。
+     * 比例费用按当前保费重算，支付历史金额保持不变。
+     * @param params policyTypes、各类保单字段、政策模式和本次完整附件列表。
+     * @return 成功响应；失败不推进状态、不替换文件，已完成单编辑不重置完成日期。
      */
+    @Override
     public ResponseResult acceptInsurance(WorkorderDTO params) {
-        Long updateBy = SystemCommonUtil.getNowUserId();
-        Workorder workorder = new Workorder(params);
-        workorder.setCreateBy(null);
-        workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
-        workorder.setUpdateBy(updateBy);
-        int x = workorderMapper.updateById(workorder);
-        savePayment(workorder);
-        saveUnderwriting(workorder);
-
-        updateFile(params, List.of("acceptInsuranceCommercial", "acceptInsuranceCompulsory", "acceptInsuranceOther"));
-        return new ResponseResult(200, "已更新" + x + "条数据");
+        Workorder current = requireStageWorkorder(params);
+        if (!List.of(8, 9, 10).contains(current.getStatus())) throw new BusinessException(400, "工单尚未进入待承保阶段");
+        List<String> fileTypes = List.of("acceptInsuranceCommercial", "acceptInsuranceCompulsory", "acceptInsuranceNonMotor", "acceptInsuranceOther", "acceptInsuranceMisc");
+        /*
+         * 旧版客户端和历史记录可能仍使用 acceptInsuranceNonMotor。
+         * 此处只规范化本次请求附件，新关系统一写为 acceptInsuranceOther；旧类型同时纳入整体替换范围。
+         */
+        if (params.getWorkorderFileList() != null) {
+            params.getWorkorderFileList().stream().filter(Objects::nonNull)
+                    .filter(file -> "acceptInsuranceNonMotor".equals(file.getType()))
+                    .forEach(file -> file.setType("acceptInsuranceOther"));
+        }
+        validateStageFiles(params, fileTypes);
+        Workorder update = WorkorderPolicyValidator.normalize(params);
+        update.setEnterpriseId(current.getEnterpriseId()); update.setUpdateBy(SystemCommonUtil.getNowUserId());
+        update.setStatus(10);
+        update.setFinishTime(current.getFinishTime() == null ? System.currentTimeMillis() / 1000 : current.getFinishTime());
+        workorderAggregateMapper.replacePolicies(update);
+        if (workorderAggregateMapper.countQuote(update) == 0) workorderAggregateMapper.insertQuote(update);
+        workorderAggregateMapper.replaceFinancials(update);
+        workorderAggregateMapper.updateMainStage(update);
+        updateFile(params, fileTypes);
+        return new ResponseResult(200, "反馈成功");
     }
 
     /**
-     * 将工单主体中的阶段字段同步到报价佣金、缴费、核保及物流聚合表；缺少企业标识时从上下文补齐。
+     * 在服务事务内锁定当前企业有效工单，并沿用管理员/处理人的详情访问范围。
+     * @param params 客户端阶段请求，仅 ID 用于定位。
+     * @return 锁定的真实工单；并发提交排队后重新校验真实状态，不接受客户端企业信息。
+     */
+    private Workorder requireStageWorkorder(WorkorderDTO params) {
+        if (params == null || params.getId() == null) throw new BusinessException(400, "请选择工单");
+        Workorder current = workorderAggregateMapper.lockWorkorder(params.getId(), EnterpriseContextHolder.requireEnterpriseId());
+        if (current == null) throw new BusinessException(404, "工单不存在");
+        if (!SystemCommonUtil.hasPerm("all") && !Objects.equals(current.getHandleBy(), SystemCommonUtil.getNowUserId()))
+            throw new BusinessException(403, "你无权处理此工单");
+        if (current.getStatus() == null || current.getStatus() < 2) throw new BusinessException(400, "工单尚未接单");
+        return current;
+    }
+
+    /**
+     * 校验阶段附件类型、数量及真实企业归属，并锁定系统文件，防止两个工单并发占用。
+     * @param params 当前工单请求，附件为完整列表，允许空列表清除报价附件。
+     * @param allowed 该阶段允许替换的附件类型；非车险单证最多六份，其他保单每类一份。
+     * @throws BusinessException 文件不存在、外企业、重复、非法类型或已被其他工单引用时拒绝。
+     */
+    private void validateStageFiles(WorkorderDTO params, List<String> allowed) {
+        List<WorkorderFile> files = params.getWorkorderFileList();
+        if (files == null) throw new BusinessException(400, "请提交完整附件列表");
+        Set<Long> ids = new HashSet<>();
+        Map<String, Integer> counts = new java.util.HashMap<>();
+        for (WorkorderFile file : files) {
+            if (file == null || file.getFileId() == null || !allowed.contains(file.getType()) || !ids.add(file.getFileId()))
+                throw new BusinessException(400, "附件类别或文件 ID 不合法，不能重复提交");
+            int count = counts.merge(file.getType(), 1, Integer::sum);
+            if (count > (Set.of("acceptInsuranceOther", "acceptInsuranceMisc").contains(file.getType()) ? 6 : 1))
+                throw new BusinessException(400, "附件数量超过限制");
+        }
+        for (Long id : ids.stream().sorted().toList()) {
+            SystemFile file = systemFileMapper.selectOne(new LambdaQueryWrapper<SystemFile>()
+                    .eq(SystemFile::getId, id).eq(SystemFile::getEnterpriseId, EnterpriseContextHolder.requireEnterpriseId())
+                    .eq(SystemFile::getIsDelete, 0).last("FOR UPDATE"));
+            if (file == null) throw new BusinessException(400, "附件不存在或不属于本企业");
+            Long otherReferences = workorderFileMapper.selectCount(new LambdaQueryWrapper<WorkorderFile>()
+                    .eq(WorkorderFile::getFileId, id).eq(WorkorderFile::getIsDelete, 0).ne(WorkorderFile::getWorkorderId, params.getId()));
+            if (otherReferences > 0) throw new BusinessException(400, "附件已关联其他工单，请重新上传");
+        }
+    }
+
+    /**
+     * 将兼容 DTO 中的字段同步到合并后的金额表、主表阶段列及物流表；缺少企业标识时从上下文补齐。
      */
     private void saveAggregate(Workorder workorder) {
         if (workorder.getEnterpriseId() == null) {
             workorder.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
         }
-        saveQuoteAndCommission(workorder);
-        savePayment(workorder);
-        saveUnderwriting(workorder);
+        saveQuote(workorder);
+        saveMainStage(workorder);
         saveLogistics(workorder);
     }
 
@@ -604,37 +677,22 @@ public class WorkorderServiceImpl implements WorkorderService {
     }
 
     /**
-     * 以更新优先、无记录则插入的方式保存报价以及上下游两侧佣金，兼容历史工单尚无拆分记录的情况。
-     */
-    private void saveQuoteAndCommission(Workorder workorder) {
-        saveQuote(workorder);
-        if (workorderAggregateMapper.updateCommission(workorder, "UPSTREAM") == 0) {
-            workorderAggregateMapper.insertCommission(workorder, "UPSTREAM");
-        }
-        if (workorderAggregateMapper.updateCommission(workorder, "DOWNSTREAM") == 0) {
-            workorderAggregateMapper.insertCommission(workorder, "DOWNSTREAM");
-        }
-    }
-
-    /**
-     * 保存报价阶段数据；旧工单不存在报价记录时自动补建。
+     * 保存金额表的部分字段，在业务事务的工单锁下补建缺失行。
+     * 不用 UPDATE 影响行数推断是否存在，避免重复提交相同内容时重复插入。
+     * @param workorder 主表对应的金额字段与当前企业信息，NULL 字段保持原值。
      */
     private void saveQuote(Workorder workorder) {
-        if (workorderAggregateMapper.updateQuote(workorder) == 0) workorderAggregateMapper.insertQuote(workorder);
+        workorderAggregateMapper.lockWorkorder(workorder.getId(), workorder.getEnterpriseId());
+        if (workorderAggregateMapper.countQuote(workorder) == 0) workorderAggregateMapper.insertQuote(workorder);
+        workorderAggregateMapper.updateQuote(workorder);
     }
 
     /**
-     * 保存缴费阶段数据；旧工单不存在缴费记录时自动补建。
+     * 新增/导入时将兼容 DTO 的支付、核保与承保阶段字段写入合并主表。
+     * @param workorder 已完成企业绑定的主表实体；仅非空兼容字段写入，不覆盖其他资料。
      */
-    private void savePayment(Workorder workorder) {
-        if (workorderAggregateMapper.updatePayment(workorder) == 0) workorderAggregateMapper.insertPayment(workorder);
-    }
-
-    /**
-     * 保存核保与承保阶段数据；旧工单不存在记录时自动补建。
-     */
-    private void saveUnderwriting(Workorder workorder) {
-        if (workorderAggregateMapper.updateUnderwriting(workorder) == 0) workorderAggregateMapper.insertUnderwriting(workorder);
+    private void saveMainStage(Workorder workorder) {
+        workorderAggregateMapper.updateMainStage(workorder);
     }
 
     /**
@@ -648,54 +706,37 @@ public class WorkorderServiceImpl implements WorkorderService {
      * 按业务附件类型整体替换工单附件：先解除旧系统文件关联并逻辑删除旧关系，
      * 再插入新关系、标记新文件已关联，保证临时上传文件的清理状态准确。
      */
-    private void updateFile(WorkorderDTO params, List<String> updateTypes){
-        // 查询已存在的文件id并取消关联
+    private void updateFile(WorkorderDTO params, List<String> updateTypes) {
+        Long enterpriseId = EnterpriseContextHolder.requireEnterpriseId();
         Long updateBy = SystemCommonUtil.getNowUserId();
-        List<WorkorderFile> existFileList = workorderFileMapper.selectList(new LambdaQueryWrapper<WorkorderFile>()
-                .eq(WorkorderFile::getWorkorderId, params.getId())
-                .eq(WorkorderFile::getIsDelete, 0)
-                .in(WorkorderFile::getType, updateTypes));
-        List<Long> existFileIds = existFileList.stream()
-                .map(WorkorderFile::getFileId)
-                .toList();
-        LambdaUpdateWrapper<SystemFile> fileWrapper = new LambdaUpdateWrapper<>();
-        if (!existFileIds.isEmpty()){
-            fileWrapper.in(SystemFile::getId, existFileIds);
-            fileWrapper.eq(SystemFile::getIsDelete, 0);
-            fileWrapper.set(SystemFile::getIsLinked, 0);
-            fileWrapper.set(SystemFile::getUpdateBy, updateBy);
-            systemFileMapper.update(null, fileWrapper);
+        List<WorkorderFile> existing = workorderFileMapper.selectList(new LambdaQueryWrapper<WorkorderFile>()
+                .eq(WorkorderFile::getWorkorderId, params.getId()).eq(WorkorderFile::getEnterpriseId, enterpriseId)
+                .eq(WorkorderFile::getIsDelete, 0).in(WorkorderFile::getType, updateTypes));
+        Set<Long> affected = new HashSet<>();
+        existing.forEach(file -> affected.add(file.getFileId()));
+        workorderFileMapper.update(null, new LambdaUpdateWrapper<WorkorderFile>()
+                .eq(WorkorderFile::getWorkorderId, params.getId()).eq(WorkorderFile::getEnterpriseId, enterpriseId)
+                .eq(WorkorderFile::getIsDelete, 0).in(WorkorderFile::getType, updateTypes)
+                .set(WorkorderFile::getIsDelete, 1).set(WorkorderFile::getUpdateBy, updateBy));
+        List<WorkorderFile> files = params.getWorkorderFileList();
+        if (files != null && !files.isEmpty()) {
+            List<WorkorderFile> replacements = new ArrayList<>();
+            for (WorkorderFile input : files) {
+                WorkorderFile relation = new WorkorderFile();
+                relation.setFileId(input.getFileId()); relation.setType(input.getType());
+                relation.setWorkorderId(params.getId()); relation.setEnterpriseId(enterpriseId);
+                relation.setIsDelete(0); relation.setUpdateBy(updateBy);
+                replacements.add(relation); affected.add(relation.getFileId());
+            }
+            workorderFileMapper.insertBatchSomeColumn(replacements);
         }
-
-        // 删除已经存在的工单文件
-        LambdaUpdateWrapper<WorkorderFile> workorderFileWrapper= new LambdaUpdateWrapper<>();
-        workorderFileWrapper.eq(WorkorderFile::getWorkorderId, params.getId());
-        workorderFileWrapper.eq(WorkorderFile::getIsDelete, 0);
-        workorderFileWrapper.in(WorkorderFile::getType, updateTypes);
-        workorderFileWrapper.set(WorkorderFile::getUpdateBy, updateBy);
-        workorderFileWrapper.set(WorkorderFile::getIsDelete, 1);
-        workorderFileMapper.update(null, workorderFileWrapper);
-
-        if(params.getWorkorderFileList() != null && !params.getWorkorderFileList().isEmpty()){
-            // 插入新工单文件
-            List<WorkorderFile> workorderFileList = params.getWorkorderFileList();
-            workorderFileList.forEach(item -> {
-                item.setWorkorderId(params.getId());
-                item.setEnterpriseId(EnterpriseContextHolder.requireEnterpriseId());
-                item.setUpdateBy(updateBy);
-                item.setIsDelete(0);
-            });
-            workorderFileMapper.insertBatchSomeColumn(workorderFileList);
-
-            // 更新文件为已关联
-            List<Long> newFileIds = params.getWorkorderFileList().stream()
-                    .map(WorkorderFile::getFileId)
-                    .toList();
-            fileWrapper.clear();
-            fileWrapper.in(SystemFile::getId, newFileIds);
-            fileWrapper.set(SystemFile::getIsLinked, 1);
-            fileWrapper.set(SystemFile::getUpdateBy, updateBy);
-            systemFileMapper.update(null, fileWrapper);
+        /* 只有不存在任何有效工单引用时才允许成为无主文件，避免定时清理误删共享资料。 */
+        for (Long id : affected.stream().filter(Objects::nonNull).sorted().toList()) {
+            Long references = workorderFileMapper.selectCount(new LambdaQueryWrapper<WorkorderFile>()
+                    .eq(WorkorderFile::getFileId, id).eq(WorkorderFile::getIsDelete, 0));
+            systemFileMapper.update(null, new LambdaUpdateWrapper<SystemFile>()
+                    .eq(SystemFile::getId, id).eq(SystemFile::getEnterpriseId, enterpriseId)
+                    .set(SystemFile::getIsLinked, references > 0 ? 1 : 0).set(SystemFile::getUpdateBy, updateBy));
         }
     }
 
@@ -710,15 +751,22 @@ public class WorkorderServiceImpl implements WorkorderService {
 
     /**
      * 按险种原子保存续保跟进，只更新用户选择的状态，避免同时处理另一险种时覆盖对方结果。
-     * 周期取自服务器中国日期；ALL 允许提前完成另一险种本轮，仍保留未来年度提醒。
+     * 新表单允许两险种分别提交不同结果；旧范围参数仍兼容，ALL 允许提前完成另一险种本轮。
+     * 周期取自服务器中国日期和配置月数，后续周期提醒不受本轮处理影响。
      * @param id 当前企业内工单 ID。
      * @param request 处理范围、结果及可选备注，不接受客户端指定周期。
      * @return 成功提示；非法参数返回400，不存在或无权操作返回404。
      */
     @Override
     public ResponseResult followUpRenewal(Long id, com.example.insurancesystem.domain.workorder.RenewalFollowUpRequest request) {
-        if (request == null || !java.util.Set.of("COMMERCIAL", "COMPULSORY", "ALL").contains(request.getScope() == null ? "" : request.getScope())
-                || request.getStatus() == null || (request.getStatus() != 1 && request.getStatus() != 2)
+        /* 新表单与旧范围参数互斥，防止同一请求给出相互矛盾的处理结果。 */
+        boolean separate = request != null && (request.getCommercialStatus() != null || request.getCompulsoryStatus() != null);
+        if (request == null || (separate
+                ? request.getScope() != null || request.getStatus() != null
+                    || (request.getCommercialStatus() != null && !java.util.Set.of(0, 1, 2).contains(request.getCommercialStatus()))
+                    || (request.getCompulsoryStatus() != null && !java.util.Set.of(0, 1, 2).contains(request.getCompulsoryStatus()))
+                : !java.util.Set.of("COMMERCIAL", "COMPULSORY", "ALL").contains(request.getScope() == null ? "" : request.getScope())
+                    || request.getStatus() == null || (request.getStatus() != 1 && request.getStatus() != 2))
                 || (request.getFollowUpRes() != null && request.getFollowUpRes().length() > 1000)) {
             return new ResponseResult(400, "续保处理范围、结果或备注不合法");
         }
@@ -730,9 +778,9 @@ public class WorkorderServiceImpl implements WorkorderService {
             return new ResponseResult(404, "工单不存在或无权操作");
         }
         java.time.LocalDate today = java.time.LocalDate.now(com.example.insurancesystem.utils.RenewalCalendar.BUSINESS_ZONE);
-        boolean all = "ALL".equals(request.getScope());
-        boolean commercial = all || "COMMERCIAL".equals(request.getScope());
-        boolean compulsory = all || "COMPULSORY".equals(request.getScope());
+        boolean all = !separate && "ALL".equals(request.getScope());
+        boolean commercial = separate ? request.getCommercialStatus() != null : all || "COMMERCIAL".equals(request.getScope());
+        boolean compulsory = separate ? request.getCompulsoryStatus() != null : all || "COMPULSORY".equals(request.getScope());
         java.time.LocalDate commercialStart = com.example.insurancesystem.utils.RenewalCalendar.startDate(current.getCommercialInsuranceStartTime());
         java.time.LocalDate compulsoryStart = com.example.insurancesystem.utils.RenewalCalendar.startDate(current.getCompulsoryInsuranceStartTime());
         int commercialCycle = all ? com.example.insurancesystem.utils.RenewalCalendar.upcomingCycle(commercialStart, today)
@@ -749,11 +797,11 @@ public class WorkorderServiceImpl implements WorkorderService {
                 .set(Workorder::getUpdateBy, userId);
         /* 完成周期只能向前推进，重复处理不回退已经提前完成的另一轮状态。 */
         if (commercial && commercialCycle > 0) {
-            update.set(Workorder::getCommercialRenewalStatus, request.getStatus())
+            update.set(Workorder::getCommercialRenewalStatus, separate ? request.getCommercialStatus() : request.getStatus())
                     .setSql("commercial_renewal_cycle = GREATEST(COALESCE(commercial_renewal_cycle,0), " + commercialCycle + ")");
         }
         if (compulsory && compulsoryCycle > 0) {
-            update.set(Workorder::getCompulsoryRenewalStatus, request.getStatus())
+            update.set(Workorder::getCompulsoryRenewalStatus, separate ? request.getCompulsoryStatus() : request.getStatus())
                     .setSql("compulsory_renewal_cycle = GREATEST(COALESCE(compulsory_renewal_cycle,0), " + compulsoryCycle + ")");
         }
         if (request.getFollowUpRes() != null) update.set(Workorder::getFollowUpRes, request.getFollowUpRes());
@@ -773,11 +821,12 @@ public class WorkorderServiceImpl implements WorkorderService {
         Workorder created = (Workorder) response.getData();
         int state = 2;
         /* 以已填写的业务阶段恢复状态，不让已经承保的历史单重新停留在待报价。 */
-        if (params.getQuotationTime() != null || params.getCommercialAmount() != null || params.getCompulsoryAmount() != null || params.getVehicleAndTaxAmount() != null) state = 4;
+        if (params.getQuotationTime() != null || params.getCommercialAmount() != null || params.getCompulsoryAmount() != null || params.getVehicleAndTaxAmount() != null || params.getNonMotorAmount() != null) state = 4;
         if (params.getRequiredPayAmount() != null) state = 6;
         if (params.getUnderwritingTime() != null) state = 8;
         if (params.getFinishTime() != null || (params.getCommercialPolicyNo() != null && !params.getCommercialPolicyNo().isBlank())
-                || (params.getCompulsoryPolicyNo() != null && !params.getCompulsoryPolicyNo().isBlank())) state = 10;
+                || (params.getCompulsoryPolicyNo() != null && !params.getCompulsoryPolicyNo().isBlank())
+                || (params.getNonMotorPolicyNo() != null && !params.getNonMotorPolicyNo().isBlank())) state = 10;
         LambdaUpdateWrapper<Workorder> update = new LambdaUpdateWrapper<Workorder>()
                 .eq(Workorder::getId, created.getId()).eq(Workorder::getEnterpriseId, EnterpriseContextHolder.requireEnterpriseId())
                 .set(Workorder::getHandleBy, params.getHandleBy()).set(Workorder::getStatus, state);

@@ -46,9 +46,9 @@
                 <td>{{ item.transactionNo }}</td>
                 <td><span class="portal-tag" :class="{ warn: item.direction === 'OUT' }">{{ item.direction === 'IN' ? '入账' : '出账' }}</span></td>
                 <td>{{ typeName(item.transactionType) }}</td>
-                <td>¥{{ item.amount }}</td>
-                <td>¥{{ item.balanceBefore }}</td>
-                <td>¥{{ item.balanceAfter }}</td>
+                <td>¥{{ money(item.amount) }}</td>
+                <td>¥{{ money(item.balanceBefore) }}</td>
+                <td>¥{{ money(item.balanceAfter) }}</td>
                 <td>{{ item.remark }}</td>
                 <td>{{ item.createdAt }}</td>
               </tr>
@@ -63,6 +63,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getWalletTransactions } from '@/api/portal';
@@ -91,6 +92,11 @@ export default {
     this.loadData();
   },
   methods: {
+    /**
+     * 将接口原始金额转为两位小数展示，保留字符串精度及负号；缺失金额沿用财务零值占位。
+     * 仅格式化列表单元格，不改写分页响应、流水方向或订单支付状态。
+     */
+    money(value) { return formatAmount(value ?? 0, '0.00'); },
     /**
      * 将钱包流水业务类型映射为充值、套餐购买、续费、退款等可读名称，未知枚举原样显示。
      */

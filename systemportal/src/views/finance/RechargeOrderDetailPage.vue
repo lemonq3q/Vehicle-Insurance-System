@@ -59,6 +59,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { loadStripe } from '@stripe/stripe-js';
@@ -185,7 +186,7 @@ export default {
     },
     statusName: getStatusName,
     /** 将订单金额统一显示为两位小数。 */
-    money(value) { return Number(value || 0).toFixed(2); },
+    money(value) { return formatAmount(value ?? 0, '0.00'); },
     /** 读取当前企业范围内的订单；租户隔离和归属校验由服务端执行。 */
     async loadOrder() {
       return loadPageData(this.pageLoad, async () => {

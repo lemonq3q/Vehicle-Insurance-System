@@ -5,6 +5,7 @@
   "scripts": {
     "serve": "node ../scripts/assert-dev-port.js 8889 monitor-frontend && vue-cli-service serve --port 8889",
     "build": "vue-cli-service build",
+    "build:dev": "vue-cli-service build --mode dev --dest dist-dev",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {

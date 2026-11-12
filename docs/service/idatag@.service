@@ -1,0 +1,24 @@
+[Unit]
+Description=iDatag %i Service
+After=network-online.target
+Wants=network-online.target
+PartOf=idatag.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/idatag
+EnvironmentFile=/usr/idatag/.env
+
+ExecStart=/usr/bin/java -jar /usr/idatag/%i-0.0.1-SNAPSHOT.jar
+
+Restart=on-failure
+RestartSec=10
+SuccessExitStatus=143
+TimeoutStopSec=30
+
+StandardOutput=append:/usr/idatag/%i.log
+StandardError=append:/usr/idatag/%i.log
+
+[Install]
+WantedBy=multi-user.target

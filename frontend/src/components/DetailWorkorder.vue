@@ -1,4 +1,7 @@
 <template>
+  <div class="workorder-return-anchor">
+    <el-button class="workorder-return-button" type="primary" :icon="Back" @click="handleBack">返回</el-button>
+  </div>
   <div class="workorder_head_container card" style="padding: 0;">
     <div class="workorder_head_left" :style="{ backgroundColor: statusColor }">
       <i class="img_icon workorder-status-icon" :style="{ backgroundImage: `url(${headIcon})` }"></i>
@@ -87,11 +90,11 @@
           </div>
           <div>
             <span class="form_text">商业起期:</span>
-            <span> {{ formatSecondTimestamp(oriInfo.commercialInsuranceStartTime) }}</span>
+            <span> {{ formatSecondTimestamp(oriInfo.commercialInsuranceStartTime, 'YYYY-MM-DD') }}</span>
           </div>
           <div>
             <span class="form_text">交强起期:</span>
-            <span> {{ formatSecondTimestamp(oriInfo.compulsoryInsuranceStartTime) }}</span>
+            <span> {{ formatSecondTimestamp(oriInfo.compulsoryInsuranceStartTime, 'YYYY-MM-DD') }}</span>
           </div>
         </div>
         <div class="divider"></div>
@@ -290,7 +293,7 @@
           <div class="img_detail_show_right form_margin">
             <div>
               <span class="form_text workorder_detail_form_title">发票金额:</span>
-              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleInvoice.invoiceAmount) }">{{ displayMetricValue(oriInfo.vehicleInvoice.invoiceAmount) }}</span>
+              <span class="form_gap detail-value" :class="{ 'detail-value--empty': isEmptyMetricValue(oriInfo.vehicleInvoice.invoiceAmount) }">{{ isEmptyMetricValue(oriInfo.vehicleInvoice.invoiceAmount) ? displayMetricValue(oriInfo.vehicleInvoice.invoiceAmount) : formatMoney(oriInfo.vehicleInvoice.invoiceAmount) }}</span>
             </div>
             <div>
               <span class="form_text workorder_detail_form_title">购方名称:</span>
@@ -383,100 +386,6 @@
       </div>
       <Transition :css="false" v-bind="collapseTransitionHooks">
       <div class="detail_content" v-if="showFlag.quotationResult">
-        <div class="img_detail_show" style="margin-top: 20px;">
-          <div class="img_detail_show_right">
-            <div>
-              <span class="form_text workorder_detail_form_title">商业起期:</span>
-              <span class="form_gap">{{ formatSecondTimestamp(oriInfo.commercialInsuranceStartTime) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">交强起期:</span>
-              <span class="form_gap">{{ formatSecondTimestamp(oriInfo.compulsoryInsuranceStartTime) }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="img_detail_show">
-          <div class="img_detail_show_right">
-            <div>
-              <span class="form_text workorder_detail_form_title">商业险保费:</span>
-              <span class="form_gap">{{ `¥${(oriInfo.commercialAmount!=null&&oriInfo.commercialAmount!=undefined)?oriInfo.commercialAmount:''}` }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">交强险保费:</span>
-              <span class="form_gap">{{ `¥${(oriInfo.compulsoryAmount!=null&&oriInfo.compulsoryAmount!=undefined)?oriInfo.compulsoryAmount:''}` }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">车船税:</span>
-              <span class="form_gap">{{ `¥${(oriInfo.vehicleAndTaxAmount!=null&&oriInfo.vehicleAndTaxAmount!=undefined)?oriInfo.vehicleAndTaxAmount:''}` }}</span>
-            </div>
-            <div v-if="oriInfo.nonMotorAmount!=undefined && oriInfo.nonMotorAmount!=null">
-              <span class="form_text workorder_detail_form_title">非车保费:</span>
-              <span class="form_gap">{{ `¥${(oriInfo.nonMotorAmount!=null&&oriInfo.nonMotorAmount!=undefined)?oriInfo.nonMotorAmount:''}` }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">合计金额:</span>
-              <span class="form_gap">{{ `¥${computeSumAmount()}` }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="img_detail_show">
-          <div class="img_detail_show_left form_text">上游政策费用</div>
-          <div class="img_detail_show_right">
-            <div>
-              <span class="form_text workorder_detail_form_title">计算方式:</span>
-              <span class="form_gap">{{ (oriInfo.upstreamComputeType ?? 0)==0?"税前":"税后" }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">商业比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamCommercialPercentage, oriInfo.upstreamCommercialAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">交强比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamCompulsoryPercentage, oriInfo.upstreamCompulsoryAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">车船税比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamVehicleAndVesselTaxPercentage, oriInfo.upstreamVehicleAndVesselTaxAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">非车比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamNonMotorPercentage, oriInfo.upstreamNonMotorAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">合计金额:</span>
-              <span class="form_gap">{{ `¥${computeUpstreamAmount()}` }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="img_detail_show">
-          <div class="img_detail_show_left form_text">下游政策费用</div>
-          <div class="img_detail_show_right">
-            <div>
-              <span class="form_text workorder_detail_form_title">计算方式:</span>
-              <span class="form_gap">{{ (oriInfo.downstreamComputeType ?? 0)==0?"税前":"税后" }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">商业比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamCommercialPercentage, oriInfo.downstreamCommercialAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">交强比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamCompulsoryPercentage, oriInfo.downstreamCompulsoryAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">车船税比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamVehicleAndVesselTaxPercentage, oriInfo.downstreamVehicleAndVesselTaxAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">非车比例/金额:</span>
-              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamNonMotorPercentage, oriInfo.downstreamNonMotorAmount) }}</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title">合计金额:</span>
-              <span class="form_gap">{{ `¥${computeDownstreamAmount()}` }}</span>
-            </div>
-          </div>
-        </div>
         <div class="img_detail_show">
           <div class="img_detail_show_right">
             <div>
@@ -567,15 +476,72 @@
       </div>
       <Transition :css="false" v-bind="collapseTransitionHooks">
       <div class="detail_content" v-if="showFlag.acceptInsurance" style="border-bottom: 0; border-top: 1px solid #DCDFE6;">
-        <div class="img_detail_show" style="margin-top: 20px;">
+        <WorkorderPolicySections :model="oriInfo" :urls="showFileUrl" @download="handleDownload" />
+        <div v-if="showFileUrl.acceptInsuranceMisc.length" class="policy-section">
+          <h3>其他单证</h3>
+          <div v-for="(file, index) in fileStore.acceptInsuranceMiscFile" :key="file.id" class="misc-document-row">
+            <span class="form_text workorder_detail_form_title file_download_text no_select" @click="downloadByUrl(showFileUrl.acceptInsuranceMisc[index])">{{ file.name }}</span>
+          </div>
+        </div>
+        <div class="policy-totals">
+          <div class="policy-total"><span class="form_text workorder_detail_form_title">合计保费：</span><span>{{ computeSumAmount() === '' ? '' : computeSumAmount() + ' 元' }}</span></div>
+          <div class="policy-total"><span class="form_text workorder_detail_form_title">应付金额：</span><span>{{ detailPayableAmount === '' ? '' : detailPayableAmount + ' 元' }}</span></div>
+        </div>
+        <div class="img_detail_show">
+          <div class="img_detail_show_left form_text">上游政策费用</div>
           <div class="img_detail_show_right">
             <div>
-              <span class="form_text workorder_detail_form_title">商业保单号:</span>
-              <span class="form_gap">{{ oriInfo.commercialPolicyNo }}</span>
+              <span class="form_text workorder_detail_form_title">计算方式:</span>
+              <span class="form_gap">{{ (oriInfo.upstreamComputeType ?? 0)==0?"税前":"税后" }}</span>
             </div>
             <div>
-              <span class="form_text workorder_detail_form_title">交强保单号:</span>
-              <span class="form_gap">{{ oriInfo.compulsoryPolicyNo }}</span>
+              <span class="form_text workorder_detail_form_title">商业比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamCommercialPercentage, oriInfo.upstreamCommercialAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">交强比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamCompulsoryPercentage, oriInfo.upstreamCompulsoryAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">车船税比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamVehicleAndVesselTaxPercentage, oriInfo.upstreamVehicleAndVesselTaxAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">非车比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.upstreamNonMotorPercentage, oriInfo.upstreamNonMotorAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">合计金额:</span>
+              <span class="form_gap">{{ `¥${computeUpstreamAmount()}` }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="img_detail_show">
+          <div class="img_detail_show_left form_text">下游政策费用</div>
+          <div class="img_detail_show_right">
+            <div>
+              <span class="form_text workorder_detail_form_title">计算方式:</span>
+              <span class="form_gap">{{ (oriInfo.downstreamComputeType ?? 0)==0?"税前":"税后" }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">商业比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamCommercialPercentage, oriInfo.downstreamCommercialAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">交强比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamCompulsoryPercentage, oriInfo.downstreamCompulsoryAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">车船税比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamVehicleAndVesselTaxPercentage, oriInfo.downstreamVehicleAndVesselTaxAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">非车比例/金额:</span>
+              <span class="form_gap">{{ computePercentageAndAmountStr(oriInfo.downstreamNonMotorPercentage, oriInfo.downstreamNonMotorAmount) }}</span>
+            </div>
+            <div>
+              <span class="form_text workorder_detail_form_title">合计金额:</span>
+              <span class="form_gap">{{ `¥${computeDownstreamAmount()}` }}</span>
             </div>
           </div>
         </div>
@@ -591,44 +557,6 @@
             </div>
           </div>
         </div> -->
-        <div class="img_detail_show">
-          <div>
-            <div style="text-align: left; margin-bottom: 5px;">
-              <span class="form_text workorder_detail_form_title">商业保单:</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title file_download_text no_select" 
-              @click="handleDownload('acceptInsuranceCommercial')" 
-              v-if="showFileUrl.acceptInsuranceCommercial != null && showFileUrl.acceptInsuranceCommercial != undefined && showFileUrl.acceptInsuranceCommercial!=''">
-                点击下载商业保单
-              </span>
-            </div>
-          </div>
-          <div>
-            <div style="text-align: left; margin-bottom: 5px;">
-              <span class="form_text workorder_detail_form_title">交强保单:</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title file_download_text no_select" 
-              @click="handleDownload('acceptInsuranceCompulsory')" 
-              v-if="showFileUrl.acceptInsuranceCompulsory != null && showFileUrl.acceptInsuranceCompulsory != undefined && showFileUrl.acceptInsuranceCompulsory!=''">
-                点击下载交强保单
-              </span>
-            </div>
-          </div>
-          <div>
-            <div style="text-align: left; margin-bottom: 5px;">
-              <span class="form_text workorder_detail_form_title">其他单证:</span>
-            </div>
-            <div>
-              <span class="form_text workorder_detail_form_title file_download_text no_select" 
-              @click="handleDownload('acceptInsuranceOther')" 
-              v-if="showFileUrl.acceptInsuranceOther != null && showFileUrl.acceptInsuranceOther != undefined && showFileUrl.acceptInsuranceOther.length>0">
-                点击下载其他单证
-              </span>
-            </div>
-          </div>
-        </div> 
         <div class="img_detail_show">
           <div class="img_detail_show_right">
             <div>
@@ -734,135 +662,172 @@
         size="large"
         class="login_form"
       >
+        <div class="divider"></div>
         <el-row>
-          <span class="workoerder_form_big_title">报价起期</span>
+          <span class="workoerder_form_big_title">保司报价单</span>
+        </el-row>
+        <el-row style="min-height: 140px;">
+          <el-col :span="6">
+            <el-upload class="workorder-document-upload"
+              v-loading="loadingFlag.quotation"
+              drag
+              :file-list="fileStore.quotationFile"
+              action="#"
+              :auto-upload="false"
+              :multiple=false
+              :limit="1"
+              :on-change="handleQuotationChange"
+              :on-remove="(file, files)=>{fileStore.quotationFile = files; workorderFileIds.quotationFile = undefined;}"
+            >
+              <!-- <el-button type="primary" :disabled="fileStore.quotationFile.length>0">点击上传保司报价单</el-button> -->
+              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+              <div class="el-upload__text">
+                拖动文件到这里 或者 <em>点击上传</em>
+              </div>
+              <template #tip>
+                <div class="el-upload__tip">
+                </div>
+              </template>
+            </el-upload>
+          </el-col>
+        </el-row>
+        <div class="divider"></div>
+        <el-row>
+          <span class="workoerder_form_big_title">报价反馈备注</span>
         </el-row>
         <el-row>
-          <!-- <el-col :span="12">
-            <el-form-item prop="quotationNo" label="报价单号">
+          <el-col :span="12">
+            <el-form-item prop="quotationRemark" label="备注">
               <el-input
-              v-model="info.quotationNo"
-              class="responsive-input"
-              placeholder="请输入报价单号"
-              />
-            </el-form-item>
-          </el-col> -->
-          <el-col :span="6">
-            <el-form-item prop="commercialInsuranceStartTime" label="商业起期">
-              <el-date-picker
+                v-model="info.quotationRemark"
+                resize="none"
                 style="width: 100%;"
-                v-model="info.commercialInsuranceStartTime"
-                type="date"
-                placeholder="请选择商业险起保日期"
+                :rows="8"
+                type="textarea"
+                placeholder="请输入报价反馈备注"
+                maxlength="400"
+                show-word-limit
               />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
-            <el-form-item prop="compulsoryInsuranceStartTime" label="交强起期">
-              <el-date-picker
+        </el-row>
+      </el-form>
+      <div>
+        <el-button type="primary" @click="handleSubmit(quotationRef, 'quotation')">提交</el-button>
+        <el-button @click="handleResetForm('quotation')">重置</el-button>
+      </div>
+    </div>
+    <!-- 报价失败 -->
+    <!-- <div class="workorder_form" v-if="formStatus==2 && showFlag.uploadForm">
+      <el-form
+        ref="quotationFailedRef"
+        :model="info"
+        status-icon
+        label-width="auto"
+        size="large"
+        class="login_form"
+      >
+        <el-row>
+          <span class="workoerder_form_big_title">报价失败原因</span>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="原因">
+              <el-input
+                v-model="info.quotationFailedRemark"
+                resize="none"
                 style="width: 100%;"
-                v-model="info.compulsoryInsuranceStartTime"
-                type="date"
-                placeholder="请选择交强险起保日期"
+                :rows="8"
+                type="textarea"
+                placeholder="请输入报价失败原因"
+                maxlength="400"
+                show-word-limit
               />
             </el-form-item>
           </el-col>
         </el-row>
+      </el-form>
+      <div>
+        <el-button type="primary" @click="handleSubmit(quotationFailedRef, 'quotationFailed')">提交</el-button>
+        <el-button @click="handleResetForm('quotationFailed')">重置</el-button>
+      </div>
+    </div> -->
+    <!-- 承保表单 -->
+    <div class="workorder_form" v-if="formStatus==7 && showFlag.uploadForm">
+      <el-form
+        ref="acceptInsuranceRef"
+        :model="info"
+        status-icon
+        :rules="acceptInsuranceRules"
+        label-width="auto"
+        size="large"
+        class="login_form"
+      >
         <el-row>
-          <span class="workoerder_form_big_title">保费</span>
+          <span class="workoerder_form_big_title">收款信息</span>
         </el-row>
-        <el-row> 
+        <el-row :gutter="20">
           <el-col :span="6">
-            <el-form-item prop="commercialAmount" label="商业保费" v-if="showFlag.insuranceType1">
+            <el-form-item prop="payName" label="收款人">
               <el-input
-              v-model="info.commercialAmount"
-              placeholder="请输入商业保费"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="compulsoryAmount" label="交强保费" v-if="showFlag.insuranceType3">
-              <el-input
-              v-model="info.compulsoryAmount"
-              placeholder="请输入交强保费"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="vehicleAndTaxAmount" label="车船税" v-if="showFlag.insuranceType3">
-              <el-input
-              v-model="info.vehicleAndTaxAmount"
-              placeholder="请输入车船税"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <div style="color:var(--insurance-primary);" class="no_select" v-if="!showFlag.is_have_non_motor" @click="handleNonMotorChange(true)">+添加非车险险种(最多添加1条)</div>
-          </el-col>
-        </el-row>
-        <el-row v-if="showFlag.is_have_non_motor">
-          <!-- <el-col :span="6">
-            <el-form-item prop="nonMotorInsuranceName" label="险种名称">
-              <el-input
-              v-model="info.nonMotorInsuranceName"
-              placeholder="请输入险种名称"
+              v-model="info.payName"
+              placeholder="请输入收款人"
               />
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item prop="nonMotorCoverageAmount" label="保额">
+            <el-form-item prop="payIdNum" label="收款人联系方式">
               <el-input
-              v-model="info.nonMotorCoverageAmount"
-              placeholder="请输入保额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
+              v-model="info.payIdNum"
+              placeholder="请输入收款人联系方式"
+              />
             </el-form-item>
-          </el-col> -->
-          <el-col :span="6">
-            <el-form-item prop="nonMotorAmount" label="非车险保费">
-              <el-input
-              v-model="info.nonMotorAmount"
-              placeholder="请输入非车险保费"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <div style="color: #F56C6C;" class="no_select" @click="handleNonMotorChange(false)">删除</div>
           </el-col>
         </el-row>
-        <el-row>
+        <el-row :gutter="20">
           <el-col :span="6">
-            <el-form-item label="合计保费">
+            <el-form-item prop="payBank" label="收款人开户行">
               <el-input
-              :disabled="true"
-              v-model="sumAmount"
-              placeholder=""
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
+              v-model="info.payBank"
+              placeholder="请输入收款人开户行"
+              />
             </el-form-item>
           </el-col>
+          <el-col :span="6">
+            <el-form-item prop="payBankCardNum" label="银行卡号">
+              <el-input
+              v-model="info.payBankCardNum"
+              placeholder="请输入银行卡号"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <div class="divider"></div>
+        <el-row :gutter="20">
+          <el-col :span="8"><el-checkbox v-model="showFlag.insuranceType1">商业保单</el-checkbox></el-col>
+          <el-col :span="8"><el-checkbox v-model="showFlag.insuranceType3">交强保单</el-checkbox></el-col>
+          <el-col :span="8"><el-checkbox v-model="showFlag.is_have_non_motor">非车险保单</el-checkbox></el-col>
+        </el-row>
+        <WorkorderPolicySections :model="info" editable :flags="showFlag" :files="fileStore" :loading="loadingFlag" :ocr-loading="policyOcrPending"
+          :ocr-candidates="getPolicyOcrCandidates"
+          @apply-ocr="applyPolicyOcrCandidate" @apply-all-ocr="applyAllPolicyOcrCandidates"
+          @change="(key, value) => info[key] = value" @upload="handlePolicyUpload" @remove="handlePolicyRemove" />
+        <div class="policy-section">
+          <h3>其他单证</h3>
+          <el-form-item>
+            <el-upload class="workorder-document-upload" drag action="#" :auto-upload="false" :limit="6" multiple
+              :file-list="fileStore.acceptInsuranceMiscFile" :disabled="loadingFlag.misc > 0"
+              v-loading="loadingFlag.misc > 0" :on-change="handleAcceptInsuranceMiscChange"
+              :on-remove="handleAcceptInsuranceMiscRemove">
+              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+              <div class="el-upload__text">拖动文件到这里 或者 <em>点击上传</em></div>
+            </el-upload>
+            <span class="policy-upload-hint">最多上传6个文件</span>
+          </el-form-item>
+        </div>
+        <el-row :gutter="20" style="margin-top:20px">
+          <el-col :span="8"><el-form-item label="合计保费"><el-input :model-value="sumAmount" disabled><template #suffix>元</template></el-input></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="应付金额"><el-input :model-value="payableAmount" disabled><template #suffix>元</template></el-input></el-form-item></el-col>
         </el-row>
         <el-row>
           <span class="workoerder_form_big_title">上游政策费用</span>
@@ -1145,898 +1110,6 @@
           </el-col>
         </el-row>
         <div class="divider"></div>
-        <el-row>
-          <span class="workoerder_form_big_title">保司报价单</span>
-        </el-row>
-        <el-row style="min-height: 140px;">
-          <el-col :span="6">
-            <el-upload
-              v-loading="loadingFlag.quotation"
-              drag
-              :file-list="fileStore.quotationFile"
-              action="#" 
-              :auto-upload="false" 
-              :multiple=false
-              :limit="1"
-              :on-change="handleQuotationChange"
-              :on-remove="(file, files)=>{fileStore.quotationFile = files; workorderFileIds.quotationFile = undefined;}"
-            >
-              <!-- <el-button type="primary" :disabled="fileStore.quotationFile.length>0">点击上传保司报价单</el-button> -->
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                拖动文件到这里 或者 <em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">
-                </div>
-              </template>
-            </el-upload>
-          </el-col>
-        </el-row>
-        <div class="divider"></div>
-        <el-row>
-          <span class="workoerder_form_big_title">报价反馈备注</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item prop="quotationRemark" label="备注">
-              <el-input
-                v-model="info.quotationRemark"
-                resize="none"
-                style="width: 100%;"
-                :rows="8"
-                type="textarea"
-                placeholder="请输入报价反馈备注"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div>
-        <el-button type="primary" @click="handleSubmit(quotationRef, 'quotation')">提交</el-button>
-        <el-button @click="handleResetForm('quotation')">重置</el-button>
-      </div>
-    </div>
-    <!-- 报价失败 -->
-    <!-- <div class="workorder_form" v-if="formStatus==2 && showFlag.uploadForm">
-      <el-form
-        ref="quotationFailedRef"
-        :model="info"
-        status-icon
-        label-width="auto"
-        size="large"
-        class="login_form"
-      >
-        <el-row>
-          <span class="workoerder_form_big_title">报价失败原因</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="原因">
-              <el-input
-                v-model="info.quotationFailedRemark"
-                resize="none"
-                style="width: 100%;"
-                :rows="8"
-                type="textarea"
-                placeholder="请输入报价失败原因"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div>
-        <el-button type="primary" @click="handleSubmit(quotationFailedRef, 'quotationFailed')">提交</el-button>
-        <el-button @click="handleResetForm('quotationFailed')">重置</el-button>
-      </div>
-    </div> -->
-    <!-- 核保表单 -->
-    <!-- <div class="workorder_form" v-if="formStatus==3 && showFlag.uploadForm">
-      <el-form
-        ref="underwriteRef"
-        :model="info"
-        status-icon
-        :rules="quotationRules"
-        label-width="auto"
-        size="large"
-        class="login_form"
-      >
-        <el-row>
-          <span class="workoerder_form_big_title">报价起期</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item prop="quotationNo" label="报价单号">
-              <el-input
-              v-model="info.quotationNo"
-              class="responsive-input"
-              placeholder="请输入报价单号"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="commercialInsuranceStartTime" label="商业起期">
-              <el-date-picker
-                style="width: 100%;"
-                v-model="info.commercialInsuranceStartTime"
-                type="date"
-                placeholder="请选择商业险起保日期"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="compulsoryInsuranceStartTime" label="交强起期">
-              <el-date-picker
-                style="width: 100%;"
-                v-model="info.compulsoryInsuranceStartTime"
-                type="date"
-                placeholder="请选择交强险起保日期"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <span class="workoerder_form_big_title">保费/政策<span style="font-weight: 700;" class="form_text">(核保价格如有变动请修改保费)</span></span>
-        </el-row>
-        <el-row> 
-          <el-col :span="6">
-            <el-form-item prop="commercialAmount" label="商业保费">
-              <el-input
-              v-model="info.commercialAmount"
-              placeholder="请输入商业保费"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="compulsoryAmount" label="交强保费">
-              <el-input
-              v-model="info.compulsoryAmount"
-              placeholder="请输入交强保费"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="vehicleAndTaxAmount" label="车船税">
-              <el-input
-              v-model="info.vehicleAndTaxAmount"
-              placeholder="请输入车船税"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <div style="color:var(--insurance-primary);" class="no_select" v-if="!showFlag.is_have_non_motor" @click="handleNonMotorChange(true)">+添加非车险险种(最多添加1条)</div>
-          </el-col>
-        </el-row>
-        <el-row v-if="showFlag.is_have_non_motor">
-          <el-col :span="6">
-            <el-form-item prop="nonMotorInsuranceName" label="险种名称">
-              <el-input
-              v-model="info.nonMotorInsuranceName"
-              placeholder="请输入险种名称"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="nonMotorCoverageAmount" label="保额">
-              <el-input
-              v-model="info.nonMotorCoverageAmount"
-              placeholder="请输入保额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="nonMotorAmount" label="非车险保费">
-              <el-input
-              v-model="info.nonMotorAmount"
-              placeholder="请输入非车险保费"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <div style="color: #F56C6C;" class="no_select" @click="handleNonMotorChange(false)">删除</div>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :span="6">
-            <el-form-item label="合计保费">
-              <el-input
-              :disabled="true"
-              v-model="sumAmount"
-              placeholder=""
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <span class="workoerder_form_big_title">上游政策费用</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="上游费用计算方式">
-              <el-radio-group v-model="info.upstreamComputeType">
-                <el-radio :value="0">按税前保费计算</el-radio>
-                <el-radio :value="1">按税后保费计算</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :span="6" v-if="!showFlag.upstream_commercial">
-            <el-form-item prop="upstreamCommercialPercentage" label="商业政策比例">
-              <el-input
-              v-model="info.upstreamCommercialPercentage"
-              placeholder="请输入商业政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.upstreamCommercialPercentage, info.commercialAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.upstream_commercial">
-            <el-form-item prop="upstreamCommercialAmount" label="商业政策金额">
-              <el-input
-              v-model="info.upstreamCommercialAmount"
-              placeholder="请输入商业政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCommercial', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="!showFlag.upstream_compulsory">
-            <el-form-item prop="upstreamCompulsoryPercentage" label="交强政策比例">
-              <el-input
-              v-model="info.upstreamCompulsoryPercentage"
-              placeholder="请输入交强政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.upstreamCompulsoryPercentage, info.compulsoryAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.upstream_compulsory">
-            <el-form-item prop="upstreamCompulsoryAmount" label="交强政策金额">
-              <el-input
-              v-model="info.upstreamCompulsoryAmount"
-              placeholder="请输入交强政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamCompulsory', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="!showFlag.upstream_tax">
-            <el-form-item prop="upstreamVehicleAndVesselTaxPercentage" label="车船税政策比例">
-              <el-input
-              v-model="info.upstreamVehicleAndVesselTaxPercentage"
-              placeholder="请输入车船税政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.upstreamVehicleAndVesselTaxPercentage, info.vehicleAndTaxAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.upstream_tax">
-            <el-form-item prop="upstreamVehicleAndVesselTaxAmount" label="车船税政策金额">
-              <el-input
-              v-model="info.upstreamVehicleAndVesselTaxAmount"
-              placeholder="请输入车船税政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamTax', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="!showFlag.upstream_non_motor && showFlag.is_have_non_motor">
-            <el-form-item prop="upstreamNonMotorPercentage" label="非车险政策比例">
-              <el-input
-              v-model="info.upstreamNonMotorPercentage"
-              placeholder="请输入非车险政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.upstreamNonMotorPercentage, info.nonMotorAmount, info.upstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.upstream_non_motor && showFlag.is_have_non_motor">
-            <el-form-item prop="upstreamNonMotorAmount" label="非车险政策金额">
-              <el-input
-              v-model="info.upstreamNonMotorAmount"
-              placeholder="请输入非车险政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('upstreamNonMotor', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <span class="workoerder_form_big_title">下游政策费用</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item prop="test" label="下游费用计算方式">
-              <el-radio-group v-model="info.downstreamComputeType">
-                <el-radio :value="0">按税前保费计算</el-radio>
-                <el-radio :value="1">按税后保费计算</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :span="6" v-if="!showFlag.downstream_commercial">
-            <el-form-item prop="downstreamCommercialPercentage" label="商业政策比例">
-              <el-input
-              v-model="info.downstreamCommercialPercentage"
-              placeholder="请输入商业政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.downstreamCommercialPercentage, info.commercialAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.downstream_commercial">
-            <el-form-item prop="downstreamCommercialAmount" label="商业政策金额">
-              <el-input
-              v-model="info.downstreamCommercialAmount"
-              placeholder="请输入商业政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCommercial', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="!showFlag.downstream_compulsory">
-            <el-form-item prop="downstreamCompulsoryPercentage" label="交强政策比例">
-              <el-input
-              v-model="info.downstreamCompulsoryPercentage"
-              placeholder="请输入交强政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.downstreamCompulsoryPercentage, info.compulsoryAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.downstream_compulsory">
-            <el-form-item prop="downstreamCompulsoryAmount" label="交强政策金额">
-              <el-input
-              v-model="info.downstreamCompulsoryAmount"
-              placeholder="请输入交强政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamCompulsory', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="!showFlag.downstream_tax">
-            <el-form-item prop="downstreamVehicleAndVesselTaxPercentage" label="车船税政策比例">
-              <el-input
-              v-model="info.downstreamVehicleAndVesselTaxPercentage"
-              placeholder="请输入车船税政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.downstreamVehicleAndVesselTaxPercentage, info.vehicleAndTaxAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.downstream_tax">
-            <el-form-item prop="downstreamVehicleAndVesselTaxAmount" label="车船税政策金额">
-              <el-input
-              v-model="info.downstreamVehicleAndVesselTaxAmount"
-              placeholder="请输入车船税政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamTax', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="!showFlag.downstream_non_motor && showFlag.is_have_non_motor">
-            <el-form-item prop="downstreamNonMotorPercentage" label="非车险政策比例">
-              <el-input
-              v-model="info.downstreamNonMotorPercentage"
-              placeholder="请输入非车险政策比例"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">%</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div>{{ `${percentageMulti(info.downstreamNonMotorPercentage, info.nonMotorAmount, info.downstreamComputeType)}元` }}</div>
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', true)" class="no_select">按金额</div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="showFlag.downstream_non_motor && showFlag.is_have_non_motor">
-            <el-form-item prop="downstreamNonMotorAmount" label="非车险政策金额">
-              <el-input
-              v-model="info.downstreamNonMotorAmount"
-              placeholder="请输入非车险政策金额"
-              >
-                <template #suffix>
-                  <span style="margin-right: 8px; color: #666;">元</span>
-                </template>
-              </el-input>
-              <div style="display: flex;">
-                <div style="color: var(--insurance-primary); margin-left: 10px;" @click="handleAmountShowChange('downstreamNonMotor', false)" class="no_select">按比例</div>
-              </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <div class="divider"></div>
-        <el-row>
-          <span class="workoerder_form_big_title">保司报价单</span>
-        </el-row>
-        <el-row style="min-height: 140px;">
-          <el-col :span="6">
-            <el-upload
-              drag
-              :file-list="fileStore.quotationFile"
-              action="#" 
-              :auto-upload="false" 
-              :multiple=false
-              :limit="1"
-              :on-change="handleQuotationChange"
-              :on-remove="(file, files)=>{fileStore.quotationFile = files; workorderFileIds.quotationFile = undefined;}"
-            >
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                拖动文件到这里 或者 <em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">
-                </div>
-              </template>
-            </el-upload>
-          </el-col>
-        </el-row>
-        <div class="divider"></div>
-        <el-row>
-          <span class="workoerder_form_big_title">核保反馈备注</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item prop="underwritingRemark" label="备注">
-              <el-input
-                v-model="info.underwritingRemark"
-                resize="none"
-                style="width: 100%;"
-                :rows="8"
-                type="textarea"
-                placeholder="请输入核保反馈备注"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div>
-        <el-button type="primary" @click="handleSubmit(underwriteRef, 'underwriting')">提交</el-button>
-        <el-button @click="handleResetForm('underwriting')">重置</el-button>
-      </div>
-    </div> -->
-    <!-- 核保失败 -->
-    <!-- <div class="workorder_form" v-if="formStatus==4 && showFlag.uploadForm">
-      <el-form
-        ref="underwriteFailedRef"
-        :model="info"
-        status-icon
-        label-width="auto"
-        size="large"
-        class="login_form"
-      >
-        <el-row>
-          <span class="workoerder_form_big_title">核保失败原因</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="原因">
-              <el-input
-                v-model="info.underwritingFailedRemark"
-                resize="none"
-                style="width: 100%;"
-                :rows="8"
-                type="textarea"
-                placeholder="请输入核保失败原因"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div>
-        <el-button type="primary" @click="handleSubmit(underwriteFailedRef, 'underwritingFailed')">提交</el-button>
-        <el-button @click="handleResetForm('underwritingFailed')">重置</el-button>
-      </div>
-    </div> -->
-    <!-- 支付信息 -->
-    <!-- <div class="workorder_form" v-if="formStatus==5 && showFlag.uploadForm">
-      <el-form
-        ref="paymentRef"
-        :model="info"
-        status-icon
-        :rules="payRules"
-        label-width="auto"
-        size="large"
-        class="login_form"
-      >
-        <el-row>
-          <span class="workoerder_form_big_title">金额</span>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="requiredPayAmount" label="需要支付保费">
-              <el-input
-              v-model="info.requiredPayAmount"
-              placeholder="请输入需要支付保费"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <span class="workoerder_form_big_title">收款信息</span>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="payName" label="收款人">
-              <el-input
-              v-model="info.payName"
-              placeholder="请输入收款人"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="payIdNum" label="收款人联系方式">
-              <el-input
-              v-model="info.payIdNum"
-              placeholder="请输入收款人联系方式"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="payBank" label="收款人开户行">
-              <el-input
-              v-model="info.payBank"
-              placeholder="请输入收款人开户行"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="payBankCardNum" label="银行卡号">
-              <el-input
-              v-model="info.payBankCardNum"
-              placeholder="请输入银行卡号"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <div class="divider"></div>
-        <el-row :gutter="20">
-          <span class="workoerder_form_big_title">支付反馈备注</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="备注">
-              <el-input
-                v-model="info.payRemark"
-                resize="none"
-                style="width: 100%;"
-                :rows="8"
-                type="textarea"
-                placeholder="请输入支付反馈备注"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div>
-        <el-button type="primary" @click="handleSubmit(paymentRef, 'pay')">提交</el-button>
-        <el-button @click="handleResetForm('pay')">重置</el-button>
-      </div>
-    </div> -->
-    <!-- 支付失败 -->
-    <!-- <div class="workorder_form" v-if="formStatus==6 && showFlag.uploadForm">
-      <el-form
-        ref="paymentFailedRef"
-        :model="info"
-        status-icon
-        label-width="auto"
-        size="large"
-        class="login_form"
-      >
-        <el-row>
-          <span class="workoerder_form_big_title">支付失败原因</span>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="原因">
-              <el-input
-                v-model="info.payFailedRemark"
-                resize="none"
-                style="width: 100%;"
-                :rows="8"
-                type="textarea"
-                placeholder="请输入支付失败原因"
-                maxlength="400"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div>
-        <el-button type="primary" @click="handleSubmit(paymentFailedRef, 'payFailed')">提交</el-button>
-        <el-button @click="handleResetForm('payFailed')">重置</el-button>
-      </div>
-    </div> -->
-    <!-- 承保表单 -->
-    <div class="workorder_form" v-if="formStatus==7 && showFlag.uploadForm">
-      <el-form
-        ref="acceptInsuranceRef"
-        :model="info"
-        status-icon
-        :rules="acceptInsuranceRules"
-        label-width="auto"
-        size="large"
-        class="login_form"
-      >
-        <el-row>
-          <span class="workoerder_form_big_title">收款信息</span>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="payName" label="收款人">
-              <el-input
-              v-model="info.payName"
-              placeholder="请输入收款人"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="payIdNum" label="收款人联系方式">
-              <el-input
-              v-model="info.payIdNum"
-              placeholder="请输入收款人联系方式"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="payBank" label="收款人开户行">
-              <el-input
-              v-model="info.payBank"
-              placeholder="请输入收款人开户行"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="payBankCardNum" label="银行卡号">
-              <el-input
-              v-model="info.payBankCardNum"
-              placeholder="请输入银行卡号"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <div class="divider"></div>
-        <el-row>
-          <span class="workoerder_form_big_title">登记保单信息</span>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="commercialPolicyNo" label="商业保单号">
-              <el-input
-              v-model="info.commercialPolicyNo"
-              placeholder="请输入商业保单号"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="compulsoryPolicyNo" label="交强保单号">
-              <el-input
-              v-model="info.compulsoryPolicyNo"
-              placeholder="请输入交强保单号"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <!-- <el-row :gutter="20">
-          <el-col :span="6">
-            <el-form-item prop="trackingNum" label="物流单号">
-              <el-input
-              v-model="info.trackingNum"
-              placeholder="请输入物流单号"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item prop="logisticsCompany" label="快递公司">
-              <el-input
-              v-model="info.logisticsCompany"
-              placeholder="请输入快递公司"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row> -->
-        <div class="divider"></div>
-        <el-row>
-          <span class="workoerder_form_big_title">电子保单</span>
-        </el-row>
-        <el-row style="min-height: 140px;">
-          <el-col :span="6">
-            <div class="workorder_file_title">商业</div>
-            <el-upload
-              v-loading="loadingFlag.commercial"
-              drag
-              :file-list="fileStore.acceptInsuranceCommercialFile"
-              action="#" 
-              :auto-upload="false" 
-              :multiple=false
-              :limit="1"
-              :on-change="handleAcceptInsuranceCommercialChange"
-              :on-remove="(file, files)=>{fileStore.acceptInsuranceCommercialFile = files; workorderFileIds.acceptInsuranceCommercialFile = undefined;}"
-            >
-              <!-- <el-button type="primary" :disabled="fileStore.acceptInsuranceCommercialFile.length>0">点击上传商业电子保单</el-button> -->
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                拖动文件到这里 或者 <em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">
-                </div>
-              </template>
-            </el-upload>
-          </el-col>
-          <el-col :span="1"></el-col>
-          <el-col :span="6">
-            <div class="workorder_file_title">交强</div>
-            <el-upload
-              v-loading="loadingFlag.compulsory"
-              drag
-              :file-list="fileStore.acceptInsuranceCompulsoryFile"
-              action="#" 
-              :auto-upload="false" 
-              :multiple=false
-              :limit="1"
-              :on-change="handleAcceptInsuranceCompulsoryChange"
-              :on-remove="(file, files)=>{fileStore.acceptInsuranceCompulsoryFile = files; workorderFileIds.acceptInsuranceCompulsoryFile = undefined;}"
-            >
-              <!-- <el-button type="primary" :disabled="fileStore.acceptInsuranceCompulsoryFile.length>0">点击上传交强电子保单</el-button> -->
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                拖动文件到这里 或者 <em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">
-                </div>
-              </template>
-            </el-upload>
-          </el-col>
-        </el-row>
-        <el-row style="min-height: 140px;">
-          <el-col :span="6">
-            <div class="workorder_file_title">其他单证 <span class="form_text">(最多上传6个文件)</span></div>
-            <el-upload
-              v-loading="loadingFlag.other!=0"
-              drag
-              :file-list="fileStore.acceptInsuranceOtherFile"
-              action="#" 
-              :auto-upload="false"
-              :multiple=true
-              :limit="6"
-              :on-change="handleAcceptInsuranceOtherChange"
-              :on-remove="handleAcceptInsuranceOtherRemove"
-            >
-              <!-- <el-button type="primary" :disabled="fileStore.acceptInsuranceOtherFile.length>=6">点击上传其他单证</el-button> -->
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                拖动文件到这里 或者 <em>点击上传</em>
-              </div>
-              <template #tip>
-                <div class="el-upload__tip">
-                </div>
-              </template>
-            </el-upload>
-          </el-col>
-        </el-row>
-        <div class="divider"></div>
         <el-row :gutter="20">
           <span class="workoerder_form_big_title">承保反馈备注</span>
         </el-row>
@@ -2104,7 +1177,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed, nextTick } from 'vue';
+import { reactive, ref, onMounted, computed, nextTick, inject } from 'vue';
+import { formatMoney, sumMoney, calculatePolicyAmount, formatPercentage } from '@/utils/money';
 import successIcon from '@/assets/icons/success.png';
 import faileIcon from '@/assets/icons/faile.png';
 import expandIcon from '@/assets/icons/expand.png';
@@ -2113,19 +1187,41 @@ import successGrayIcon from '@/assets/icons/success_gray.png';
 import faileGrayIcon from '@/assets/icons/faile_gray.png';
 import writeIcon from '@/assets/icons/write.png';
 import collapseIcon from '@/assets/icons/collapse.png';
-import { convertDateToSecondTimestamp, formatSecondTimestamp } from '@/utils/time';
+import { formatSecondTimestamp } from '@/utils/time';
 import { selectWorkorderById } from '@/api/workorder';
 import { selectAllInsurance } from '@/api/insurance';
 import { downloadByUrl, uploadToOss } from '@/api/file';
+import { policyRecognition, policyRecognitionStatus } from '@/api/ocr';
 import { validateAmount, validFileSize } from '@/utils/validate';
 import { updateQuotation, updateNoCascade, updateAcceptInsurance } from '@/api/workorder';
 import Message from '@/utils/message';
-import { Document, UploadFilled } from '@element-plus/icons-vue';
+import { Back, Document, UploadFilled } from '@element-plus/icons-vue';
 import EditBaseWorkorder from './EditBaseWorkorder.vue';
+import { workorderPolicyInsuranceMock } from '@/mock/workorderPolicyMock';
+import WorkorderPolicySections from './WorkorderPolicySections.vue';
+import { fillEmptyOcrFields, consumeOcrCandidates } from '@/utils/ocrCandidates';
+import { normalizePolicyOcrCandidates, detectedPolicyGroups } from '@/utils/policyOcr';
+import { POLICY_GROUPS, policyFields, hasPolicy, buildPolicyPayload, validatePolicies } from '@/utils/workorderPolicy';
 import Loading from '@/utils/loading';
 import { useRouter } from 'vue-router';
+import { WORKORDER_NAVIGATION_KEY, returnToWorkorderList } from '@/utils/workorderNavigation';
 
 const router = useRouter();
+const workorderNavigation = inject(WORKORDER_NAVIGATION_KEY, null);
+
+/**
+ * 返回进入详情前的列表，优先回退到已知历史来源，直接打开详情时安全回到工单管理。
+ * 列表实例及筛选/分页由工作台缓存，详情不持久化列表数据，也不重新构造查询条件。
+ */
+const handleBack = () => returnToWorkorderList(router, router.currentRoute.value.query.returnTo);
+
+/**
+ * 仅在后端已确认保存或基础资料保存成功后推进列表修改版本。
+ * 返回列表时以原查询刷新，失败提交和只读查看不触发刷新，避免丢失页面上下文。
+ */
+const markWorkorderChanged = () => {
+  if (workorderNavigation) workorderNavigation.revision.value += 1;
+};
 
 const collapseAnimations = new WeakMap();
 
@@ -2315,7 +1411,8 @@ const loadingFlag = reactive({
   quotation: false,
   commercial: false,
   compulsory: false,
-  other: 0
+  other: 0,
+  misc: 0
 });
 
 const drawer = ref(false);
@@ -2327,14 +1424,73 @@ const fileStore = reactive({
   quotationFile: [],
   acceptInsuranceCommercialFile: [],
   acceptInsuranceCompulsoryFile: [],
-  acceptInsuranceOtherFile: []
+  acceptInsuranceOtherFile: [],
+  acceptInsuranceMiscFile: []
 });
 const workorderFileIds = reactive({
   quotationFile: undefined,
   acceptInsuranceCommercialFile: undefined,
   acceptInsuranceCompulsoryFile: undefined,
-  acceptInsuranceOtherFile: []
+  acceptInsuranceOtherFile: [],
+  acceptInsuranceMiscFile: []
 });
+
+/**
+ * 以系统文件 ID 区分各份保单的待应用候选；同一文件可同时贡献三类险种字段。
+ * 上传文件被移除或表单重新加载后清空候选，防止迟到的模型响应污染当前编辑。
+ */
+const policyOcrResults = reactive({});
+const policyOcrSources = reactive({});
+// 以文件 ID 追踪独立于 OSS 上传的识别请求，支持非车险多文件并发显示。
+const policyOcrPending = reactive({});
+const policyUploadVersions = {};
+let policyOcrGeneration = 0;
+let mockPolicyFileSequence = 0;
+
+/**
+ * 仅展示仍被用户选中的险种候选；取消险种后不允许一键应用隐藏字段。
+ */
+const isActivePolicyOcrField = (path) => POLICY_GROUPS.some(group => showFlag[group.flag]
+  && policyFields(group).some(field => field.key === path));
+
+/**
+ * 展示某字段所有仍附在当前表单上的识别候选，保留来源以便多文件冲突时人工选择。
+ * @param {string} path 当前承保字段名。
+ * @returns {Array} OcrCandidate 共用的来源、标签与值。
+ */
+const getPolicyOcrCandidates = (path) => Object.keys(policyOcrResults)
+  .filter(source => isActivePolicyOcrField(path) && policyOcrResults[source]?.[path] !== undefined)
+  .map(source => ({ source, label: policyOcrSources[source], value: policyOcrResults[source][path] }));
+
+/**
+ * 应用一项识别值并清除该字段所有来源候选，用户仍须提交承保表单才会持久化。
+ */
+const applyPolicyOcrCandidate = (path, value) => {
+  info[path] = value instanceof Date ? new Date(value.getTime()) : value;
+  consumeOcrCandidates(policyOcrResults, path);
+};
+
+/**
+ * 仅应用点击按钮所属险种的候选，其他区域保留待确认结果。
+ * 同一字段存在多份文件候选时沿用来源顺序，应用后清除该字段的所有候选，不自动提交。
+ * @param {object} group 子组件传回的当前险种配置。
+ */
+const applyAllPolicyOcrCandidates = (group) => {
+  policyFields(group).forEach(({ key: path }) => {
+    const candidate = getPolicyOcrCandidates(path)[0];
+    if (candidate) applyPolicyOcrCandidate(path, candidate.value);
+  });
+};
+
+/**
+ * 移除指定文件的待确认候选，已自动填入或用户手工修改的字段不自动撤销。
+ */
+const clearPolicyOcrSource = (fileId) => {
+  if (fileId == null) return;
+  delete policyOcrResults[String(fileId)];
+  delete policyOcrSources[String(fileId)];
+  delete policyOcrPending[String(fileId)];
+};
 
 const showFileUrl = reactive({
   idCardFront: "",
@@ -2347,7 +1503,8 @@ const showFileUrl = reactive({
   quotation: "",
   acceptInsuranceCommercial: "",
   acceptInsuranceCompulsory: "",
-  acceptInsuranceOther: []
+  acceptInsuranceOther: [],
+  acceptInsuranceMisc: []
 })
 
 const canEdit = computed(() => {
@@ -2486,8 +1643,8 @@ const oriInfo = ref({
 });
 
 const info = reactive({
-  commercialInsuranceStartTime: new Date(),
-  compulsoryInsuranceStartTime: new Date(),
+  commercialInsuranceStartTime: null,
+  compulsoryInsuranceStartTime: null,
   quotationNo: "",
   nonMotorInsuranceName: "",
   nonMotorCoverageAmount: undefined,
@@ -2546,7 +1703,8 @@ const insuranceOptions = ref({
 });
 
 
-const quotationRules = {
+const quotationRules = { quotationRemark: [{ max: 500, message: '输入内容过长', trigger: 'blur' }] };
+const policyFeeRules = {
   quotationRemark: [
     { min: 0, max: 495, message: '输入内容过长', trigger: 'blur' }
   ],
@@ -2653,26 +1811,8 @@ const quotationRules = {
   ],
 }
 
-// const payRules = {
-//   requiredPayAmount: [
-//     { required: true, message: '请输入金额', trigger: 'blur' },
-//     { validator: validateAmount, trigger: 'blur' }
-//   ],
-//   payName: [
-//     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
-//   ],
-//   payIdNum: [
-//     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
-//   ],
-//   payBank: [
-//     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
-//   ],
-//   payBankCardNum: [
-//     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
-//   ]
-// }
-
 const acceptInsuranceRules = {
+  ...policyFeeRules,
   commercialPolicyNo: [
     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
   ],
@@ -2689,7 +1829,7 @@ const acceptInsuranceRules = {
     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
   ],
   payIdNum: [
-    { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
+    { min: 0, max: 20, message: '输入内容过长', trigger: 'blur' }
   ],
   payBank: [
     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
@@ -2697,6 +1837,36 @@ const acceptInsuranceRules = {
   payBankCardNum: [
     { min: 0, max: 95, message: '输入内容过长', trigger: 'blur' }
   ]
+}
+
+/*
+ * 三组表单共用字段定义，只有起期和保费标记必填。
+ * 其他字段可留空；已填写的公司、保单号和车船税仍按长度或金额格式校验。
+ */
+for (const group of POLICY_GROUPS) {
+  for (const field of policyFields(group)) {
+    if (field.required) {
+      acceptInsuranceRules[field.key] = [
+        { required: true, message: '请填写' + field.label, trigger: field.kind === 'date' ? 'change' : 'blur' },
+        ...(field.kind === 'money' ? [{ validator: validateAmount, trigger: 'blur' }] : [])
+      ];
+    } else if (field.kind === 'text') {
+      acceptInsuranceRules[field.key] = [{ max: field.max, message: '输入内容过长', trigger: 'blur' }];
+    } else if (field.kind === 'money') {
+      acceptInsuranceRules[field.key] = [{ validator: validateOptionalPolicyAmount, trigger: 'blur' }];
+    }
+  }
+}
+
+/**
+ * 交强险代收车船税不是保费必填项；空值保持未知，不自动补零。
+ * 用户填写后仍复用金额校验，避免非法小数或负数进入承保请求。
+ * @param {object} rule Element Plus 当前校验规则。
+ * @param {string|number|null} value 当前车船税输入。
+ * @returns {Promise<void>} 空值或合法金额通过，否则返回原金额校验错误。
+ */
+function validateOptionalPolicyAmount(rule, value) {
+  return value === null || value === undefined || value === '' ? Promise.resolve() : validateAmount(rule, value);
 }
 
 /**
@@ -2777,35 +1947,12 @@ const buildInsuranceOption = (data) => {
 }
 
 /**
- * 汇总当前表单中的商业险、交强险、车船税和非车险金额。
- * 所有字段均为空或非数字时返回空串，避免页面把“尚未报价”误显示为零元。
+ * 汇总选中三类保单保费，车船税只计入独立应付金额，采用十进制求和到分。
+ * 输入来自当前编辑模型，全部缺失时保留空串；只读计算不改变用户输入或提交载荷。
  */
-const sumAmount = computed(() => {
-  let sum = 0;
-  let flag = 0;
-  if(!isNaN(Number(info.commercialAmount))){
-    sum += Number(info.commercialAmount)
-    flag++;
-  }
-  if(!isNaN(Number(info.compulsoryAmount))){
-    sum += Number(info.compulsoryAmount)
-    flag++;
-  }
-  if(!isNaN(Number(info.vehicleAndTaxAmount))){
-    sum += Number(info.vehicleAndTaxAmount)
-    flag++;
-  }
-  if(!isNaN(Number(info.nonMotorAmount))){
-    sum += Number(info.nonMotorAmount)
-    flag++;
-  }
-  if(flag == 0){
-    return "";
-  }
-  else {
-    return sum.toFixed(2);
-  }
-});
+const sumAmount = computed(() => sumMoney(POLICY_GROUPS.filter(group => showFlag[group.flag]).map(group => info[group.amount])));
+const payableAmount = computed(() => sumMoney([sumAmount.value, showFlag.insuranceType3 ? info.vehicleAndTaxAmount : null]));
+const detailPayableAmount = computed(() => sumMoney([oriInfo.value.commercialAmount, oriInfo.value.compulsoryAmount, oriInfo.value.nonMotorAmount, oriInfo.value.vehicleAndTaxAmount]));
 
 /**
 
@@ -2813,7 +1960,8 @@ const sumAmount = computed(() => {
 
  */
 const getAllInsuranceOption = async () => {
-  let res = await selectAllInsurance();
+  let res = process.env.VUE_APP_WORKORDER_POLICY_MOCK === 'true'
+    ? { data: { code: 200, data: workorderPolicyInsuranceMock } } : await selectAllInsurance();
   res = res.data;
   if (res.code == 200){
     buildInsuranceOption(res.data);
@@ -2821,14 +1969,14 @@ const getAllInsuranceOption = async () => {
 }
 
 /**
- * 从 sessionStorage 恢复详情查看模式和工单 ID，再并行加载险种字典与工单数据并构建页面。
+ * 从sessionStorage恢复查看模式，工单ID优先使用当前路由，旧入口仍兼容sessionStorage；再并行构建详情。
  * 初始化遮罩覆盖全部异步步骤，并在异常情况下可靠关闭。
  */
 onMounted(async () => {
   try{
     Loading.open();
     let nowType = sessionStorage.getItem('workorderDetailType');
-    let nowId = sessionStorage.getItem('workorderId');
+    let nowId = router.currentRoute.value.query.id || sessionStorage.getItem('workorderId');
     if(nowType != null && nowType != undefined && nowType != ''){
       type.value = nowType;
     }
@@ -2861,11 +2009,24 @@ const buildPage = async () => {
  * 尊重历史比例，只有明确存在固定金额且比例缺失时才使用金额，两者都缺失时统一回退为比例。
  */
 const buildInfo = () => {
+  policyOcrGeneration++;
+  policyUploadVersions.commercial = (policyUploadVersions.commercial || 0) + 1;
+  policyUploadVersions.compulsory = (policyUploadVersions.compulsory || 0) + 1;
+  loadingFlag.commercial = false;
+  loadingFlag.compulsory = false;
+  loadingFlag.other = 0;
+  loadingFlag.misc = 0;
+  Object.keys(policyOcrResults).forEach(source => clearPolicyOcrSource(source));
+  Object.keys(policyOcrPending).forEach(source => clearPolicyOcrSource(source));
   console.log(oriInfo.value);
   info.upstreamComputeType = oriInfo.value.upstreamComputeType ?? 0;
   info.downstreamComputeType = oriInfo.value.downstreamComputeType ?? 0;
-  info.commercialInsuranceStartTime = new Date(oriInfo.value.commercialInsuranceStartTime * 1000);
-  info.compulsoryInsuranceStartTime = new Date(oriInfo.value.compulsoryInsuranceStartTime * 1000);
+  for (const group of POLICY_GROUPS) {
+    for (const field of policyFields(group)) {
+      const value = oriInfo.value[field.key];
+      info[field.key] = field.kind === 'date' ? (value == null ? null : new Date(value * 1000)) : value;
+    }
+  }
   info.quotationNo = oriInfo.value.quotationNo;
   info.nonMotorInsuranceName = oriInfo.value.nonMotorInsuranceName;
   info.nonMotorCoverageAmount = oriInfo.value.nonMotorCoverageAmount;
@@ -2912,6 +2073,7 @@ const buildInfo = () => {
   workorderFileIds.acceptInsuranceCommercialFile = undefined;
   workorderFileIds.acceptInsuranceCompulsoryFile = undefined;
   workorderFileIds.acceptInsuranceOtherFile = [];
+  workorderFileIds.acceptInsuranceMiscFile = [];
 
   showFileUrl.idCardFront = "";
   showFileUrl.idCardBack = "";
@@ -2924,11 +2086,13 @@ const buildInfo = () => {
   showFileUrl.acceptInsuranceCommercial = "";
   showFileUrl.acceptInsuranceCompulsory = "";
   showFileUrl.acceptInsuranceOther = [];
+  showFileUrl.acceptInsuranceMisc = [];
 
   fileStore.quotationFile = [];
   fileStore.acceptInsuranceCommercialFile = [];
   fileStore.acceptInsuranceCompulsoryFile = [];
   fileStore.acceptInsuranceOtherFile = [];
+  fileStore.acceptInsuranceMiscFile = [];
 
   if (oriInfo.value.workorderFileList != null && oriInfo.value.workorderFileList != undefined){
     oriInfo.value.workorderFileList.forEach(item => {
@@ -2977,13 +2141,22 @@ const buildInfo = () => {
           name: item.fileName
         });
       }
-      if (item.type=="acceptInsuranceOther"){
+      /*
+       * 历史非车险单文件与其他单证在业务上属于同一组。
+       * 读取时合并展示，重新提交时统一用 acceptInsuranceOther 写入多文件关系。
+       */
+      if (item.type === 'acceptInsuranceOther' || item.type === 'acceptInsuranceNonMotor') {
         showFileUrl.acceptInsuranceOther.push(item.path);
         workorderFileIds.acceptInsuranceOtherFile.push(item.fileId);
         fileStore.acceptInsuranceOtherFile.push({
           id: item.fileId,
           name: item.fileName
         });
+      }
+      if (item.type === 'acceptInsuranceMisc') {
+        showFileUrl.acceptInsuranceMisc.push(item.path);
+        workorderFileIds.acceptInsuranceMiscFile.push(item.fileId);
+        fileStore.acceptInsuranceMiscFile.push({ id: item.fileId, name: item.fileName });
       }
     });
   }
@@ -3031,9 +2204,7 @@ const buildInfo = () => {
     oriInfo.value.downstreamNonMotorPercentage
   );
 
-  if (oriInfo.value.nonMotorAmount != null){
-    showFlag.is_have_non_motor = true;
-  }
+  showFlag.is_have_non_motor = hasPolicy(oriInfo.value, POLICY_GROUPS[2]);
 
   let noSelectValue = ["不投保", "不需要"];
   if (oriInfo.value.workorderInsuranceList != null && oriInfo.value.workorderInsuranceList != undefined){
@@ -3079,14 +2250,14 @@ const buildInfo = () => {
     });
   }
   
-  if(info.insurance.type1.length == 0){
+  if(info.insurance.type1.length == 0 && !hasPolicy(oriInfo.value, POLICY_GROUPS[0])){
     showFlag.insuranceType1 = false;
   }
   else {
     showFlag.insuranceType1 = true;
   }
 
-  if(info.insurance.type3.length == 0){
+  if(info.insurance.type3.length == 0 && !hasPolicy(oriInfo.value, POLICY_GROUPS[1])){
     showFlag.insuranceType3 = false;
   }
   else {
@@ -3118,9 +2289,6 @@ const getDataById = async () => {
  * * 切换非车险报价区域是否参与当前工单报价和上下游金额计算。
 
  */
-const handleNonMotorChange = (flag) => {
-  showFlag.is_have_non_motor = flag;
-}
 
 /**
  * 判断单项上下游费用是否应使用固定金额输入。比例是新建和空数据的统一默认模式；仅当后端存在
@@ -3167,111 +2335,54 @@ const handleAmountShowChange = (type, flag) => {
 }
 
 /**
-
- * * 汇总后端原始工单的四类保费金额；没有任何历史金额时返回空串表示尚未报价。
-
+ * 汇总工单详情的保费，使用接口原始金额进行十进制累加，最终显示两位小数。
+ * 支持数字及精确金额字符串，缺失项不参与合计；全部缺失返回空串，不回写工单业务字段。
  */
-const computeSumAmount = () => {
-  let sum = 0;
-  let flag = 0;
-  if(oriInfo.value.commercialAmount != null && oriInfo.value.commercialAmount != undefined){
-    sum += oriInfo.value.commercialAmount;
-    flag++;
-  }
-  if(oriInfo.value.compulsoryAmount != null && oriInfo.value.compulsoryAmount != undefined){
-    sum += oriInfo.value.compulsoryAmount;
-    flag++;
-  }
-  if(oriInfo.value.vehicleAndTaxAmount != null && oriInfo.value.vehicleAndTaxAmount != undefined){
-    sum += oriInfo.value.vehicleAndTaxAmount;
-    flag++;
-  }
-  if(oriInfo.value.nonMotorAmount != null && oriInfo.value.nonMotorAmount != undefined){
-    sum += oriInfo.value.nonMotorAmount;
-    flag++;
-  }
-  if (flag==0){
-    return "";
-  }
-  return sum;
-}
+const computeSumAmount = () => sumMoney([
+  oriInfo.value.commercialAmount,
+  oriInfo.value.compulsoryAmount,
+  oriInfo.value.nonMotorAmount
+]);
 
 /**
-
- * * 汇总历史上游商业险、交强险、车船税和非车险结算金额，无数据时保留空值语义。
-
+ * 汇总工单详情的上游政策费用，使用接口原始金额进行十进制累加，最终显示两位小数。
+ * 支持数字及精确金额字符串，缺失项不参与合计；全部缺失返回空串，不回写工单业务字段。
  */
-const computeUpstreamAmount = () => {
-  let sum = 0;
-  let flag = 0;
-  if(oriInfo.value.upstreamCommercialAmount != null && oriInfo.value.upstreamCommercialAmount != undefined){
-    sum += oriInfo.value.upstreamCommercialAmount;
-    flag++;
-  }
-  if(oriInfo.value.upstreamCompulsoryAmount != null && oriInfo.value.upstreamCompulsoryAmount != undefined){
-    sum += oriInfo.value.upstreamCompulsoryAmount;
-    flag++;
-  }
-  if(oriInfo.value.upstreamVehicleAndVesselTaxAmount != null && oriInfo.value.upstreamVehicleAndVesselTaxAmount != undefined){
-    sum += oriInfo.value.upstreamVehicleAndVesselTaxAmount;
-    flag++;
-  }
-  if(oriInfo.value.upstreamNonMotorAmount != null && oriInfo.value.upstreamNonMotorAmount != undefined){
-    sum += oriInfo.value.upstreamNonMotorAmount;
-    flag++;
-  }
-  if (flag==0){
-    return "";
-  }
-  return sum; 
-}
+const computeUpstreamAmount = () => sumMoney([
+  oriInfo.value.upstreamCommercialAmount,
+  oriInfo.value.upstreamCompulsoryAmount,
+  oriInfo.value.upstreamVehicleAndVesselTaxAmount,
+  oriInfo.value.upstreamNonMotorAmount
+]);
 
 /**
-
- * * 汇总历史下游四类业务金额，用于详情的下游结算合计展示。
-
+ * 汇总工单详情的下游政策费用，使用接口原始金额进行十进制累加，最终显示两位小数。
+ * 支持数字及精确金额字符串，缺失项不参与合计；全部缺失返回空串，不回写工单业务字段。
  */
-const computeDownstreamAmount = () => {
-  let sum = 0;
-  let flag = 0;
-  if(oriInfo.value.downstreamCommercialAmount != null && oriInfo.value.downstreamCommercialAmount != undefined){
-    sum += oriInfo.value.downstreamCommercialAmount;
-    flag++;
-  }
-  if(oriInfo.value.downstreamCompulsoryAmount != null && oriInfo.value.downstreamCompulsoryAmount != undefined){
-    sum += oriInfo.value.downstreamCompulsoryAmount;
-    flag++;
-  }
-  if(oriInfo.value.downstreamVehicleAndVesselTaxAmount != null && oriInfo.value.downstreamVehicleAndVesselTaxAmount != undefined){
-    sum += oriInfo.value.downstreamVehicleAndVesselTaxAmount;
-    flag++;
-  }
-  if(oriInfo.value.downstreamNonMotorAmount != null && oriInfo.value.downstreamNonMotorAmount != undefined){
-    sum += oriInfo.value.downstreamNonMotorAmount;
-    flag++;
-  }
-  if (flag==0){
-    return "";
-  }
-  return sum;  
-}
+const computeDownstreamAmount = () => sumMoney([
+  oriInfo.value.downstreamCommercialAmount,
+  oriInfo.value.downstreamCompulsoryAmount,
+  oriInfo.value.downstreamVehicleAndVesselTaxAmount,
+  oriInfo.value.downstreamNonMotorAmount
+]);
 
 /**
- * 提交流程节点前等待报价单、商业保单、交强保单及其他附件全部完成上传。
- * 每 200ms 检查一次，30 秒超时后阻止状态推进，避免工单引用尚未生成的文件 ID。
+ * 提交流程节点前等待附件上传及其保单识别结束。
+ * 保单 PDF 可能需要较长时间；超时后阻止提交，避免模型迟到结果覆盖已保存表单。
  */
 const waitFileUpload = async () => {
   return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      clearInterval(checkupInterval);
+      reject('上传文件超时');
+    }, 300000);
     const checkupInterval = setInterval(() => {
-      if(!loadingFlag.quotation && !loadingFlag.commercial && !loadingFlag.compulsory && loadingFlag.other==0){
+      if(!loadingFlag.quotation && !loadingFlag.commercial && !loadingFlag.compulsory && loadingFlag.other==0 && loadingFlag.misc==0){
         clearInterval(checkupInterval);
+        clearTimeout(timeout);
         resolve(true);
       }
     }, 200);
-    setTimeout(() => {
-      clearInterval(checkupInterval);
-      reject('上传文件超时');
-    }, 30000);
   })
 }
 
@@ -3280,6 +2391,14 @@ const waitFileUpload = async () => {
  * 承保成功后返回工单列表；任何上传超时都保持原工单状态并提示用户重试。
  */
 const handleSubmit = async (formEl, type) => {
+  if (type === 'acceptInsurance') {
+    try {
+      await waitFileUpload();
+    } catch (error) {
+      Message.error('附件上传或保单识别超时，请稍后再试');
+      return;
+    }
+  }
   formEl.validate(async (valid) => {
     if (valid) {
       Loading.open();
@@ -3298,23 +2417,15 @@ const handleSubmit = async (formEl, type) => {
       if (type == 'quotationFailed'){
         handleNoCascadeUpdate(buildQuotationFailedFrom());
       }
-      if (type == 'underwriting'){
-        let data = buildQuotationUpdateFrom(6);
-        handleQuotationUpdate(data);
-      }
-      if (type == 'underwritingFailed'){
-        handleNoCascadeUpdate(buildUnderwritingFailedForm());
-      }
-      if (type == 'pay'){
-        handleNoCascadeUpdate(buildPayForm());
-      }
-      if (type == 'payFailed'){
-        handleNoCascadeUpdate(buildPayFailedForm());
-      }
+
+
+
+
       if (type == 'acceptInsurance'){
-        await handleAcceptInsuranceUpdate(buildAcceptInsuranceFrom());
-        // 承保成功跳转回工单页面继续录单
-        router.push('/home/allWorkorder');
+        const data = buildAcceptInsuranceFrom();
+        const error = validatePolicies(data, data.workorderFileList);
+        if (error) { Message.error(error); Loading.close(); return; }
+        if (await handleAcceptInsuranceUpdate(data)) handleBack();
       }
       if (type == 'acceptInsuranceFailed'){
         handleNoCascadeUpdate(buildAcceptInsuranceFailedForm());
@@ -3383,6 +2494,73 @@ const handleSingleFileUpload = async (uploadFile) => {
 }
 
 /**
+ * 承保联调模式返回与文件服务一致的文件 ID，供 OCR mock 独立模拟上传到识别的完整页面流程。
+ * 正常模式复用现有 OSS 签名和浏览器直传封装。
+ */
+const handleSinglePolicyFileUpload = async (uploadFile) => {
+  if (process.env.VUE_APP_WORKORDER_POLICY_MOCK !== 'true') return handleSingleFileUpload(uploadFile);
+  const fileInfo = { id: `MOCK-POLICY-${++mockPolicyFileSequence}`, fileName: uploadFile.name };
+  return { fileInfo, uploadFileItem: buildUploadFileItem(uploadFile, fileInfo) };
+};
+
+/**
+ * 上传完成后提交后台 OCR 任务，每一秒查询一次，避免模型处理占用浏览器长连接。
+ * 只在附件仍存在且表单未重建时接收最终结果；失败保留附件并提示人工录入。
+ * @param {object} fileInfo OSS 上传成功后返回的系统文件记录。
+ * @param {string} groupLoading 上传区域对应的加载键，用于在该组件旁显示识别状态。
+ */
+const recognizeUploadedPolicy = async (fileInfo, groupLoading) => {
+  const source = String(fileInfo.id);
+  const generation = policyOcrGeneration;
+  policyOcrPending[source] = groupLoading;
+  try {
+    const submitted = (await policyRecognition(oriInfo.value.id, fileInfo.id))?.data;
+    if (submitted?.code !== 200 || !submitted?.data?.jobId) {
+      throw new Error(submitted?.msg || '识别任务提交失败');
+    }
+    const jobId = submitted.data.jobId;
+    const deadline = Date.now() + 10 * 60 * 1000;
+    let result;
+    /*
+     * 每轮先确认文件和表单仍有效，再发送独立短请求。失败结果和超时均结束轮询，
+     * 不重复提交任务或上传文件，避免额外供应商调用和迟到结果覆盖用户修改。
+     */
+    while (Date.now() < deadline) {
+      if (generation !== policyOcrGeneration || policyOcrPending[source] !== groupLoading) return;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (generation !== policyOcrGeneration || policyOcrPending[source] !== groupLoading) return;
+      const statusResponse = (await policyRecognitionStatus(jobId))?.data;
+      if (statusResponse?.code !== 200) throw new Error(statusResponse?.msg || '查询识别任务失败');
+      const task = statusResponse.data;
+      if (String(task?.fileId) !== source) throw new Error('识别任务文件不匹配');
+      if (task.status === 'FAILED') throw new Error(task.result?.msg || '保单识别失败，请手动填写');
+      if (task.status === 'SUCCEEDED') {
+        result = task.result;
+        break;
+      }
+      if (!['QUEUED', 'RUNNING'].includes(task.status)) throw new Error('识别任务状态异常');
+    }
+    if (!result) throw new Error('保单识别等待超时，请稍后重试');
+    if (result.code !== 200) throw new Error(result.msg || '保单识别失败');
+    const stillAttached = POLICY_GROUPS.some(group =>
+      (fileStore[group.fileType + 'File'] || []).some(file => String(file.id) === source));
+    if (!stillAttached || generation !== policyOcrGeneration) return;
+    const values = normalizePolicyOcrCandidates(result.data?.recognitionData);
+    detectedPolicyGroups(values).forEach(group => { showFlag[group.flag] = true; });
+    policyOcrSources[source] = fileInfo.fileName || '保单附件';
+    policyOcrResults[source] = fillEmptyOcrFields(info, values);
+
+  } catch (error) {
+    // 文件已移除或详情已重载时忽略迟到的失败，避免对当前表单弹出无关提醒。
+    if (generation === policyOcrGeneration && policyOcrPending[source] === groupLoading) {
+      Message.error('保单识别失败，请重试或手动填写');
+    }
+  } finally {
+    if (generation === policyOcrGeneration) delete policyOcrPending[source];
+  }
+};
+
+/**
 
  * * 单文件上传失败或移除时，同时清空组件列表和请求体文件 ID，并按需显示错误信息。
 
@@ -3439,6 +2617,8 @@ const handleQuotationChange = async (uploadFile, uploadFiles) => {
 
  */
 const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) => {
+  const version = policyUploadVersions.commercial = (policyUploadVersions.commercial || 0) + 1;
+  fileStore.acceptInsuranceCommercialFile.forEach(item => clearPolicyOcrSource(item.id));
   const validFiles = validFileSize(uploadFiles);
   fileStore.acceptInsuranceCommercialFile = validFiles;
   if (validFiles.length == 0){
@@ -3446,15 +2626,18 @@ const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) =>
   }
   try{
     loadingFlag.commercial = true;
-    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    const { fileInfo, uploadFileItem } = await handleSinglePolicyFileUpload(uploadFile);
+    if (policyUploadVersions.commercial !== version) return;
     workorderFileIds.acceptInsuranceCommercialFile = fileInfo.id;
     fileStore.acceptInsuranceCommercialFile = [uploadFileItem];
+    // 上传文件已可继续操作；识别请求自行维护旁边的进度和最终回填。
+    recognizeUploadedPolicy(fileInfo, 'commercial');
   }
   catch(error){
-    clearSingleUploadState('acceptInsuranceCommercialFile', 'acceptInsuranceCommercialFile', error.message || '文件上传失败，请重试');
+    if (policyUploadVersions.commercial === version) clearSingleUploadState('acceptInsuranceCommercialFile', 'acceptInsuranceCommercialFile', error.message || '文件上传失败，请重试');
   }
   finally{
-    loadingFlag.commercial = false;
+    if (policyUploadVersions.commercial === version) loadingFlag.commercial = false;
   }
 }
 
@@ -3464,6 +2647,8 @@ const handleAcceptInsuranceCommercialChange = async (uploadFile, uploadFiles) =>
 
  */
 const handleAcceptInsuranceCompulsoryChange = async (uploadFile, uploadFiles) => {
+  const version = policyUploadVersions.compulsory = (policyUploadVersions.compulsory || 0) + 1;
+  fileStore.acceptInsuranceCompulsoryFile.forEach(item => clearPolicyOcrSource(item.id));
   const validFiles = validFileSize(uploadFiles);
   fileStore.acceptInsuranceCompulsoryFile = validFiles;
   if (validFiles.length == 0){
@@ -3471,23 +2656,53 @@ const handleAcceptInsuranceCompulsoryChange = async (uploadFile, uploadFiles) =>
   }
   try{
     loadingFlag.compulsory = true;
-    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
+    const { fileInfo, uploadFileItem } = await handleSinglePolicyFileUpload(uploadFile);
+    if (policyUploadVersions.compulsory !== version) return;
     workorderFileIds.acceptInsuranceCompulsoryFile = fileInfo.id;
     fileStore.acceptInsuranceCompulsoryFile = [uploadFileItem];
+    // 解除上传遮罩后，交强险识别继续在独立状态中运行。
+    recognizeUploadedPolicy(fileInfo, 'compulsory');
   }
   catch(error){
-    clearSingleUploadState('acceptInsuranceCompulsoryFile', 'acceptInsuranceCompulsoryFile', error.message || '文件上传失败，请重试');
+    if (policyUploadVersions.compulsory === version) clearSingleUploadState('acceptInsuranceCompulsoryFile', 'acceptInsuranceCompulsoryFile', error.message || '文件上传失败，请重试');
   }
   finally{
-    loadingFlag.compulsory = false;
+    if (policyUploadVersions.compulsory === version) loadingFlag.compulsory = false;
   }
 }
 
 /**
- * 并发上传可多选的其他承保附件，按 uid 用上传成功项替换本地占位，并累加对应文件 ID。
+ * 根据保单配置复用原上传流程；非车险保单统一使用可多选的其他单证附件组。
+ * @param {object} group 保单类别及其附件和加载键。
+ * @param {object} file 本次选择的文件。
+ * @param {Array} list Element Plus 当前文件列表。
+ */
+const handlePolicyUpload = async (group, file, list) => {
+  if (group.type === 'COMMERCIAL') return handleAcceptInsuranceCommercialChange(file, list);
+  if (group.type === 'COMPULSORY') return handleAcceptInsuranceCompulsoryChange(file, list);
+  return handleAcceptInsuranceOtherChange(file, list);
+};
+
+/**
+ * 移除当前组上传文件仅修改待提交关系；服务端成功保存后才解除原文件关联。
+ * @param {object} group 当前保单类别。
+ * @param {object} file 被移除的文件。
+ * @param {Array} list 移除后的 Element Plus 文件列表。
+ */
+const handlePolicyRemove = (group, file, list) => {
+  clearPolicyOcrSource(file.id);
+  if (group.type === 'NON_MOTOR') return handleAcceptInsuranceOtherRemove(file, list);
+  policyUploadVersions[group.loading] = (policyUploadVersions[group.loading] || 0) + 1;
+  fileStore[group.fileType + 'File'] = [];
+  workorderFileIds[group.fileType + 'File'] = undefined;
+};
+
+/**
+ * 并发上传可多选的非车险保单，按 uid 用成功项替换占位，再累加对应文件 ID。
  * 任一文件超限或失败只移除该项，loadingFlag.other 以计数方式支持多个上传同时进行。
  */
 const handleAcceptInsuranceOtherChange = async (uploadFile, uploadFiles) => {
+  const generation = policyOcrGeneration;
   let oriLength = uploadFiles.length;
   const validFiles = validFileSize(uploadFiles);
   fileStore.acceptInsuranceOtherFile = validFiles;
@@ -3496,31 +2711,74 @@ const handleAcceptInsuranceOtherChange = async (uploadFile, uploadFiles) => {
   }
   try{
     loadingFlag.other++;
-    const { fileInfo, uploadFileItem } = await handleSingleFileUpload(uploadFile);
-    workorderFileIds.acceptInsuranceOtherFile.push(fileInfo.id);
+    const { fileInfo, uploadFileItem } = await handleSinglePolicyFileUpload(uploadFile);
+    if (generation !== policyOcrGeneration) return;
     const fileIndex = fileStore.acceptInsuranceOtherFile.findIndex(item => item.uid === uploadFile.uid);
     if (fileIndex >= 0) {
+      workorderFileIds.acceptInsuranceOtherFile.push(fileInfo.id);
       fileStore.acceptInsuranceOtherFile.splice(fileIndex, 1, uploadFileItem);
+      // 非车险各文件可并发识别，上传计数只覆盖 OSS 直传阶段。
+      recognizeUploadedPolicy(fileInfo, 'other');
     }
     uploadFile.id = fileInfo.id;
   }
   catch(error){
-    removeUploadFileByUid('acceptInsuranceOtherFile', uploadFile, error.message || '文件上传失败，请重试');
+    if (generation === policyOcrGeneration) {
+      removeUploadFileByUid('acceptInsuranceOtherFile', uploadFile, error.message || '文件上传失败，请重试');
+    }
   }
   finally{
-    loadingFlag.other--;
+    if (generation === policyOcrGeneration) loadingFlag.other = Math.max(0, loadingFlag.other - 1);
   }
 }
 
 /**
 
- * * 移除其他承保附件时同步更新界面文件列表和待提交文件 ID 数组。
+ * * 移除非车险保单时同步更新界面文件列表和待提交文件 ID 数组。
 
  */
 const handleAcceptInsuranceOtherRemove = (file, files) => {
   fileStore.acceptInsuranceOtherFile = files;
   workorderFileIds.acceptInsuranceOtherFile = workorderFileIds.acceptInsuranceOtherFile.filter(item => item != file.id);
 }
+
+/**
+ * 独立上传其他单证，仅登记 OSS 文件和待提交的关联 ID，不进入三险 OCR 流程。
+ * 并发时用工单加载代数拦截旧回调；单项失败只移除该项，保留其余已上传文件。
+ * @param {object} uploadFile 本次选择的文件，来自其他单证上传控件。
+ * @param {Array} uploadFiles 控件当前文件列表，用于沿用项目大小校验。
+ */
+const handleAcceptInsuranceMiscChange = async (uploadFile, uploadFiles) => {
+  const generation = policyOcrGeneration;
+  const validFiles = validFileSize(uploadFiles);
+  fileStore.acceptInsuranceMiscFile = validFiles;
+  if (validFiles.length !== uploadFiles.length) return;
+  try {
+    loadingFlag.misc++;
+    const { fileInfo, uploadFileItem } = await handleSinglePolicyFileUpload(uploadFile);
+    if (generation !== policyOcrGeneration) return;
+    const index = fileStore.acceptInsuranceMiscFile.findIndex(item => item.uid === uploadFile.uid);
+    if (index < 0) return;
+    workorderFileIds.acceptInsuranceMiscFile.push(fileInfo.id);
+    fileStore.acceptInsuranceMiscFile.splice(index, 1, uploadFileItem);
+  } catch (error) {
+    if (generation === policyOcrGeneration) {
+      removeUploadFileByUid('acceptInsuranceMiscFile', uploadFile, error.message || '文件上传失败，请重试');
+    }
+  } finally {
+    if (generation === policyOcrGeneration) loadingFlag.misc = Math.max(0, loadingFlag.misc - 1);
+  }
+};
+
+/**
+ * 从其他单证的当前快照中移除文件和待提交关联；已保存关系在承保提交成功后才被替换。
+ * @param {object} file 用户移除的上传项。
+ * @param {Array} files 移除后的完整文件列表。
+ */
+const handleAcceptInsuranceMiscRemove = (file, files) => {
+  fileStore.acceptInsuranceMiscFile = files;
+  workorderFileIds.acceptInsuranceMiscFile = workorderFileIds.acceptInsuranceMiscFile.filter(id => id != file.id);
+};
 
 /**
 
@@ -3552,18 +2810,20 @@ const handleTableExpand = (type) => {
 }
 
 /**
-
- * * 将结算比例和固定金额组合为“比例%/¥金额”文本，缺失部分仍保留统一货币格式。
-
+ * 组装详情的政策比例与金额文本，比例沿用接口业务值，金额统一显示到分。
+ * 缺失比例不显示百分比前缀，缺失金额仅保留货币标记；不改变原始工单或结算数据。
+ * @param {number|string|null} percentage 接口返回的政策百分比。
+ * @param {number|string|null} amount 接口返回的固定或计算后金额。
+ * @returns {string} 用于只读详情的比例/金额组合文本。
  */
 const computePercentageAndAmountStr = (percentage, amount) => {
   let result = "";
   if(percentage != null && percentage !=undefined){
-    result += `${percentage}%/`;
+    result += `${formatPercentage(percentage)}%/`;
   }
   result += '¥';
   if(amount != null && amount !=undefined){
-    result += `${amount}`;
+    result += formatMoney(amount);
   }
   return result;
 }
@@ -3591,117 +2851,19 @@ const handleDownload = (type) => {
 }
 
 /**
- * 按保费和比例计算结算金额；类型 1 先按 1.06 还原不含税金额，再计算百分比。
- * 非数字输入返回短横线，正常结果固定保留两位小数。
+ * 为报价和核保的各险种展示政策费用预览；参数来自当前表单的比例、保费和计算方式。
+ * 统一交给十进制工具按后端公式计算，结果为两位小数或输入未就绪时的短横线，不修改表单。
  */
-const percentageMulti = (percentage, amount, type) => {
-  percentage = Number(percentage);
-  amount = Number(amount);
-  if ( isNaN(percentage) || isNaN(amount)){
-    return '-';
-  }
-  if (type == 1){
-    amount = amount / 1.06;
-  }
-  return (amount * percentage / 100.0).toFixed(2);
-}
+const percentageMulti = (percentage, amount, type) => calculatePolicyAmount(percentage, amount, type);
 
 /**
- * 构建报价或核保成功阶段的更新数据。
- * 该方法转换保险起期和保费，按每个上下游维度选择提交固定金额或百分比，按需加入非车险及报价单，
- * 并保证编辑较早阶段资料时不会把已经推进到更后状态的工单倒退。
+ * 构建仅含报价附件和反馈的最小请求，编辑旧阶段时保持已有后续状态。
+ * 保单与政策字段只能在承保完整提交中写入，不随报价反馈重复提交。
  */
-const buildQuotationUpdateFrom = (status) => {
-  let data = {};
-  data.id = oriInfo.value.id;
-  data.quotationNo = info.quotationNo;
-  data.commercialInsuranceStartTime = convertDateToSecondTimestamp(info.commercialInsuranceStartTime);
-  data.compulsoryInsuranceStartTime = convertDateToSecondTimestamp(info.compulsoryInsuranceStartTime);
-  data.commercialAmount = Number(info.commercialAmount);
-  data.compulsoryAmount = Number(info.compulsoryAmount);
-  data.vehicleAndTaxAmount = Number(info.vehicleAndTaxAmount);
-  data.upstreamComputeType = info.upstreamComputeType;
-  data.downstreamComputeType = info.downstreamComputeType;
-  // 修改信息的时候不覆盖当前状态
-  if(oriInfo.value.status > status){
-    data.status = oriInfo.value.status;
-  }
-  else {
-    data.status = status;
-  }
-  data.quotationRemark = info.quotationRemark;
-  // if (status == 4){
-  //   data.quotationRemark = info.quotationRemark;
-  // }
-  // else {
-  //   data.underwritingRemark = info.underwritingRemark;
-  // }
-  if(showFlag.upstream_commercial){
-    data.upstreamCommercialAmount = Number(info.upstreamCommercialAmount);
-  }
-  else {
-    data.upstreamCommercialPercentage = Number(info.upstreamCommercialPercentage);
-  }
-  if(showFlag.upstream_compulsory){
-    data.upstreamCompulsoryAmount = Number(info.upstreamCompulsoryAmount);
-  }
-  else {
-    data.upstreamCompulsoryPercentage = Number(info.upstreamCompulsoryPercentage);
-  }
-  if(showFlag.upstream_tax){
-    data.upstreamVehicleAndVesselTaxAmount = Number(info.upstreamVehicleAndVesselTaxAmount);
-  }
-  else {
-    data.upstreamVehicleAndVesselTaxPercentage = Number(info.upstreamVehicleAndVesselTaxPercentage);
-  }
-
-  if (showFlag.downstream_commercial){
-    data.downstreamCommercialAmount = Number(info.downstreamCommercialAmount); 
-  }
-  else {
-    data.downstreamCommercialPercentage = Number(info.downstreamCommercialPercentage);
-  }
-  if (showFlag.downstream_compulsory){
-    data.downstreamCompulsoryAmount = Number(info.downstreamCompulsoryAmount); 
-  }
-  else {
-    data.downstreamCompulsoryPercentage = Number(info.downstreamCompulsoryPercentage);
-  }
-  if (showFlag.downstream_tax){
-    data.downstreamVehicleAndVesselTaxAmount = Number(info.downstreamVehicleAndVesselTaxAmount); 
-  }
-  else {
-    data.downstreamVehicleAndVesselTaxPercentage = Number(info.downstreamVehicleAndVesselTaxPercentage);
-  }
-
-  if(showFlag.is_have_non_motor){
-    data.nonMotorInsuranceName = info.nonMotorInsuranceName;
-    data.nonMotorCoverageAmount = Number(info.nonMotorCoverageAmount);
-    data.nonMotorAmount = Number(info.nonMotorAmount);
-    if (showFlag.upstream_non_motor){
-      data.upstreamNonMotorAmount = Number(info.upstreamNonMotorAmount);
-    }
-    else {
-      data.upstreamNonMotorPercentage = Number(info.upstreamNonMotorPercentage);
-    }
-    if (showFlag.downstream_non_motor){
-      data.downstreamNonMotorAmount = Number(info.downstreamNonMotorAmount);
-    }
-    else {
-      data.downstreamNonMotorPercentage = Number(info.downstreamNonMotorPercentage);
-    }
-  }
-  
-  data.workorderFileList = [];
-  if (workorderFileIds.quotationFile != null && workorderFileIds.quotationFile != undefined){
-    data.workorderFileList.push({
-      fileId: workorderFileIds.quotationFile,
-      type: 'quotation'
-    });
-  }
-  // console.log(data);
-  return data;
-}
+const buildQuotationUpdateFrom = (status) => ({
+  id: oriInfo.value.id, status: Math.max(oriInfo.value.status, status), quotationRemark: info.quotationRemark,
+  workorderFileList: workorderFileIds.quotationFile ? [{ fileId: workorderFileIds.quotationFile, type: 'quotation' }] : []
+});
 
 /**
 
@@ -3716,83 +2878,43 @@ const buildQuotationFailedFrom = () => {
   return data;
 }
 
-/**
 
- * * 构建核保失败更新，将失败说明写入专属字段并把工单推进到状态 5。
 
- */
-const buildUnderwritingFailedForm = () => { 
-  let data = {};
-  data.id = oriInfo.value.id;
-  data.underwritingFailedRemark = info.underwritingFailedRemark;
-  data.status = 5;
-  console.log(data);
-  return data;
-}
+
+
+
 
 /**
-
- * * 构建支付确认成功数据，包含应付金额、付款人及银行资料，并将工单推进到待承保状态 8。
-
- */
-const buildPayForm = () => {
-  let data = {};
-  data.id = oriInfo.value.id;
-  data.requiredPayAmount = Number(info.requiredPayAmount);
-  data.payName = info.payName;
-  data.payIdNum = info.payIdNum;
-  data.payBank = info.payBank;
-  data.payBankCardNum = info.payBankCardNum;
-  data.payRemark = info.payRemark;
-  data.status = 8;
-  return data;
-}
-
-/**
-
- * * 构建支付失败的最小更新，只保存失败说明并标记状态 7。
-
- */
-const buildPayFailedForm = () => { 
-  let data = {};
-  data.id = oriInfo.value.id;
-  data.payFailedRemark = info.payFailedRemark;
-  data.status = 7;
-  return data;
-}
-
-/**
- * 构建承保完成数据，记录当前完成时间、保单号、物流和付款资料，并关联商业险、交强险及其他附件。
- * 其他附件逐个转换为统一的工单文件关系，最终状态固定为 10。
+ * 构建三类保单和政策的完整请求，取消险种保留显式空值。
+ * 非车险保单和独立其他单证分别使用现有与新增的附件类型，不因险种开关丢弃补充单证。
+ * 服务器决定完成时间和状态；原支付录入金额及报价反馈不进入此载荷。
  */
 const buildAcceptInsuranceFrom = () => { 
   let data = {};
-  data.finishTime = convertDateToSecondTimestamp(new Date());
+  Object.assign(data, buildPolicyPayload(info, showFlag));
   data.id = oriInfo.value.id;
   data.payName = info.payName;
   data.payIdNum = info.payIdNum;
   data.payBank = info.payBank;
   data.payBankCardNum = info.payBankCardNum;
-  data.commercialPolicyNo = info.commercialPolicyNo;
-  data.compulsoryPolicyNo = info.compulsoryPolicyNo;
   data.trackingNum = info.trackingNum;
   data.logisticsCompany = info.logisticsCompany;
   data.acceptInsuranceRemark = info.acceptInsuranceRemark;
   data.status = 10;
   data.workorderFileList = [];
-  if (workorderFileIds.acceptInsuranceCommercialFile != null && workorderFileIds.acceptInsuranceCommercialFile != undefined){
+  if (showFlag.insuranceType1 && workorderFileIds.acceptInsuranceCommercialFile != null && workorderFileIds.acceptInsuranceCommercialFile != undefined){
     data.workorderFileList.push({
       fileId: workorderFileIds.acceptInsuranceCommercialFile,
       type: 'acceptInsuranceCommercial'
     });
   }
-  if (workorderFileIds.acceptInsuranceCompulsoryFile != null && workorderFileIds.acceptInsuranceCompulsoryFile != undefined){
+  if (showFlag.insuranceType3 && workorderFileIds.acceptInsuranceCompulsoryFile != null && workorderFileIds.acceptInsuranceCompulsoryFile != undefined){
     data.workorderFileList.push({
       fileId: workorderFileIds.acceptInsuranceCompulsoryFile,
       type: 'acceptInsuranceCompulsory'
     });
   }
-  if (workorderFileIds.acceptInsuranceOtherFile != null && workorderFileIds.acceptInsuranceOtherFile != undefined && workorderFileIds.acceptInsuranceOtherFile.length > 0){
+  if (showFlag.is_have_non_motor && workorderFileIds.acceptInsuranceOtherFile.length > 0){
     workorderFileIds.acceptInsuranceOtherFile.forEach(fileId => {
       data.workorderFileList.push({
         fileId: fileId,
@@ -3800,7 +2922,9 @@ const buildAcceptInsuranceFrom = () => {
       });
     });
   }
-  console.log(data);
+  (workorderFileIds.acceptInsuranceMiscFile || []).forEach(fileId => {
+    data.workorderFileList.push({ fileId, type: 'acceptInsuranceMisc' });
+  });
   return data;
 }
 
@@ -3819,7 +2943,7 @@ const buildAcceptInsuranceFailedForm = () => {
 
 /**
 
- * * 持久化报价或核保成功数据；后端成功后重新加载完整详情，以真实状态和计算结果覆盖本地表单。
+ * * 持久化报价反馈数据；后端成功后重新加载完整详情，以真实状态和计算结果覆盖本地表单。
 
  */
 const handleQuotationUpdate = async (data) => {
@@ -3828,6 +2952,7 @@ const handleQuotationUpdate = async (data) => {
       res = res.data;
       if(res.code == 200){
         Message.success("反馈成功");
+        markWorkorderChanged();
         buildPage();
       }
     });
@@ -3848,6 +2973,7 @@ const handleNoCascadeUpdate = async (data) => {
       res = res.data;
       if(res.code == 200){
         Message.success("反馈成功");
+        markWorkorderChanged();
         buildPage();
       }
     });
@@ -3863,18 +2989,16 @@ const handleNoCascadeUpdate = async (data) => {
 
  */
 const handleAcceptInsuranceUpdate = async (data) => {
-  try{
-    await updateAcceptInsurance(data).then(res=>{
-      res = res.data;
-      if(res.code == 200){
-        Message.success("反馈成功");
-        buildPage();
-      }
-    });
-  }
-  finally{
-    Loading.close();
-  }
+  try {
+    const response = await updateAcceptInsurance(data);
+    if (response.data.code !== 200) return false;
+    Message.success('反馈成功');
+    markWorkorderChanged();
+    return true;
+  } catch (error) {
+    Message.error(error.message || '保存失败，请重试');
+    return false;
+  } finally { Loading.close(); }
 }
 
 /**
@@ -3903,12 +3027,32 @@ const handleEdit = async (status) => {
 
  */
 const handleRefresh = () => {
+  markWorkorderChanged();
   buildPage();
 }
 </script>
 
 
 <style scoped>
+/*
+ * sticky以HomePage的main滚动视窗为参照，零高度锚点使按钮悬浮且不挤占详情布局。
+ * 锚点不拦截下方内容操作，只有按钮本身可点击；滚动详情时仍固定在视窗右上角。
+ */
+.workorder-return-anchor {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 0;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.workorder-return-button {
+  flex-shrink: 0;
+  pointer-events: auto;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, .18);
+}
+
 .workorder_head_container {
   display: flex;
   justify-content: left;
@@ -4161,8 +3305,32 @@ const handleRefresh = () => {
   padding: 16px 0;
 }
 
-.file_download_text {
-  color: var(--insurance-primary);
-}
+/*
+ * 保费汇总与保单只读字段采用相同行高、标签间距和换行间距。
+ * 去除原有的额外上下内边距，避免汇总行明显高于上下游政策费用。
+ */
+.policy-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 20px 30px; margin: 10px 0 20px; }
+.policy-total { display: flex; min-width: 0; align-items: baseline; line-height: 20px; }
+.policy-section { padding: 20px 0; border-bottom: 1px solid var(--insurance-border, #dcdfe6); text-align: left; }
+.policy-section h3 { margin: 0 0 18px; font-size: 16px; }
+.policy-section :deep(.el-form-item__content) { min-width: 0; }
+.policy-upload-hint { display: block; width: 100%; color: #909399; font-size: 12px; }
+.policy-section .workorder-document-upload { width: 100%; max-width: 500px; }
+.misc-document-row { min-height: 24px; line-height: 24px; }
+
+/*
+ * 报价单和其他单证沿用同一上传宽度；文件名在可用宽度内省略，操作图标保持可见。
+ * 保单上传由 WorkorderPolicySections 使用相同的拖拽区和文件列表样式。
+ */
+.workorder-document-upload { width: 100%; min-width: 0; overflow: hidden; }
+.workorder-document-upload :deep(.el-upload),
+.workorder-document-upload :deep(.el-upload-dragger) { width: 100%; }
+.workorder-document-upload :deep(.el-upload-list) { width: 100%; max-width: 100%; min-width: 0; }
+.workorder-document-upload :deep(.el-upload-list__item) { width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
+.workorder-document-upload :deep(.el-upload-list__item) { height: 24px; line-height: 24px; margin-top: 2px; }
+/* 全局上传列表将内部 div 居中；文件名需填满受限容器，超长时才会显示省略号。 */
+.workorder-document-upload :deep(.el-upload-list__item-info) { width: calc(100% - 30px); min-width: 0; overflow: hidden; align-items: stretch; }
+.workorder-document-upload :deep(.el-upload-list__item-name) { width: 100%; min-width: 0; display: flex; align-items: center; line-height: 22px; }
+.workorder-document-upload :deep(.el-upload-list__item-file-name) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 </style>

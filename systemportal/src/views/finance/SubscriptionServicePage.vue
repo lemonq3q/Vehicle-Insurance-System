@@ -59,12 +59,12 @@
             <strong>{{ plan.name }}</strong>
           </div>
           <p>{{ plan.description }}</p>
-          <div class="price">¥{{ plan.price }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
+          <div class="price">¥{{ money(plan.price) }}<small>/{{ periodName(plan.billingPeriod) }}</small></div>
           <ul>
             <li>成员上限：{{ plan.userLimit }} 人</li>
             <li>工单额度：{{ plan.workorderLimit }} 单</li>
             <li>有效天数：{{ plan.durationDays }} 天</li>
-            <li>原价：¥{{ plan.originalPrice }}</li>
+            <li>原价：¥{{ money(plan.originalPrice) }}</li>
           </ul>
           <button class="layui-btn portal-btn portal-btn-primary plan-action" :disabled="!canManageFinance" @click="openOrder(plan)">
             {{ actionName(plan) }}
@@ -79,6 +79,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getFinanceOverview, getPlans, updateAutoRenew } from '@/api/portal';
@@ -178,7 +179,7 @@ export default {
      * 将余额和套餐价格统一格式化为两位小数。
      */
     money(value) {
-      return Number(value || 0).toFixed(2);
+      return formatAmount(value ?? 0, '0.00');
     },
     /**
      * 将套餐周期枚举转换为价格旁使用的中文单位。

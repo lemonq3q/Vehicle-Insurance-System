@@ -207,6 +207,7 @@
   </div>
 </template>
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import PageHeader from "@/components/PageHeader.vue";
 import LineChart from "@/components/LineChart.vue";
 import AppModal from "@/components/AppModal.vue";
@@ -317,9 +318,7 @@ export default {
     /** 格式化数量。 */ format: (value) =>
       Number(value || 0).toLocaleString("zh-CN"),
     /** 格式化人民币。 */ money: (value) =>
-      `¥ ${Number(value || 0).toLocaleString("zh-CN", {
-        minimumFractionDigits: 2,
-      })}`,
+      `¥ ${formatAmount(value ?? 0, '0.00', { group: true })}`,
     /** 读取企业详情和本月快照。 */ loadDetail() {
       return enterpriseApi.detail(this.id).then((data) => {
         this.enterprise = data;

@@ -2,7 +2,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '../src/utils/workorderDisplay.js'), 'utf8');
+const moneySource = fs.readFileSync(path.join(__dirname, '../../shared/money.js'), 'utf8');
+const moneyUrl = `data:text/javascript;base64,${Buffer.from(moneySource).toString('base64')}`;
+const source = fs.readFileSync(path.join(__dirname, '../src/utils/workorderDisplay.js'), 'utf8')
+  .replace("'./money'", JSON.stringify(moneyUrl));
 const display = import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 
 /**
@@ -49,25 +52,27 @@ test('quoted workflow states show zero for missing policy fees', async () => {
   const { formatWorkorderPolicyFee } = await display;
   for (const status of [4, 5, 6, 7, 8, 9, 10, '4', '10']) {
     for (const missing of [null, undefined, '', '  ']) {
-      assert.equal(formatWorkorderPolicyFee({ status }, missing), 0);
+      assert.equal(formatWorkorderPolicyFee({ status }, missing), '0.00');
     }
   }
-  assert.equal(formatWorkorderPolicyFee({ status: 2, quotationTime: 1793577600 }, null), 0);
+  assert.equal(formatWorkorderPolicyFee({ status: 2, quotationTime: 1793577600 }, null), '0.00');
   assert.equal(formatWorkorderPolicyFee({ status: 2, quotationTime: 'invalid' }, null), '');
 });
 
 /**
- * 格式化不得丢失显式零、负数及精确金额字符串，也不得改写接口或业务操作字段。
+ * 格式化统一两位小数且保留显式零、负号及金额字符串的有效精度，也不得改写接口或业务操作字段。
  */
-test('display preserves original money and business fields', async () => {
+test('display formats money without changing original business fields', async () => {
   const { formatWorkorderPolicyFee, buildWorkorderListDisplay } = await display;
   for (const amount of [0, '0.00', '128.50', -10, '-0.01']) {
-    assert.equal(formatWorkorderPolicyFee({ status: 2 }, amount), amount);
+    assert.equal(formatWorkorderPolicyFee({ status: 2 }, amount), Number(amount).toFixed(2));
   }
+  assert.equal(formatWorkorderPolicyFee({ status: 4 }, 258.58000000000004), '258.58');
+  assert.equal(formatWorkorderPolicyFee({ status: 4 }, '9999999999.99'), '9999999999.99');
   const row = Object.freeze({ status: 4, handleUserName: '李鸣', handleUser: '李鸣\n旧账号',
     upstreamSumAmount: null, downstreamSumAmount: '0.00' });
   assert.deepEqual(buildWorkorderListDisplay(row), {
-    handleUserDisplay: '李鸣', upstreamPolicyFeeDisplay: 0, downstreamPolicyFeeDisplay: '0.00'
+    handleUserDisplay: '李鸣', upstreamPolicyFeeDisplay: '0.00', downstreamPolicyFeeDisplay: '0.00'
   });
   assert.equal(row.upstreamSumAmount, null);
   assert.equal(row.handleUser, '李鸣\n旧账号');

@@ -48,4 +48,20 @@ class RenewalCalendarTest {
         assertEquals(0, RenewalCalendar.activeCycle(start, LocalDate.of(2026, 12, 30)));
         assertEquals(1, RenewalCalendar.activeCycle(start, LocalDate.of(2026, 12, 31)));
     }
+
+    /** 测试环境改为一月一轮时，起期当天进入首轮，月末仍按原始起期逐轮截断。 */
+    @Test
+    void configuredMonthlyCycleStartsImmediatelyAndRepeats() {
+        RenewalCalendar.configureCycleMonths(1);
+        try {
+            LocalDate start = LocalDate.of(2026, 1, 31);
+            assertEquals(LocalDate.of(2026, 1, 31), RenewalCalendar.reminderDate(start, 1));
+            assertEquals(LocalDate.of(2026, 2, 28), RenewalCalendar.reminderDate(start, 2));
+            assertEquals(1, RenewalCalendar.activeCycle(start, LocalDate.of(2026, 2, 27)));
+            assertEquals(2, RenewalCalendar.activeCycle(start, LocalDate.of(2026, 2, 28)));
+            assertEquals(2, RenewalCalendar.upcomingCycle(start, LocalDate.of(2026, 3, 1)));
+        } finally {
+            RenewalCalendar.configureCycleMonths(12);
+        }
+    }
 }

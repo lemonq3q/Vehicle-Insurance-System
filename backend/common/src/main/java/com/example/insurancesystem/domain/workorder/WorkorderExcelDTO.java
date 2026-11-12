@@ -142,10 +142,55 @@ public class WorkorderExcelDTO {
     @ExcelProperty("收款账号")
     private String payeeAccount;
 
+    @ExcelProperty("商业险保险公司")
+    private String commercialInsurerName;
+
+    @ExcelProperty("商业险保单号")
+    private String commercialPolicyNo;
+
+    @ExcelProperty("商业险终期")
+    private String commercialInsuranceEndTime;
+
+    @ExcelProperty("交强险保险公司")
+    private String compulsoryInsurerName;
+
+    @ExcelProperty("交强险保单号")
+    private String compulsoryPolicyNo;
+
+    @ExcelProperty("交强险终期")
+    private String compulsoryInsuranceEndTime;
+
+    @ExcelProperty("非车险保险公司")
+    private String nonMotorInsurerName;
+
+    @ExcelProperty("非车险保单号")
+    private String nonMotorPolicyNo;
+
+    @ExcelProperty("非车险终期")
+    private String nonMotorInsuranceEndTime;
+
+    @ExcelProperty("非车险起期")
+    private String nonMotorInsuranceStartTime;
+
     @ExcelProperty("承保备注")
     private String insureRemark;
 
+    /**
+     * 将当前接口资料转换成导出行，三种保单分别展示公司、号码和完整保险期间。
+     * 空时间不生成 1970 年日期；金额及上下游政策继续使用现有导出列，新增列不改旧列含义。
+     * @param workorderDTO 已计算展示字段的本企业工单详情。
+     */
     public WorkorderExcelDTO(WorkorderDTO workorderDTO) {
+        this.commercialInsurerName = workorderDTO.getCommercialInsurerName();
+        this.commercialPolicyNo = workorderDTO.getCommercialPolicyNo();
+        this.commercialInsuranceEndTime = workorderDTO.getCommercialInsuranceEndTime() == null ? null : TimeConvertUtil.timestampConvert(workorderDTO.getCommercialInsuranceEndTime());
+        this.compulsoryInsurerName = workorderDTO.getCompulsoryInsurerName();
+        this.compulsoryPolicyNo = workorderDTO.getCompulsoryPolicyNo();
+        this.compulsoryInsuranceEndTime = workorderDTO.getCompulsoryInsuranceEndTime() == null ? null : TimeConvertUtil.timestampConvert(workorderDTO.getCompulsoryInsuranceEndTime());
+        this.nonMotorInsurerName = workorderDTO.getNonMotorInsurerName();
+        this.nonMotorPolicyNo = workorderDTO.getNonMotorPolicyNo();
+        this.nonMotorInsuranceEndTime = workorderDTO.getNonMotorInsuranceEndTime() == null ? null : TimeConvertUtil.timestampConvert(workorderDTO.getNonMotorInsuranceEndTime());
+        this.nonMotorInsuranceStartTime = workorderDTO.getNonMotorInsuranceStartTime() == null ? null : TimeConvertUtil.timestampConvert(workorderDTO.getNonMotorInsuranceStartTime());
         this.code = workorderDTO.getCode();
 
         // 时间处理
@@ -213,7 +258,7 @@ public class WorkorderExcelDTO {
         // 上游金额
         this.upstreamCommercialAmount = nullToZero(workorderDTO.getUpstreamCommercialAmount());
         this.upstreamCompulsoryAmount = nullToZero(workorderDTO.getUpstreamCompulsoryAmount());
-        this.upstreamTaxAmount = nullToZero(workorderDTO.getDownstreamVehicleAndVesselTaxAmount());
+        this.upstreamTaxAmount = nullToZero(workorderDTO.getUpstreamVehicleAndVesselTaxAmount());
         this.upstreamNonAutoAmount = nullToZero(workorderDTO.getUpstreamNonMotorAmount());
         this.upstreamAmountSum = nullToZero(workorderDTO.getUpstreamSumAmount());
 
@@ -236,8 +281,8 @@ public class WorkorderExcelDTO {
         this.downstreamNonAutoRatio = zeroToNull(workorderDTO.getDownstreamNonMotorPercentage());
 
         // 计算方式
-        this.upstreamCalculateType = workorderDTO.getUpstreamComputeType() == 0 ? "税前" : "税后";
-        this.downstreamCalculateType = workorderDTO.getDownstreamComputeType() == 0 ? "税前" : "税后";
+        this.upstreamCalculateType = Integer.valueOf(1).equals(workorderDTO.getUpstreamComputeType()) ? "税后" : "税前";
+        this.downstreamCalculateType = Integer.valueOf(1).equals(workorderDTO.getDownstreamComputeType()) ? "税后" : "税前";
 
         // 其他信息
         this.handleUser = workorderDTO.getHandleUserName();

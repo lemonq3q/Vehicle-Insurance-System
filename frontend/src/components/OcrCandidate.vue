@@ -14,7 +14,7 @@ import { defineProps, defineEmits } from 'vue';
 import OcrApplyButton from './OcrApplyButton.vue';
 
 /**
- * 在工单原输入框旁展示来自不同证件的 OCR 候选，不维护业务字段。
+ * 在工单原输入框旁仅展示 OCR 候选内容，不显示来源文件名前缀，不维护业务字段。
  * 长识别值限制在输入区宽度内并省略展示，鼠标悬停或键盘聚焦可查看全文，不撑开原表单列宽。
  * 仅在用户点击应用时交给编辑器写入，应用后的候选由编辑器移除。
  */
@@ -35,7 +35,8 @@ function displayValue(value) {
 </script>
 
 <style scoped>
-.ocr-candidates { width: 100%; max-width: 100%; min-width: 0; font-size: 12px; line-height: 1.5; color: var(--el-color-primary); }
+/* 候选与输入框保留独立行距，识别文本略放大以便人工核对，应用按钮随候选一起下移。 */
+.ocr-candidates { width: 100%; max-width: 100%; min-width: 0; margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--el-color-primary); }
 .ocr-candidate { display: flex; align-items: center; width: 100%; min-width: 0; gap: 8px; }
 .ocr-candidate-value { flex: 1; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

@@ -95,6 +95,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount, formatPercentage } from '@/utils/money';
 import { getDashboardStatistics, getRecentReminders } from '@/api/portal';
 import { getRoleName } from '@/utils/portalLabels';
 
@@ -175,13 +176,13 @@ export default {
     formatNumber(value) { return Number(value || 0).toLocaleString('zh-CN'); },
     /** 将盈利格式化为人民币两位小数并保留负数。 */
     formatMoney(value) {
-      return `¥${Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      return `¥${formatAmount(value ?? 0, '0.00', { group: true })}`;
     },
     /** 把环比结构转换为完整文字，确保不依赖颜色传达涨跌。 */
     trendText(comparison = {}) {
       if (comparison.direction === 'NEW') return '上月暂无数据';
       if (comparison.direction === 'FLAT') return '与上月持平';
-      return `较上月${comparison.direction === 'UP' ? '增加' : '减少'} ${comparison.rate || 0}%`;
+      return `较上月${comparison.direction === 'UP' ? '增加' : '减少'} ${formatPercentage(comparison.rate)}%`;
     },
     /** 下降时使用网站现有危险色，上涨和中性继续沿用原统计说明色。 */
     trendClass(comparison = {}) {

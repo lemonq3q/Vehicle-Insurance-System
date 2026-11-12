@@ -76,6 +76,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { getSubscriptionOrder } from '@/api/portal';
@@ -148,7 +149,7 @@ export default {
      * 将订单金额统一格式化为两位小数，兼容接口中的数字和字符串类型，空值按零展示。
      */
     money(value) {
-      return Number(value || 0).toFixed(2);
+      return formatAmount(value ?? 0, '0.00');
     },
     /**
      * 为套餐权益数字追加业务单位；缺失的历史字段展示占位符，不将零值误判为无数据。

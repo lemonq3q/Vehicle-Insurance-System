@@ -131,6 +131,7 @@
   </div>
 </template>
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import PageHeader from "@/components/PageHeader.vue";
 import AppPagination from "@/components/AppPagination.vue";
 import AppToast from "@/components/AppToast.vue";
@@ -210,9 +211,7 @@ export default {
      * 以人民币两位小数显示企业余额。
      */
     money: (value) =>
-      `¥ ${Number(value || 0).toLocaleString("zh-CN", {
-        minimumFractionDigits: 2,
-      })}`,
+      `¥ ${formatAmount(value ?? 0, '0.00', { group: true })}`,
     /**
      * 将企业正常、欠费限制和停用状态映射为文案与标签样式。
      */

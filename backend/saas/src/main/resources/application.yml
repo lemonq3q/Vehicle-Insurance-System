@@ -22,6 +22,9 @@ mybatis-plus:
 server:
   port: 8081
 
+renewal:
+  cycle-months: ${RENEWAL_CYCLE_MONTHS:12}
+
 portal:
   sso:
     # 可修改为车险前端的正式域名，不要带末尾斜杠。

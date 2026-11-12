@@ -1,3 +1,4 @@
+import { sumMoney } from '../utils/money';
 import { dailyUsage, enterprises, finance, members, plans, platformUsers, promotionTargets, visitorLeads } from './database';
 import { reminders } from './reminders';
 
@@ -181,7 +182,7 @@ export async function mockAdapter(config) {
     if (params.startDate) rows = rows.filter(item => String(item.createdAt || '').slice(0, 10) >= params.startDate);
     if (params.endDate) rows = rows.filter(item => String(item.createdAt || '').slice(0, 10) <= params.endDate);
     result = ok(page(rows, Number(params.pageNo || 1), Number(params.pageSize || 10)));
-  } else if (method === 'POST' && /^\/enterprises\/\d+\/balance-adjustments$/.test(url)) { const item = enterprises.find(row => row.id === Number(url.split('/')[2])); item.balance += Number(body.amount); result = ok({ balance: item.balance }); }
+  } else if (method === 'POST' && /^\/enterprises\/\d+\/balance-adjustments$/.test(url)) { const item = enterprises.find(row => row.id === Number(url.split('/')[2])); item.balance = Number(sumMoney([item.balance, body.amount])); result = ok({ balance: item.balance }); }
   else if (method === 'PUT' && /^\/enterprises\/\d+\/subscription$/.test(url)) { const item = enterprises.find(row => row.id === Number(url.split('/')[2])); const plan = plans.find(row => row.id === Number(body.planId)); Object.assign(item, { planId: plan.id, planName: plan.name, memberLimit: plan.memberLimit, subscriptionEndDate: body.endDate }); result = ok(item); }
   else if (method === 'DELETE' && /^\/enterprises\/\d+\/subscription$/.test(url)) { const item = enterprises.find(row => row.id === Number(url.split('/')[2])); Object.assign(item, { planId: null, planName: null, subscriptionEndDate: null }); result = ok(null); }
   else if (method === 'GET' && url === '/plans') result = ok([...plans].sort((a,b) => a.sortOrder-b.sortOrder));

@@ -17,7 +17,21 @@
     <name>insruance</name>
     <description>Existing vehicle insurance business application</description>
 
+    <properties>
+        <!-- OpenAI Java 4.94.0 编译依赖 Jackson 2.18.9；仅提升本服务的整套 Jackson，避免运行期方法缺失。 -->
+        <jackson-bom.version>2.18.9</jackson-bom.version>
+        <!-- SDK 的 HTTP 客户端需要 OkHttp 4.12.0，Spring Boot 2.5 默认的 3.14.9 缺少运行期字段。 -->
+        <okhttp3.version>4.12.0</okhttp3.version>
+        <!-- OkHttp 4.12 与 OpenAI SDK 均依赖 Kotlin 1.8；避免父工程锁定的 1.5 产生下一处二进制冲突。 -->
+        <kotlin.version>1.8.21</kotlin.version>
+    </properties>
+
     <dependencies>
+        <dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java</artifactId>
+            <version>4.94.0</version>
+        </dependency>
         <dependency>
             <groupId>com.example</groupId>
             <artifactId>common</artifactId>

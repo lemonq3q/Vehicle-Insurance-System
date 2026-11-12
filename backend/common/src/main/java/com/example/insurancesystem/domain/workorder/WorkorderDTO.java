@@ -15,6 +15,14 @@ import java.util.List;
  * 工单详情传输对象，聚合主工单与证件、保险、文件、支付和流转阶段信息供前端一次性展示。
  */
 public class WorkorderDTO {
+    /**
+     * 承保完整替换时明确选择的险种；不入库，防止省略字段被误判为取消投保。
+     * 合计保费和应付金额仅为响应派生值，支付原录入金额保持独立。
+     */
+    private List<String> policyTypes;
+    private BigDecimal totalPremiumAmount;
+    private BigDecimal payableAmount;
+
     private Long id;
 
     private String code;
@@ -46,6 +54,27 @@ public class WorkorderDTO {
     private Long commercialInsuranceStartTime;
 
     private Long compulsoryInsuranceStartTime;
+
+    /**
+     * 三类保单真实资料。起终期统一使用 Unix 秒，历史未识别字段保持空值；
+     * 起期均在主表，金额通过 quote 保存，人工确认后可接入 OCR 识别结果。
+     */
+    private Long nonMotorInsuranceStartTime;
+
+    private String commercialInsurerName;
+
+    private String compulsoryInsurerName;
+
+    private String nonMotorInsurerName;
+
+    private String nonMotorPolicyNo;
+
+    private Long commercialInsuranceEndTime;
+
+    private Long compulsoryInsuranceEndTime;
+
+    private Long nonMotorInsuranceEndTime;
+
 
     private Long insuranceMerchantId;
 
@@ -231,6 +260,7 @@ public class WorkorderDTO {
      * 计算工单列表和详情展示所需的全部派生字段，包括车辆标识、上下游机构、经办人、状态、费用合计和最终车主名称。
      */
     public void compute(){
+        computePolicyTotals();
         computeRenewal();
         this.vehicleId = computeVehicleId();
         this.createMerchant = computeCreateMerchant();
@@ -253,11 +283,25 @@ public class WorkorderDTO {
             compute();
         }
         else{
+            computePolicyTotals();
             this.workorderStatus = computeWorkorderStatus();
             this.upstreamSumAmount = computeUpstreamSumAmount();
             this.downstreamSumAmount = computeDownstreamSumAmount();
             this.finialOwnerName = computeFinialOwnerName();
         }
+    }
+
+    /**
+     * 根据三类保费计算响应合计，车船税仅计入应付金额，全部缺失时保持未知。
+     * 不修改主表支付录入金额，不持久化这些计算字段；明确零保费仍返回零。
+     */
+    public void computePolicyTotals() {
+        totalPremiumAmount = null;
+        for (BigDecimal amount : new BigDecimal[]{commercialAmount, compulsoryAmount, nonMotorAmount}) {
+            if (amount != null) totalPremiumAmount = totalPremiumAmount == null ? amount : totalPremiumAmount.add(amount);
+        }
+        payableAmount = totalPremiumAmount;
+        if (vehicleAndTaxAmount != null) payableAmount = payableAmount == null ? vehicleAndTaxAmount : payableAmount.add(vehicleAndTaxAmount);
     }
 
     /**
@@ -414,7 +458,7 @@ public class WorkorderDTO {
     }
     /**
      * 以各自起期计算当前提醒周期和显示状态，历史已处理标记只对所属周期有效。
-     * 不更改持久化完成周期；下个年度自然恢复未处理，无需依赖定时任务准时运行。
+     * 不更改持久化完成周期；下个配置周期自然恢复未处理，无需依赖定时任务准时运行。
      */
     private void computeRenewal() {
         java.time.LocalDate today = java.time.LocalDate.now(com.example.insurancesystem.utils.RenewalCalendar.BUSINESS_ZONE);

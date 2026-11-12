@@ -1,10 +1,15 @@
 package com.example.insurancesystem.controller;
 
 import com.example.insurancesystem.domain.SystemFile;
+import com.example.insurancesystem.ai.PolicyOcrRequest;
+import com.example.insurancesystem.ai.PolicyOcrTaskService;
 import com.example.insurancesystem.domain.encapsulate.ResponseResult;
 import com.example.insurancesystem.service.OCRService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +23,32 @@ public class OCRController {
 
     @Autowired
     private OCRService ocrService;
+
+    @Autowired
+    private PolicyOcrTaskService policyOcrTaskService;
+
+    /**
+     * 为已上传承保附件创建后台识别任务并立即返回任务 ID。
+     * 需具备工单编辑权限；实际识别和结果缓存由任务服务完成，不阻塞 HTTP 连接。
+     */
+    @PostMapping("/policy")
+    @PreAuthorize("hasAuthority('workorder:update')")
+    public ResponseResult<?> policyRecognition(@RequestBody PolicyOcrRequest request) {
+        return policyOcrTaskService.submit(request);
+    }
+
+    /**
+     * 查询承保 OCR 任务的执行状态和最终回填结果。
+     * 继续要求工单编辑权限，并由任务服务核对当前企业，防止跨企业读取结果。
+     *
+     * @param jobId 提交接口返回的任务 ID
+     * @return 排队、运行、成功或失败状态
+     */
+    @GetMapping("/policy/tasks/{jobId}")
+    @PreAuthorize("hasAuthority('workorder:update')")
+    public ResponseResult<?> policyRecognitionStatus(@PathVariable String jobId) {
+        return policyOcrTaskService.status(jobId);
+    }
 
     @PostMapping("/idCard")
     /**

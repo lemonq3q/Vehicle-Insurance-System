@@ -27,7 +27,26 @@ mybatis-plus:
 server:
   port: 8080
 
+renewal:
+  cycle-months: ${RENEWAL_CYCLE_MONTHS:12}
+
 insurance:
+  ai:
+    provider: ${POLICY_OCR_PROVIDER:qwen}
+    api-key: ${DASHSCOPE_API_KEY:}
+    base-url: ${DASHSCOPE_BASE_URL:}
+    ocr-model: ${POLICY_OCR_MODEL:qwen3.8-flash}
+    organizer-model: ${POLICY_OCR_ORGANIZER_MODEL:qwen3.8-flash}
+    doubao-api-key: ${ARK_API_KEY:}
+    doubao-base-url: ${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}
+    doubao-ocr-model: ${POLICY_OCR_DOUBAO_MODEL:doubao-seed-2-1-lite-260915}
+    doubao-organizer-model: ${POLICY_OCR_DOUBAO_ORGANIZER_MODEL:doubao-seed-2-1-lite-260915}
+    gemini-api-key: ${GEMINI_API_KEY:}
+    gemini-base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    gemini-ocr-model: ${POLICY_OCR_GEMINI_MODEL:gemini-3.8-flash}
+    gemini-organizer-model: ${POLICY_OCR_GEMINI_ORGANIZER_MODEL:gemini-3.8-flash}
+    organizer-retries: ${POLICY_OCR_ORGANIZER_RETRIES:2}
+    ocr-request-retries: ${POLICY_OCR_REQUEST_RETRIES:2}
   wechat:
     # 两端使用同一个网站应用；先执行增量 SQL，再启用微信登录。
     account-enabled: true

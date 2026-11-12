@@ -1,0 +1,35 @@
+# Deploy to /etc/systemd/system/idatag_dev@.service on 47.100.210.159.
+# Keep the four test JARs and the independent environment file in /usr/idatag_dev.
+[Unit]
+Description=iDatag Development %i Service
+After=network-online.target
+Wants=network-online.target
+PartOf=idatag_dev.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/idatag_dev
+Environment=DEV_DB_HOST=127.0.0.1 DEV_DB_PORT=3306 DEV_REDIS_DATABASE=1
+EnvironmentFile=/usr/idatag_dev/.env
+
+# Command-line database URLs override both generic and Druid YAML/environment defaults.
+# The database name is deliberately fixed; never inherit insurance_saas from production.
+# Credentials stay in the environment file and are not exposed in the command line.
+ExecStart=/usr/bin/java -jar /usr/idatag_dev/%i-0.0.1-SNAPSHOT.jar \
+    --spring.profiles.active=prod \
+    "--spring.datasource.url=jdbc:mysql://${DEV_DB_HOST}:${DEV_DB_PORT}/insurance_saas_dev?characterEncoding=utf-8&serverTimezone=Asia/Shanghai" \
+    "--spring.datasource.druid.url=jdbc:mysql://${DEV_DB_HOST}:${DEV_DB_PORT}/insurance_saas_dev?characterEncoding=utf-8&serverTimezone=Asia/Shanghai" \
+    "--spring.redis.database=${DEV_REDIS_DATABASE}"
+
+Restart=on-failure
+RestartSec=10
+SuccessExitStatus=143
+TimeoutStopSec=30
+
+StandardOutput=append:/usr/idatag_dev/%i.log
+StandardError=append:/usr/idatag_dev/%i.log
+
+[Install]
+WantedBy=idatag_dev.target
+

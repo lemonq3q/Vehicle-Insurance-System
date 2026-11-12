@@ -11,8 +11,12 @@
       <div class="top">
         <HeaderComponent :sidebar-collapsed="sidebarCollapsed" @toggle-sidebar="toggleSidebar"></HeaderComponent>
       </div>
-      <main class="right">
-        <router-view></router-view>
+      <main ref="mainViewport" class="right">
+        <router-view v-slot="{ Component, route: viewRoute }">
+          <keep-alive :include="cachedWorkorderComponents" :max="4">
+            <component :is="Component" :key="viewRoute.path" />
+          </keep-alive>
+        </router-view>
       </main>
     </div>
   </div>
@@ -21,9 +25,38 @@
 <script setup>
 import HeaderComponent from '@/components/HeaderComponent.vue';
 import MenuComponent from '@/components/MenuComponent.vue';
-import { ref } from 'vue';
+import { ref, provide, watch, nextTick } from 'vue';
+import { useRoute, onBeforeRouteUpdate } from 'vue-router';
+import { WORKORDER_LIST_COMPONENTS, WORKORDER_NAVIGATION_KEY, captureWorkorderScroll, restoreWorkorderScroll } from '@/utils/workorderNavigation';
 
 const sidebarCollapsed = ref(false);
+const mainViewport = ref(null);
+const route = useRoute();
+const cachedWorkorderComponents = Object.values(WORKORDER_LIST_COMPONENTS);
+const scrollPositions = new Map();
+const revision = ref(0);
+
+/**
+ * 在路由内容完成切换或工单列表刷新后恢复当前视窗；异步等待后再次校验路径，
+ * 防止快速连续导航时旧页面的恢复任务滚动新页面。详情始终从顶部开始，不沿用列表位置。
+ */
+const restoreScroll = async (path = route.path) => {
+  await nextTick();
+  if (route.path !== path) return;
+  restoreWorkorderScroll(mainViewport.value, scrollPositions.get(path));
+};
+
+/*
+ * 父工作台复用期间，在子路由替换DOM之前记录列表视窗；缓存中保留筛选、分页、选项和表格实例。
+ * 快照只属于当前HomePage，退出登录/离开工作台会随组件销毁，不跨账号保存客户列表。
+ */
+onBeforeRouteUpdate((to, from) => {
+  if (WORKORDER_LIST_COMPONENTS[from.path]) {
+    scrollPositions.set(from.path, captureWorkorderScroll(mainViewport.value));
+  }
+});
+watch(() => route.fullPath, () => restoreScroll(), { flush: 'post' });
+provide(WORKORDER_NAVIGATION_KEY, { revision, restoreScroll, currentPath: () => route.path });
 
 /**
  * 仅切换工作台侧栏的展示宽度。菜单的路由、权限和页面实例保持原样，

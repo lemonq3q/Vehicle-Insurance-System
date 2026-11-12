@@ -47,6 +47,27 @@ public class Workorder {
 
     private Long compulsoryInsuranceStartTime;
 
+    /**
+     * 三类保单真实资料。起终期统一使用 Unix 秒，历史未识别字段保持空值；
+     * 起期均在主表，金额通过 quote 保存，人工确认后可接入 OCR 识别结果。
+     */
+    private Long nonMotorInsuranceStartTime;
+
+    private String commercialInsurerName;
+
+    private String compulsoryInsurerName;
+
+    private String nonMotorInsurerName;
+
+    private String nonMotorPolicyNo;
+
+    private Long commercialInsuranceEndTime;
+
+    private Long compulsoryInsuranceEndTime;
+
+    private Long nonMotorInsuranceEndTime;
+
+
     private Long insuranceMerchantId;
 
     private String remark;
@@ -242,6 +263,14 @@ public class Workorder {
         this.areaCode = workorderDTO.getAreaCode();
         this.commercialInsuranceStartTime = workorderDTO.getCommercialInsuranceStartTime();
         this.compulsoryInsuranceStartTime = workorderDTO.getCompulsoryInsuranceStartTime();
+        this.nonMotorInsuranceStartTime = workorderDTO.getNonMotorInsuranceStartTime();
+        this.commercialInsurerName = workorderDTO.getCommercialInsurerName();
+        this.compulsoryInsurerName = workorderDTO.getCompulsoryInsurerName();
+        this.nonMotorInsurerName = workorderDTO.getNonMotorInsurerName();
+        this.nonMotorPolicyNo = workorderDTO.getNonMotorPolicyNo();
+        this.commercialInsuranceEndTime = workorderDTO.getCommercialInsuranceEndTime();
+        this.compulsoryInsuranceEndTime = workorderDTO.getCompulsoryInsuranceEndTime();
+        this.nonMotorInsuranceEndTime = workorderDTO.getNonMotorInsuranceEndTime();
         this.insuranceMerchantId = workorderDTO.getInsuranceMerchantId();
         this.remark = workorderDTO.getRemark();
         this.ownerPhone = workorderDTO.getOwnerPhone();

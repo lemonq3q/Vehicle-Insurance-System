@@ -17,6 +17,7 @@ import java.util.Map;
 @Component
 public class WorkorderImportSchema {
     private final List<Column> columns;
+    private final List<Column> legacyColumns;
 
     /**
      * 从随版本发布的契约加载列定义，保持模板与解析顺序一致。
@@ -27,13 +28,22 @@ public class WorkorderImportSchema {
         try (InputStream input = new ClassPathResource("import/workorder-columns.json").getInputStream()) {
             columns = List.copyOf(mapper.readValue(input, new TypeReference<List<Column>>() { }));
         }
+        try (InputStream input = new ClassPathResource("import/workorder-columns-legacy.json").getInputStream()) {
+            legacyColumns = List.copyOf(mapper.readValue(input, new TypeReference<List<Column>>() { }));
+        }
     }
 
     /**
      * 返回固定顺序的只读列集合，供导入校验及模板核对使用。
-     * @return 当前版本的93列业务契约。
+     * @return 按前端业务流程排列的当前101列契约。
      */
     public List<Column> getColumns() { return columns; }
+
+    /**
+     * 返回旧101列契约，导入器还可读取其前93列，防止用户已填写的历史模板因新版调序而错位。
+     * @return 旧模板原始字段顺序。
+     */
+    public List<Column> getLegacyColumns() { return legacyColumns; }
 
     /**
      * 描述单个 Excel 列的业务字段路径、类型、必填性和长度/枚举约束。

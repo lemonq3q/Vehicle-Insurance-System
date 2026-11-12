@@ -1,5 +1,6 @@
 <template><div><PageHeader eyebrow="Product Configuration" title="套餐管理" description="维护套餐价格、周期、成员上限、免费工单存储额度和上下架状态。"><button class="layui-btn monitor-primary" @click="$router.push('/plans/new/edit')">新建套餐</button></PageHeader><div v-if="loading" class="panel loading-state">正在加载套餐…</div><div v-else-if="!plans.length" class="panel empty-state">暂无套餐，可点击“新建套餐”进行配置。</div><section v-else class="plan-grid"><article v-for="plan in plans" :key="plan.id" class="panel plan-card"><header><div><span :class="['tag',plan.status?'success':'muted']">{{plan.status?'已上架':'已下架'}}</span><h2>{{plan.name}}</h2><p>{{plan.description}}</p></div><span class="plan-code">{{plan.code}}</span></header><div class="price"><strong>¥ {{money(plan.price)}}</strong><span>/ {{period(plan.billingCycle)}}</span></div><ul><li><i class="layui-icon layui-icon-user"></i>最多 {{format(plan.memberLimit)}} 名企业成员</li><li><i class="layui-icon layui-icon-list"></i>免费工单存储 {{format(plan.workorderLimit)}} 份</li><li><i class="layui-icon layui-icon-time"></i>套餐时长 {{format(plan.durationDays)}} 天</li></ul><footer><router-link class="layui-btn monitor-secondary" :to="`/plans/${plan.id}/edit`">编辑套餐</router-link><button class="layui-btn" :class="plan.status?'monitor-danger':'monitor-primary'" @click="openStatus(plan)">{{plan.status?'下架':'上架'}}</button></footer></article></section><section class="panel change-note"><i class="layui-icon layui-icon-tips"></i><div><strong>套餐变更说明</strong><p>修改套餐不会回写已生成的订单快照，也不会立即改变企业已生效订阅的工单额度。</p></div></section><AppModal v-model="statusModal" :title="targetPlan?.status?'下架套餐':'上架套餐'" :confirm-text="targetPlan?.status?'确认下架':'确认上架'" :danger="Boolean(targetPlan?.status)" :loading="submitting" @confirm="changeStatus"><p>将{{targetPlan?.status?'下架':'上架'}}“{{targetPlan?.name}}”。已有订阅不会被终止。</p><div class="field"><label>操作原因 *</label><textarea v-model.trim="reason" class="layui-textarea" maxlength="500"></textarea><p v-if="formError" class="error-text">{{formError}}</p></div></AppModal><AppToast :message="toastMessage" :type="toastType" /></div></template>
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import PageHeader from '@/components/PageHeader.vue';
 import AppModal from '@/components/AppModal.vue';
 import AppToast from '@/components/AppToast.vue';
@@ -24,7 +25,7 @@ export default {
      */
     format: value => Number(value || 0).toLocaleString('zh-CN'),
     /** 以两位小数显示套餐金额，保持价格卡位定。 */
-    money: value => Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    money: value => formatAmount(value ?? 0, '0.00', { group: true }),
     /**
      * 将计费周期代码转换为价格单位，未知枚举保留原值。
      */

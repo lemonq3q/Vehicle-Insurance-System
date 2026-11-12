@@ -13,7 +13,7 @@
 
 列表处理人按非空白的姓名、邮箱、微信昵称、手机号、账号依次选择，只显示一项；不再在姓名下面附加内部微信账号。旧服务未返回新增字段时兼容已有身份字段。
 
-费用只在前端展示层处理，`upstreamSumAmount`、`downstreamSumAmount` 原接口值和数据库金额不修改：有有效 `quotationTime`，或状态为4至10时视为完成过报价，缺失合计显示数字0；否则缺失合计仍为空。已有零、精确金额字符串、非零及负金额均保留。报价失败且没有成功报价依据时不补零。
+费用只在前端展示层处理，`upstreamSumAmount`、`downstreamSumAmount` 原接口值和数据库金额不修改：有有效 `quotationTime`，或状态为4至10时视为完成过报价，缺失合计显示0.00；否则缺失合计仍为空。已有零、精确金额字符串、非零及负金额在展示层统一按HALF_UP保留两位小数，不通过Number重新解析精确字符串；接口原始金额仍保留。报价失败且没有成功报价依据时不补零。
 
 前端展示字段 `handleUserDisplay`、`upstreamPolicyFeeDisplay`、`downstreamPolicyFeeDisplay` 只由页面生成，不是请求或服务端响应字段。API联调样例位于 `frontend/src/mock/workorderListDisplayMock.js`：
 
@@ -21,7 +21,7 @@
 {"code":200,"msg":null,"data":{"total":1,"table":[{"id":"102","status":4,"quotationTime":1793577600,"handleUserName":"秦艺玲","handleUserEmail":null,"handleUserWechatNickname":null,"handleUserUsername":"issuer_example","handleUserPhone":null,"handleUser":"秦艺玲","upstreamSumAmount":null,"downstreamSumAmount":null}]}}
 ```
 
-此样例在页面显示处理人“秦艺玲”、上下游费用均为0；未新增错误分支，继续沿用接口原有401/403及业务失败响应。
+此样例在页面显示处理人“秦艺玲”、上下游费用均为0.00；未新增错误分支，继续沿用接口原有401/403及业务失败响应。
 
 统一响应 `{code:number,msg:string|null,data:any}`，鉴权沿用 `token` 请求头和当前企业上下文；所有 ID 以十进制字符串传输。本文为此次版本的新契约，替代独立商户人员及嵌套 user 数据结构。
 

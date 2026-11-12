@@ -12,25 +12,17 @@ import org.springframework.stereotype.Component;
 
 /**
  * 基于已完成承保记录计算企业每日盈利。每张工单分别合并 UPSTREAM 和 DOWNSTREAM 四类已落库费用，
- * 再按企业汇总；只认 finish_time 已落入目标日且主工单、承保记录均有效的数据。
+ * 再按企业汇总；只认 finish_time 已落入目标日且主工单有效，费用从合并后的金额表读取的数据。
  */
 @Component
 public class SettledWorkorderProfitCalculator implements DailyProfitCalculator {
     private static final String PROFIT_SQL =
             "SELECT w.enterprise_id,COUNT(DISTINCT w.id) processed_count," +
-            "COALESCE(SUM(COALESCE(upc.total_amount,0)),0) upstream_income," +
-            "COALESCE(SUM(COALESCE(downc.total_amount,0)),0) downstream_cost " +
-            "FROM biz_workorder w JOIN biz_workorder_underwriting uw " +
-            "ON uw.workorder_id=w.id AND uw.enterprise_id=w.enterprise_id AND uw.deleted=0 " +
-            "LEFT JOIN (SELECT enterprise_id,workorder_id,SUM(COALESCE(commercial_amount,0)+" +
-            "COALESCE(compulsory_amount,0)+COALESCE(vehicle_tax_amount,0)+COALESCE(non_motor_amount,0)) total_amount " +
-            "FROM biz_workorder_commission WHERE deleted=0 AND side='UPSTREAM' GROUP BY enterprise_id,workorder_id) upc " +
-            "ON upc.enterprise_id=w.enterprise_id AND upc.workorder_id=w.id " +
-            "LEFT JOIN (SELECT enterprise_id,workorder_id,SUM(COALESCE(commercial_amount,0)+" +
-            "COALESCE(compulsory_amount,0)+COALESCE(vehicle_tax_amount,0)+COALESCE(non_motor_amount,0)) total_amount " +
-            "FROM biz_workorder_commission WHERE deleted=0 AND side='DOWNSTREAM' GROUP BY enterprise_id,workorder_id) downc " +
-            "ON downc.enterprise_id=w.enterprise_id AND downc.workorder_id=w.id " +
-            "WHERE w.deleted=0 AND uw.finish_time>=? AND uw.finish_time<? GROUP BY w.enterprise_id";
+            "COALESCE(SUM(q.upstream_total),0) upstream_income,COALESCE(SUM(q.downstream_total),0) downstream_cost " +
+            "FROM biz_workorder w LEFT JOIN (SELECT enterprise_id,workorder_id,SUM(COALESCE(upstream_commercial_amount,0)+COALESCE(upstream_compulsory_amount,0)+COALESCE(upstream_vehicle_and_vessel_tax_amount,0)+COALESCE(upstream_non_motor_amount,0)) upstream_total," +
+            "SUM(COALESCE(downstream_commercial_amount,0)+COALESCE(downstream_compulsory_amount,0)+COALESCE(downstream_vehicle_and_vessel_tax_amount,0)+COALESCE(downstream_non_motor_amount,0)) downstream_total FROM biz_workorder_quote WHERE deleted=0 GROUP BY enterprise_id,workorder_id) q " +
+            "ON q.workorder_id=w.id AND q.enterprise_id=w.enterprise_id " +
+            "WHERE w.deleted=0 AND w.finish_time>=? AND w.finish_time<? GROUP BY w.enterprise_id";
 
     private final JdbcTemplate jdbcTemplate;
 

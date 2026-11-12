@@ -52,6 +52,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { createRechargeOrder, getFinanceOverview } from '@/api/portal';
@@ -109,13 +110,13 @@ export default {
      * 原套餐订单的最终应付金额，用于向用户说明充值原因。
      */
     requiredAmount() {
-      return Number(this.$route.query.requiredAmount || 0);
+      return this.$route.query.requiredAmount || 0;
     },
     /**
      * 进入充值流程时的钱包余额快照，仅用于展示原始缺口计算背景。
      */
     originalBalanceAmount() {
-      return Number(this.$route.query.balanceAmount || 0);
+      return this.$route.query.balanceAmount || 0;
     },
     /**
      * 读取套餐订单计算出的余额缺口，页面初始化时优先将其作为充值金额。
@@ -141,7 +142,7 @@ export default {
     async loadData() {
       return loadPageData(this.pageLoad, async () => {
         const response = await getFinanceOverview();
-        this.balanceAmount = Number(response.data.wallet?.balanceAmount || 0);
+        this.balanceAmount = response.data.wallet?.balanceAmount ?? 0;
         this.minimumRechargeAmount = Number(response.data.rechargeLimits?.minimumAmount || 5);
         this.maximumRechargeAmount = Number(response.data.rechargeLimits?.maximumAmount || 50000);
         if (this.hasOrderContext) this.form.amount = this.money(Math.max(this.shortfallAmount, this.minimumRechargeAmount));
@@ -151,7 +152,7 @@ export default {
      * 将充值金额、余额和缺口统一格式化为两位小数。
      */
     money(value) {
-      return Number(value || 0).toFixed(2);
+      return formatAmount(value ?? 0, '0.00');
     },
     /**
      * 按财务概览返回的服务器充值上下限校验金额后创建订单，并跳转订单详情；后端仍会重复执行
@@ -179,7 +180,7 @@ export default {
       }
       this.submitting = true;
       try {
-        const response = await createRechargeOrder({ amount: amount.toFixed(2) });
+        const response = await createRechargeOrder({ amount: formatAmount(this.hasOrderContext ? amount : this.form.amount) });
         /*
          * 在打开 Stripe 前按充值订单保存原套餐意图，外部支付回跳丢失 query 时可恢复。
          * 存储失败时停留当前页面，不启动支付，避免充值后没有套餐续接信息。

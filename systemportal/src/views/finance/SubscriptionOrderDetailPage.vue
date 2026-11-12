@@ -99,6 +99,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount, moneyShortfall, compareMoney } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { createSubscriptionOrder, getFinanceOverview, getPlans, getSubscriptionOrderPreview } from '@/api/portal';
@@ -140,13 +141,13 @@ export default {
      * 使用后端最终应付金额与钱包余额比较，套餐基础价、抵扣及超额工单费用均已包含在应付金额中。
      */
     isBalanceInsufficient() {
-      return Number(this.preview?.payableAmount || 0) > Number(this.overview.wallet?.balanceAmount || 0);
+      return compareMoney(this.preview?.payableAmount, this.overview.wallet?.balanceAmount) > 0;
     },
     /**
-     * 计算需要补充的最小余额并限制结果不小于零，供充值页预填充值金额。
+     * 按十进制精确相减计算需补充的余额，仅最终舍入到分且负缺口归零，供充值页预填金额。
      */
     shortfallAmount() {
-      return Math.max(0, Number(this.preview?.payableAmount || 0) - Number(this.overview.wallet?.balanceAmount || 0));
+      return moneyShortfall(this.preview?.payableAmount, this.overview.wallet?.balanceAmount);
     }
   },
   /**
@@ -160,7 +161,7 @@ export default {
      * 将各类订单金额统一格式化为两位小数，空值按零显示。
      */
     money(value) {
-      return Number(value || 0).toFixed(2);
+      return formatAmount(value ?? 0, '0.00');
     },
     /**
      * 将套餐计费周期枚举转换为年、月、日单位，用于价格和周期说明。

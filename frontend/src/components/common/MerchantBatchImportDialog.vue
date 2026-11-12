@@ -14,7 +14,9 @@
           <div class="panel-title">使用官方模板填写数据</div>
           <div class="panel-help">选择文件后直接导入，系统会自动校验模板结构和每行业务数据。</div>
         </div>
-        <el-button plain type="primary" @click="downloadTemplate">下载规范模板</el-button>
+        <el-button plain type="primary" :loading="downloading" :disabled="downloading" @click="downloadTemplate">
+          {{ downloading ? '正在下载...' : '下载规范模板' }}
+        </el-button>
       </div>
 
       <el-upload
@@ -100,6 +102,7 @@ const resultVisible = ref(false);
 const selectedFile = ref(null);
 const uploadRef = ref();
 const importing = ref(false);
+const downloading = ref(false);
 const result = reactive({ totalRows: 0, successRows: 0, failureRows: 0, failures: [] });
 const failurePage = ref(1);
 const failurePageSize = ref(20);
@@ -181,11 +184,17 @@ async function confirmImport() {
 }
 
 /**
- * 获取后端随当前版本发布的官方模板，复用现有请求鉴权和文件响应下载处理。
- * 模板与导入校验一起更新，避免前端继续下载人员绑定时代的旧文件。
+ * 三类批量导入共用下载状态，请求期间展示加载提示并阻止重复点击。
+ * 请求成功或失败后恢复按钮；文件保存仍由现有响应拦截器处理。
  */
 async function downloadTemplate() {
-  await downloadBatchImportTemplate(props.businessType);
+  if (downloading.value) return;
+  downloading.value = true;
+  try {
+    await downloadBatchImportTemplate(props.businessType);
+  } finally {
+    downloading.value = false;
+  }
 }
 
 /** 把失败行字段压缩成易扫描文本，完整内容仍可通过表格 tooltip 查看。 */

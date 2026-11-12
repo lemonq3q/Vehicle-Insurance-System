@@ -210,6 +210,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import { markRaw } from 'vue';
 import ContactSuccessPanel from '@/components/ContactSuccessPanel.vue';
 import { createVisitorLead, getMarketingPlans } from '@/api/portal';
@@ -369,8 +370,7 @@ export default {
      * 整数价格使用中文千分位，小数金额保留两位，统一官网套餐价格的可读格式。
      */
     money(value) {
-      const amount = Number(value || 0);
-      return Number.isInteger(amount) ? amount.toLocaleString('zh-CN') : amount.toFixed(2);
+      return formatAmount(value ?? 0, '0.00', { group: true, trim: true });
     },
     /**
      * 将套餐计费周期代码转换为价格后缀，未知周期使用中性“周期”文案。

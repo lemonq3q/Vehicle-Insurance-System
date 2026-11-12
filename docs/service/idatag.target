@@ -1,0 +1,12 @@
+[Unit]
+Description=iDatag All Backend Services
+Wants=idatag@coordinator.service
+Wants=idatag@insruance.service
+Wants=idatag@monitor.service
+Wants=idatag@saas.service
+
+After=network-online.target
+Wants=network-online.target
+
+[Install]
+WantedBy=multi-user.target

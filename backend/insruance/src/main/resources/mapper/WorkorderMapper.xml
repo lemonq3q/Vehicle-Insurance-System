@@ -21,6 +21,14 @@
         <result column="area_code" property="areaCode"/>
         <result column="commercial_insurance_start_time" property="commercialInsuranceStartTime"/>
         <result column="compulsory_insurance_start_time" property="compulsoryInsuranceStartTime"/>
+        <result column="non_motor_insurance_start_time" property="nonMotorInsuranceStartTime"/>
+        <result column="commercial_insurer_name" property="commercialInsurerName"/>
+        <result column="compulsory_insurer_name" property="compulsoryInsurerName"/>
+        <result column="non_motor_insurer_name" property="nonMotorInsurerName"/>
+        <result column="non_motor_policy_no" property="nonMotorPolicyNo"/>
+        <result column="commercial_insurance_end_time" property="commercialInsuranceEndTime"/>
+        <result column="compulsory_insurance_end_time" property="compulsoryInsuranceEndTime"/>
+        <result column="non_motor_insurance_end_time" property="nonMotorInsuranceEndTime"/>
         <result column="insurance_merchant_id" property="insuranceMerchantId"/>
         <result column="insurance_merchant_name" property="insuranceMerchantName"/>
         <result column="insurance_merchant_code" property="insuranceMerchantCode"/>
@@ -151,18 +159,37 @@
         </association>
     </resultMap>
 
-    <!-- 各险种按原始起期计算已开始的年度提醒周期；在同一派生数据源统一列表和去重计数。 -->
+    <!--
+      按原始起期和配置的自然月周期计算提醒轮次，列表与去重计数复用同一结果。
+      先把 Unix 秒转换为中国业务日期，再按年月差估计当前轮次，最后比较该轮准确的提醒日；
+      月末截断只在目标月发生，与 Java 日历计算保持一致，避免测试周期为一月时仍按年查询。
+    -->
     <sql id="renewalWorkorderFrom">
-        FROM (SELECT rw.*,
-            CASE WHEN rw.commercial_insurance_start_time IS NULL THEN 0 ELSE GREATEST(0,
-                CASE WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)))) + 1) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)))) + 1
-                     WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))))) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND))))
-                     ELSE (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)))) - 1 END) END AS commercial_active_cycle,
-            CASE WHEN rw.compulsory_insurance_start_time IS NULL THEN 0 ELSE GREATEST(0,
-                CASE WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)))) + 1) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)))) + 1
-                     WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &gt;= TIMESTAMPADD(MONTH, (((YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))))) * 12 - 1), DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))) THEN (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND))))
-                     ELSE (YEAR(DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)) - YEAR(DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)))) - 1 END) END AS compulsory_active_cycle
-            FROM biz_workorder rw) w
+        <bind name="cycleMonths" value="@com.example.insurancesystem.utils.RenewalCalendar@getCycleMonths()"/>
+        FROM (
+            SELECT c.*,
+                CASE WHEN c.commercial_start_date IS NULL THEN 0 ELSE GREATEST(0,
+                    c.commercial_candidate - CASE WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &lt;
+                        TIMESTAMPADD(MONTH, c.commercial_candidate * #{cycleMonths} - 1, c.commercial_start_date)
+                        THEN 1 ELSE 0 END) END AS commercial_active_cycle,
+                CASE WHEN c.compulsory_start_date IS NULL THEN 0 ELSE GREATEST(0,
+                    c.compulsory_candidate - CASE WHEN DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR) &lt;
+                        TIMESTAMPADD(MONTH, c.compulsory_candidate * #{cycleMonths} - 1, c.compulsory_start_date)
+                        THEN 1 ELSE 0 END) END AS compulsory_active_cycle
+            FROM (
+                SELECT d.*,
+                    GREATEST(1, FLOOR((PERIOD_DIFF(EXTRACT(YEAR_MONTH FROM DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)),
+                        EXTRACT(YEAR_MONTH FROM d.commercial_start_date)) + 1) / #{cycleMonths})) AS commercial_candidate,
+                    GREATEST(1, FLOOR((PERIOD_DIFF(EXTRACT(YEAR_MONTH FROM DATE(UTC_TIMESTAMP() + INTERVAL 8 HOUR)),
+                        EXTRACT(YEAR_MONTH FROM d.compulsory_start_date)) + 1) / #{cycleMonths})) AS compulsory_candidate
+                FROM (
+                    SELECT rw.*,
+                        DATE(DATE_ADD('1970-01-01', INTERVAL (rw.commercial_insurance_start_time + 28800) SECOND)) AS commercial_start_date,
+                        DATE(DATE_ADD('1970-01-01', INTERVAL (rw.compulsory_insurance_start_time + 28800) SECOND)) AS compulsory_start_date
+                    FROM biz_workorder rw
+                ) d
+            ) c
+        ) w
     </sql>
     <sql id="commercialPending">
         (w.commercial_active_cycle &gt; 0 AND (COALESCE(w.commercial_renewal_cycle, 0) &lt; w.commercial_active_cycle OR COALESCE(w.commercial_renewal_status, 0) = 0))
@@ -192,40 +219,48 @@
         w.remark, w.owner_phone, w.owner_id_num, w.owner_name,
         w.organization_name, w.social_credit_code,
         w.commercial_insurance_start_time, w.compulsory_insurance_start_time,
+        w.non_motor_insurance_start_time,
+        w.commercial_insurer_name,
+        w.compulsory_insurer_name,
+        w.non_motor_insurer_name,
+        w.non_motor_policy_no,
+        w.commercial_insurance_end_time,
+        w.compulsory_insurance_end_time,
+        w.non_motor_insurance_end_time,
         q.quotation_no, q.commercial_amount, q.compulsory_amount, q.vehicle_and_tax_amount,
         q.non_motor_amount, q.non_motor_insurance_name, q.non_motor_coverage_amount,
-        upc.compute_type AS upstream_compute_type,
-        upc.commercial_percentage AS upstream_commercial_percentage,
-        upc.compulsory_percentage AS upstream_compulsory_percentage,
-        upc.vehicle_tax_percentage AS upstream_vehicle_and_vessel_tax_percentage,
-        upc.non_motor_percentage AS upstream_non_motor_percentage,
-        upc.commercial_amount AS upstream_commercial_amount,
-        upc.compulsory_amount AS upstream_compulsory_amount,
-        upc.vehicle_tax_amount AS upstream_vehicle_and_vessel_tax_amount,
-        upc.non_motor_amount AS upstream_non_motor_amount,
-        downc.compute_type AS downstream_compute_type,
-        downc.commercial_percentage AS downstream_commercial_percentage,
-        downc.compulsory_percentage AS downstream_compulsory_percentage,
-        downc.vehicle_tax_percentage AS downstream_vehicle_and_vessel_tax_percentage,
-        downc.non_motor_percentage AS downstream_non_motor_percentage,
-        downc.commercial_amount AS downstream_commercial_amount,
-        downc.compulsory_amount AS downstream_compulsory_amount,
-        downc.vehicle_tax_amount AS downstream_vehicle_and_vessel_tax_amount,
-        downc.non_motor_amount AS downstream_non_motor_amount,
+        q.upstream_compute_type,
+        q.upstream_commercial_percentage,
+        q.upstream_compulsory_percentage,
+        q.upstream_vehicle_and_vessel_tax_percentage,
+        q.upstream_non_motor_percentage,
+        q.upstream_commercial_amount,
+        q.upstream_compulsory_amount,
+        q.upstream_vehicle_and_vessel_tax_amount,
+        q.upstream_non_motor_amount,
+        q.downstream_compute_type,
+        q.downstream_commercial_percentage,
+        q.downstream_compulsory_percentage,
+        q.downstream_vehicle_and_vessel_tax_percentage,
+        q.downstream_non_motor_percentage,
+        q.downstream_commercial_amount,
+        q.downstream_compulsory_amount,
+        q.downstream_vehicle_and_vessel_tax_amount,
+        q.downstream_non_motor_amount,
         q.quotation_remark, q.quotation_failed_remark,
-        p.required_pay_amount, p.payee_name AS pay_name,
-        p.payee_phone AS pay_id_num,
-        p.merchant_bank AS pay_bank, p.merchant_bank_card_num AS pay_bank_card_num,
-        p.pay_remark, p.pay_failed_remark,
-        uw.underwriting_remark, uw.underwriting_failed_remark,
-        uw.commercial_policy_no, uw.compulsory_policy_no,
+        w.required_pay_amount, w.payee_name AS pay_name,
+        w.payee_phone AS pay_id_num,
+        w.merchant_bank AS pay_bank, w.merchant_bank_card_num AS pay_bank_card_num,
+        w.pay_remark, w.pay_failed_remark,
+        w.underwriting_remark, w.underwriting_failed_remark,
+        w.commercial_policy_no, w.compulsory_policy_no,
         lg.tracking_num, lg.logistics_company,
-        uw.accept_insurance_remark, uw.accept_insurance_failed_remark,
+        w.accept_insurance_remark, w.accept_insurance_failed_remark,
         UNIX_TIMESTAMP(w.created_at) AS create_time,
         UNIX_TIMESTAMP(w.updated_at) AS update_time,
         UNIX_TIMESTAMP(q.quotation_time) AS quotation_time,
-        UNIX_TIMESTAMP(uw.underwriting_time) AS underwriting_time,
-        UNIX_TIMESTAMP(uw.finish_time) AS finish_time,
+        UNIX_TIMESTAMP(w.underwriting_time) AS underwriting_time,
+        UNIX_TIMESTAMP(w.finish_time) AS finish_time,
         w.created_by AS create_by, w.handle_by, w.status, w.remind_status, w.renewal_status_cycle,
         w.renewal_reminder_disabled, w.follow_up_res,
 
@@ -276,15 +311,7 @@
     <sql id="normalizedWorkorderFrom">
         <include refid="renewalWorkorderFrom"/>
         LEFT JOIN biz_workorder_quote q
-            ON q.workorder_id = w.id AND q.deleted = 0
-        LEFT JOIN biz_workorder_commission upc
-            ON upc.workorder_id = w.id AND upc.side = 'UPSTREAM' AND upc.deleted = 0
-        LEFT JOIN biz_workorder_commission downc
-            ON downc.workorder_id = w.id AND downc.side = 'DOWNSTREAM' AND downc.deleted = 0
-        LEFT JOIN biz_workorder_payment p
-            ON p.workorder_id = w.id AND p.deleted = 0
-        LEFT JOIN biz_workorder_underwriting uw
-            ON uw.workorder_id = w.id AND uw.deleted = 0
+            ON q.workorder_id = w.id AND q.enterprise_id = w.enterprise_id AND q.deleted = 0
         LEFT JOIN biz_workorder_logistics lg
             ON lg.workorder_id = w.id AND lg.deleted = 0
         LEFT JOIN biz_vehicle_license vl
@@ -352,8 +379,8 @@
                     <if test="endTime != null">AND w.updated_at &lt;= FROM_UNIXTIME(#{endTime})</if>
                 </if>
                 <if test="dateType == 'finishTime'">
-                    <if test="beginTime != null">AND uw.finish_time &gt;= FROM_UNIXTIME(#{beginTime})</if>
-                    <if test="endTime != null">AND uw.finish_time &lt;= FROM_UNIXTIME(#{endTime})</if>
+                    <if test="beginTime != null">AND w.finish_time &gt;= FROM_UNIXTIME(#{beginTime})</if>
+                    <if test="endTime != null">AND w.finish_time &lt;= FROM_UNIXTIME(#{endTime})</if>
                 </if>
             </if>
         </where>

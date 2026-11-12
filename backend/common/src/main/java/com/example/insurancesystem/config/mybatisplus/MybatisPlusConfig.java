@@ -33,13 +33,10 @@ public class MybatisPlusConfig {
             "biz_vehicle_invoice",
             "biz_vehicle_license",
             "biz_workorder",
-            "biz_workorder_commission",
             "biz_workorder_file",
             "biz_workorder_insurance",
             "biz_workorder_logistics",
-            "biz_workorder_payment",
             "biz_workorder_quote",
-            "biz_workorder_underwriting",
             "sys_file"
     );
 

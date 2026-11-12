@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.insurancesystem.mapper.WorkorderAggregateMapper">
+    <!-- 工单锁串行化同一工单的阶段写入，租户条件显式限制，重复提交不会补建重复金额行。 -->
+    <select id="lockWorkorder" resultType="com.example.insurancesystem.domain.workorder.Workorder">
+        SELECT id, enterprise_id, handle_by, status, UNIX_TIMESTAMP(finish_time) AS finish_time
+        FROM biz_workorder WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0 FOR UPDATE
+    </select>
+    <select id="countQuote" resultType="int">
+        SELECT COUNT(*) FROM biz_workorder_quote WHERE workorder_id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0
+    </select>
+    <!-- 部分阶段更新仅写非空字段，避免报价反馈覆盖已有的保费和政策。 -->
     <update id="updateQuote">
         UPDATE biz_workorder_quote
         <set>
@@ -13,49 +22,81 @@
             <if test="nonMotorCoverageAmount != null">non_motor_coverage_amount=#{nonMotorCoverageAmount},</if>
             <if test="quotationRemark != null">quotation_remark=#{quotationRemark},</if>
             <if test="quotationFailedRemark != null">quotation_failed_remark=#{quotationFailedRemark},</if>
+            <if test="upstreamComputeType != null">upstream_compute_type=#{upstreamComputeType},</if>
+            <if test="upstreamCommercialPercentage != null">upstream_commercial_percentage=#{upstreamCommercialPercentage},</if>
+            <if test="upstreamCompulsoryPercentage != null">upstream_compulsory_percentage=#{upstreamCompulsoryPercentage},</if>
+            <if test="upstreamVehicleAndVesselTaxPercentage != null">upstream_vehicle_and_vessel_tax_percentage=#{upstreamVehicleAndVesselTaxPercentage},</if>
+            <if test="upstreamNonMotorPercentage != null">upstream_non_motor_percentage=#{upstreamNonMotorPercentage},</if>
+            <if test="upstreamCommercialAmount != null">upstream_commercial_amount=#{upstreamCommercialAmount},</if>
+            <if test="upstreamCompulsoryAmount != null">upstream_compulsory_amount=#{upstreamCompulsoryAmount},</if>
+            <if test="upstreamVehicleAndVesselTaxAmount != null">upstream_vehicle_and_vessel_tax_amount=#{upstreamVehicleAndVesselTaxAmount},</if>
+            <if test="upstreamNonMotorAmount != null">upstream_non_motor_amount=#{upstreamNonMotorAmount},</if>
+            <if test="downstreamComputeType != null">downstream_compute_type=#{downstreamComputeType},</if>
+            <if test="downstreamCommercialPercentage != null">downstream_commercial_percentage=#{downstreamCommercialPercentage},</if>
+            <if test="downstreamCompulsoryPercentage != null">downstream_compulsory_percentage=#{downstreamCompulsoryPercentage},</if>
+            <if test="downstreamVehicleAndVesselTaxPercentage != null">downstream_vehicle_and_vessel_tax_percentage=#{downstreamVehicleAndVesselTaxPercentage},</if>
+            <if test="downstreamNonMotorPercentage != null">downstream_non_motor_percentage=#{downstreamNonMotorPercentage},</if>
+            <if test="downstreamCommercialAmount != null">downstream_commercial_amount=#{downstreamCommercialAmount},</if>
+            <if test="downstreamCompulsoryAmount != null">downstream_compulsory_amount=#{downstreamCompulsoryAmount},</if>
+            <if test="downstreamVehicleAndVesselTaxAmount != null">downstream_vehicle_and_vessel_tax_amount=#{downstreamVehicleAndVesselTaxAmount},</if>
+            <if test="downstreamNonMotorAmount != null">downstream_non_motor_amount=#{downstreamNonMotorAmount},</if>
             <if test="quotationTime != null">quotation_time=FROM_UNIXTIME(#{quotationTime}),</if>
-            updated_at=updated_at
+            updated_at=NOW()
         </set>
-        WHERE workorder_id=#{id} AND deleted=0
+        WHERE workorder_id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0
     </update>
     <insert id="insertQuote">
-        INSERT INTO biz_workorder_quote(enterprise_id,workorder_id,quotation_no,commercial_amount,compulsory_amount,vehicle_and_tax_amount,
-        non_motor_amount,non_motor_insurance_name,non_motor_coverage_amount,quotation_remark,quotation_failed_remark,quotation_time,deleted)
-        VALUES(#{enterpriseId},#{id},#{quotationNo},#{commercialAmount},#{compulsoryAmount},#{vehicleAndTaxAmount},#{nonMotorAmount},
-        #{nonMotorInsuranceName},#{nonMotorCoverageAmount},#{quotationRemark},#{quotationFailedRemark},
-        CASE WHEN #{quotationTime} IS NULL THEN NULL ELSE FROM_UNIXTIME(#{quotationTime}) END,0)
+        INSERT INTO biz_workorder_quote(enterprise_id,workorder_id,deleted,created_at,updated_at)
+        VALUES(#{enterpriseId},#{id},0,NOW(),NOW())
     </insert>
-
-    <update id="updateCommission">
-        UPDATE biz_workorder_commission SET
-        compute_type=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamComputeType} ELSE #{workorder.downstreamComputeType} END,
-        commercial_percentage=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCommercialPercentage} ELSE #{workorder.downstreamCommercialPercentage} END,
-        compulsory_percentage=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCompulsoryPercentage} ELSE #{workorder.downstreamCompulsoryPercentage} END,
-        vehicle_tax_percentage=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamVehicleAndVesselTaxPercentage} ELSE #{workorder.downstreamVehicleAndVesselTaxPercentage} END,
-        non_motor_percentage=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamNonMotorPercentage} ELSE #{workorder.downstreamNonMotorPercentage} END,
-        commercial_amount=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCommercialAmount} ELSE #{workorder.downstreamCommercialAmount} END,
-        compulsory_amount=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCompulsoryAmount} ELSE #{workorder.downstreamCompulsoryAmount} END,
-        vehicle_tax_amount=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamVehicleAndVesselTaxAmount} ELSE #{workorder.downstreamVehicleAndVesselTaxAmount} END,
-        non_motor_amount=CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamNonMotorAmount} ELSE #{workorder.downstreamNonMotorAmount} END
-        WHERE workorder_id=#{workorder.id} AND side=#{side} AND deleted=0
+    <!-- 完整承保才允许清空不再投保的金额、比例和保单字段；不修改报价备注/时间。 -->
+    <update id="replaceFinancials">
+        UPDATE biz_workorder_quote SET
+        commercial_amount=#{commercialAmount},
+        compulsory_amount=#{compulsoryAmount},
+        vehicle_and_tax_amount=#{vehicleAndTaxAmount},
+        non_motor_amount=#{nonMotorAmount},
+        non_motor_insurance_name=#{nonMotorInsuranceName},
+        non_motor_coverage_amount=#{nonMotorCoverageAmount},
+        upstream_compute_type=#{upstreamComputeType},
+        upstream_commercial_percentage=#{upstreamCommercialPercentage},
+        upstream_compulsory_percentage=#{upstreamCompulsoryPercentage},
+        upstream_vehicle_and_vessel_tax_percentage=#{upstreamVehicleAndVesselTaxPercentage},
+        upstream_non_motor_percentage=#{upstreamNonMotorPercentage},
+        upstream_commercial_amount=#{upstreamCommercialAmount},
+        upstream_compulsory_amount=#{upstreamCompulsoryAmount},
+        upstream_vehicle_and_vessel_tax_amount=#{upstreamVehicleAndVesselTaxAmount},
+        upstream_non_motor_amount=#{upstreamNonMotorAmount},
+        downstream_compute_type=#{downstreamComputeType},
+        downstream_commercial_percentage=#{downstreamCommercialPercentage},
+        downstream_compulsory_percentage=#{downstreamCompulsoryPercentage},
+        downstream_vehicle_and_vessel_tax_percentage=#{downstreamVehicleAndVesselTaxPercentage},
+        downstream_non_motor_percentage=#{downstreamNonMotorPercentage},
+        downstream_commercial_amount=#{downstreamCommercialAmount},
+        downstream_compulsory_amount=#{downstreamCompulsoryAmount},
+        downstream_vehicle_and_vessel_tax_amount=#{downstreamVehicleAndVesselTaxAmount},
+        downstream_non_motor_amount=#{downstreamNonMotorAmount}, updated_at=NOW()
+        WHERE workorder_id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0
     </update>
-    <insert id="insertCommission">
-        INSERT INTO biz_workorder_commission(enterprise_id,workorder_id,side,compute_type,commercial_percentage,compulsory_percentage,
-        vehicle_tax_percentage,non_motor_percentage,commercial_amount,compulsory_amount,vehicle_tax_amount,non_motor_amount,deleted)
-        VALUES(#{workorder.enterpriseId},#{workorder.id},#{side},
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamComputeType} ELSE #{workorder.downstreamComputeType} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCommercialPercentage} ELSE #{workorder.downstreamCommercialPercentage} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCompulsoryPercentage} ELSE #{workorder.downstreamCompulsoryPercentage} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamVehicleAndVesselTaxPercentage} ELSE #{workorder.downstreamVehicleAndVesselTaxPercentage} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamNonMotorPercentage} ELSE #{workorder.downstreamNonMotorPercentage} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCommercialAmount} ELSE #{workorder.downstreamCommercialAmount} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamCompulsoryAmount} ELSE #{workorder.downstreamCompulsoryAmount} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamVehicleAndVesselTaxAmount} ELSE #{workorder.downstreamVehicleAndVesselTaxAmount} END,
-        CASE WHEN #{side}='UPSTREAM' THEN #{workorder.upstreamNonMotorAmount} ELSE #{workorder.downstreamNonMotorAmount} END,0)
-    </insert>
-
-    <update id="updatePayment">
-        UPDATE biz_workorder_payment
+    <update id="replacePolicies">
+        UPDATE biz_workorder SET
+        commercial_insurance_start_time=#{commercialInsuranceStartTime},
+        compulsory_insurance_start_time=#{compulsoryInsuranceStartTime},
+        non_motor_insurance_start_time=#{nonMotorInsuranceStartTime},
+        commercial_insurer_name=#{commercialInsurerName},
+        compulsory_insurer_name=#{compulsoryInsurerName},
+        non_motor_insurer_name=#{nonMotorInsurerName},
+        non_motor_policy_no=#{nonMotorPolicyNo},
+        commercial_insurance_end_time=#{commercialInsuranceEndTime},
+        compulsory_insurance_end_time=#{compulsoryInsuranceEndTime},
+        non_motor_insurance_end_time=#{nonMotorInsuranceEndTime},
+        commercial_policy_no=#{commercialPolicyNo},
+        compulsory_policy_no=#{compulsoryPolicyNo}, updated_at=NOW(), updated_by=#{updateBy}
+        WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0
+    </update>
+    <!-- 合并后的核保、支付、收款和反馈直接写入主表；秒时间转为原 DATETIME 列。 -->
+    <update id="updateMainStage">
+        UPDATE biz_workorder
         <set>
             <if test="requiredPayAmount != null">required_pay_amount=#{requiredPayAmount},</if>
             <if test="payName != null">payee_name=#{payName},</if>
@@ -64,41 +105,20 @@
             <if test="payBankCardNum != null">merchant_bank_card_num=#{payBankCardNum},</if>
             <if test="payRemark != null">pay_remark=#{payRemark},</if>
             <if test="payFailedRemark != null">pay_failed_remark=#{payFailedRemark},</if>
-            updated_at=updated_at
-        </set>
-        WHERE workorder_id=#{id} AND deleted=0
-    </update>
-    <insert id="insertPayment">
-        INSERT INTO biz_workorder_payment(enterprise_id,workorder_id,required_pay_amount,payee_name,payee_phone,
-        merchant_bank,merchant_bank_card_num,pay_remark,pay_failed_remark,deleted)
-        VALUES(#{enterpriseId},#{id},#{requiredPayAmount},#{payName},#{payIdNum},#{payBank},#{payBankCardNum},#{payRemark},#{payFailedRemark},0)
-    </insert>
-
-    <update id="updateUnderwriting">
-        UPDATE biz_workorder_underwriting
-        <set>
             <if test="underwritingRemark != null">underwriting_remark=#{underwritingRemark},</if>
             <if test="underwritingFailedRemark != null">underwriting_failed_remark=#{underwritingFailedRemark},</if>
-            <if test="underwritingTime != null">underwriting_time=FROM_UNIXTIME(#{underwritingTime}),</if>
             <if test="commercialPolicyNo != null">commercial_policy_no=#{commercialPolicyNo},</if>
             <if test="compulsoryPolicyNo != null">compulsory_policy_no=#{compulsoryPolicyNo},</if>
             <if test="acceptInsuranceRemark != null">accept_insurance_remark=#{acceptInsuranceRemark},</if>
             <if test="acceptInsuranceFailedRemark != null">accept_insurance_failed_remark=#{acceptInsuranceFailedRemark},</if>
+            <if test="underwritingTime != null">underwriting_time=FROM_UNIXTIME(#{underwritingTime}),</if>
             <if test="finishTime != null">finish_time=FROM_UNIXTIME(#{finishTime}),</if>
-            updated_at=updated_at
+            <if test="status != null">status=#{status},</if>
+            <if test="updateBy != null">updated_by=#{updateBy},</if>
+            updated_at=NOW()
         </set>
-        WHERE workorder_id=#{id} AND deleted=0
+        WHERE id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0
     </update>
-    <insert id="insertUnderwriting">
-        INSERT INTO biz_workorder_underwriting(enterprise_id,workorder_id,underwriting_remark,underwriting_failed_remark,underwriting_time,
-        commercial_policy_no,compulsory_policy_no,accept_insurance_remark,accept_insurance_failed_remark,finish_time,deleted)
-        VALUES(#{enterpriseId},#{id},#{underwritingRemark},#{underwritingFailedRemark},
-        CASE WHEN #{underwritingTime} IS NULL THEN NULL ELSE FROM_UNIXTIME(#{underwritingTime}) END,
-        #{commercialPolicyNo},#{compulsoryPolicyNo},#{acceptInsuranceRemark},#{acceptInsuranceFailedRemark},
-        CASE WHEN #{finishTime} IS NULL THEN NULL ELSE FROM_UNIXTIME(#{finishTime}) END,0)
-    </insert>
-
-    <update id="updateLogistics">UPDATE biz_workorder_logistics SET tracking_num=#{trackingNum},logistics_company=#{logisticsCompany} WHERE workorder_id=#{id} AND deleted=0</update>
+    <update id="updateLogistics">UPDATE biz_workorder_logistics SET tracking_num=#{trackingNum},logistics_company=#{logisticsCompany} WHERE workorder_id=#{id} AND enterprise_id=#{enterpriseId} AND deleted=0</update>
     <insert id="insertLogistics">INSERT INTO biz_workorder_logistics(enterprise_id,workorder_id,tracking_num,logistics_company,deleted) VALUES(#{enterpriseId},#{id},#{trackingNum},#{logisticsCompany},0)</insert>
-
 </mapper>

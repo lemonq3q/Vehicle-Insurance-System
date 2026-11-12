@@ -116,6 +116,7 @@
 </template>
 
 <script>
+import { formatMoney as formatAmount } from '@/utils/money';
 import DataLoadFeedback from '@/components/DataLoadFeedback.vue';
 import { createPageLoad, loadPageData } from '@/utils/pageLoad';
 import { createEnterprise, exitEnterprise, getEnterpriseCurrent, joinEnterpriseByInvite, updateEnterprise } from '@/api/portal';
@@ -199,7 +200,7 @@ export default {
      * 将接口返回的余额统一显示为两位小数；空值按零处理，避免未创建钱包时页面出现 NaN。
      */
     money(value) {
-      return Number(value || 0).toFixed(2);
+      return formatAmount(value ?? 0, '0.00');
     },
     /**
      * 一次性同步企业、成员、钱包和订阅快照，并为缺失的可选关联对象设置稳定默认值。

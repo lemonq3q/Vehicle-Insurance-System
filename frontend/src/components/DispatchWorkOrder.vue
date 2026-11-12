@@ -221,6 +221,7 @@
 </template>
 
 <script setup>
+import { useWorkorderListRefresh } from '@/utils/workorderNavigation';
 import { buildWorkorderListDisplay } from '@/utils/workorderDisplay';
 import { reactive, ref, onMounted } from 'vue';
 import AreaSelect from './AreaSelect.vue';
@@ -468,7 +469,8 @@ const handleDetail = (index, row) => {
   router.push({
     path: '/home/detailWorkorder',
     query: {
-      id: row.id
+      id: String(row.id),
+      returnTo: router.currentRoute.value.fullPath
     }
   });
 };
@@ -483,14 +485,20 @@ const handleSearch = () => {
   getData();
 }
 
-/**
-
- * * 查询分派工作台工单，同步分页总数并转换表格展示字段。
-
+/*
+ * 记录最近一次实际提交的查询，返回后刷新时不把尚未点击查询的输入误当作新筛选。
+ * 参数已由原buildSearchParams规范化，只保存当前页面内存副本，不写入浏览器存储。
  */
-const getData = () => {
-  let params = buildSearchParams();
-  selectWorkorder(params).then(res => {
+let lastSearchParams = null;
+/**
+ * 使用现有接口刷新当前分页，正常查询读取表单，详情保存后的恢复查询使用最近已提交的参数。
+ * @param {boolean|number} restoreQuery 仅显式true复用参数，分页组件传入的数值事件仍按新页码查询。
+ * @returns {Promise<void>} 查询及表格更新结束后完成，不清空未提交筛选输入或重置当前页码。
+ */
+const getData = (restoreQuery = false) => {
+  let params = restoreQuery === true && lastSearchParams ? { ...lastSearchParams } : buildSearchParams();
+  lastSearchParams = { ...params };
+  return selectWorkorder(params).then(res => {
     res = res.data;
     if(res.code == 200){
       page.total = res.data.total;
@@ -568,6 +576,10 @@ const handleExport = () => {
   let params = buildSearchParams();
   getWorkorderExcel(params);
 }
+/*
+ * 详情只读返回直接复用缓存；详情成功保存后仅重查最后已提交的筛选和页码，并恢复滚动位置。
+ */
+useWorkorderListRefresh(() => getData(true));
 </script>
 
 
