@@ -8,7 +8,8 @@ const rootUrl = "/ocr";
  */
 export function imgRecognition(systemFile, type) {
   let url = `${rootUrl}/${type}`
-  return axios.post(url, systemFile);
+  // 证件识别与上传共用局部失败恢复，由上传组件唯一提示。
+  return axios.post(url, systemFile, { skipErrorNotification: true });
 }
 
 /**

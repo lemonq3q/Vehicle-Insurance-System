@@ -18,8 +18,12 @@ export default {
       this.toastTimer = setTimeout(() => { this.toastMessage = ''; }, 3200);
     },
     /**
-     * 从接口异常中提取可读信息并按错误样式展示，没有具体信息时使用统一兜底文案。
+     * 普通接口异常已由拦截器通知，此处只处理显式自主提示或非请求异常，4xx 为警告。
      */
-    errorMessage(error) { this.notify(error?.message || '操作失败，请稍后重试', 'error'); }
+    errorMessage(error) {
+      if (error?.notificationHandled) return;
+      const code = Number(error?.code || error?.response?.status);
+      this.notify(error?.message || '操作失败，请稍后重试', code >= 400 && code < 500 ? 'warning' : 'error');
+    }
   }
 };

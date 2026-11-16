@@ -83,11 +83,11 @@ function handleUnauthorized() {
 
 /**
 
- * * HTTP503优先返回服务不可用，其他错误优先读取失败业务码；响应体成功码不能掩盖HTTP失败。
+ * * HTTP 5xx 优先于响应体业务码，其他错误优先读取失败业务码；响应体成功码不能掩盖HTTP失败。
 
  */
 function responseStatus(payload, response) {
-  if (response?.status === 503) return 503;
+  if (Number(response?.status) >= 500) return Number(response.status);
   const businessCode = Number(payload?.code);
   return businessCode >= 400 ? businessCode : Number(response?.status || businessCode || 0);
 }
@@ -123,7 +123,7 @@ function rejectResponse(response, originalError) {
   const status = responseStatus(payload, response);
   const error = originalError || new Error();
   error.message = status >= 400 ? responseMessage(payload, status) : '请求错误';
-  if (status === 503 || response?.status === 503) error.message = '系统维护中，服务不可用';
+  if (status === 503 && !payload?.msg && !payload?.message) error.message = '系统维护中，服务不可用';
   error.code = status;
   error.data = payload?.data;
   error.response = response;
@@ -131,9 +131,10 @@ function rejectResponse(response, originalError) {
   if (status === 401 && !isPublicRequest(config?.url)) handleUnauthorized();
   /* 自动会话恢复的认证拒绝不弹通知；仍拒绝 Promise、清理失效会话，维护及业务错误照常提示。 */
   const silentAuthFailure = config?.silentAuthFailure && [400, 401, 403].includes(status);
-  if (!config?.skipErrorNotification && !silentAuthFailure) {
+  if (!config?.skipErrorNotification && !silentAuthFailure && !error.notificationHandled) {
     if (status >= 400) notifyRequestError(status, error.message);
     else notifyError(error.message);
+    error.notificationHandled = true;
   }
   return Promise.reject(error);
 }
@@ -162,16 +163,31 @@ request.interceptors.request.use(config => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return beginRequestLoading(config);
-}, error => {
+}, async error => {
+  await decodeResponseError(error.response);
   finishRequestLoading(error.config);
   return Promise.reject(error);
 });
 
 /**
+ * 下载接口以 Blob 接收时也可能返回 JSON 错误，先还原错误外壳再交给统一通知。
+ * 仅解析 JSON 类型或 HTTP 失败响应，不读取正常二进制文件；解析失败使用标准错误兜底。
+ * @param {object} response Axios 原始响应，JSON Blob 成功解析时原地替换 data。
+ * @returns {Promise<void>} 解析完成，不触发通知或改变成功文件内容。
+ */
+async function decodeResponseError(response) {
+  if (typeof Blob === 'undefined' || !(response?.data instanceof Blob)) return;
+  const contentType = response.headers?.['content-type'] || response.headers?.get?.('content-type') || response.data.type;
+  if (!String(contentType || '').includes('json') && !(response.status >= 400)) return;
+  try { response.data = JSON.parse(await response.data.text()); } catch { /* 非 JSON 的失败响应使用状态码兜底。 */ }
+}
+
+/**
  * 统一处理门户响应：保存后端刷新的 token、递归规范日期格式、把业务失败转成 rejected Promise，
  * 并在 401 时清理会话。调用方可通过 skipErrorNotification 抑制公共页面的全局错误提示。
  */
-request.interceptors.response.use(response => {
+request.interceptors.response.use(async response => {
+  await decodeResponseError(response);
   finishRequestLoading(response.config);
   const refreshedToken = response.headers?.[REFRESHED_TOKEN_HEADER]
     || response.headers?.get?.(REFRESHED_TOKEN_HEADER);
@@ -187,7 +203,8 @@ request.interceptors.response.use(response => {
     }
   }
   return payload;
-}, error => {
+}, async error => {
+  await decodeResponseError(error.response);
   finishRequestLoading(error.config || error.response?.config);
   return rejectResponse(error.response, error);
 });

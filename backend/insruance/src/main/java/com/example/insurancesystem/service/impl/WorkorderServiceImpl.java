@@ -572,13 +572,15 @@ public class WorkorderServiceImpl implements WorkorderService {
      * 原子保存三类保单、金额政策和收款反馈，随后将工单置为承保完成。
      * 完整快照允许取消险种并显式清空原字段；非车险单证统一为可多选的其他单证类型。
      * 比例费用按当前保费重算，支付历史金额保持不变。
+     * 已接单工单允许跳过报价、核保及支付阶段直接承保，不要求报价单或先前报价记录；
+     * 金额表不存在时在同一事务补建，权限、附件归属和完整承保资料仍必须校验。
      * @param params policyTypes、各类保单字段、政策模式和本次完整附件列表。
      * @return 成功响应；失败不推进状态、不替换文件，已完成单编辑不重置完成日期。
      */
     @Override
     public ResponseResult acceptInsurance(WorkorderDTO params) {
         Workorder current = requireStageWorkorder(params);
-        if (!List.of(8, 9, 10).contains(current.getStatus())) throw new BusinessException(400, "工单尚未进入待承保阶段");
+        if (current.getStatus() > 10) throw new BusinessException(400, "工单状态异常，请刷新后重试");
         List<String> fileTypes = List.of("acceptInsuranceCommercial", "acceptInsuranceCompulsory", "acceptInsuranceNonMotor", "acceptInsuranceOther", "acceptInsuranceMisc");
         /*
          * 旧版客户端和历史记录可能仍使用 acceptInsuranceNonMotor。

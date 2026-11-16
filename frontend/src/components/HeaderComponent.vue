@@ -132,7 +132,7 @@ const handleReturnPortal = async () => {
     window.location.assign(payload.data.redirectUrl);
   } catch (error) {
     returningPortal.value = false;
-    Message.error(error.response?.data?.msg || error.message || '返回门户授权失败');
+    if (!error.notificationHandled) Message.error(error.response?.data?.msg || error.message || '返回门户授权失败');
   }
 };
 // const dialogVisible = ref(false);

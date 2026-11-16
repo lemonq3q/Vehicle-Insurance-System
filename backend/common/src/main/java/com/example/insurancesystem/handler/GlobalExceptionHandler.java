@@ -35,7 +35,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ResponseResult> handleBusinessException(BusinessException e, HttpServletRequest request) {
-        log.error("业务异常：code={}, msg={}", e.getCode(), e.getMsg());
+        if (e.getCode() != null && e.getCode() >= 500) log.error("业务异常：code={}, msg={}", e.getCode(), e.getMsg());
+        else log.warn("业务拒绝：code={}, msg={}", e.getCode(), e.getMsg());
         return ResponseEntity.ok(new ResponseResult(e.getCode(), e.getMsg(), e.getData()));
     }
 
@@ -46,6 +47,36 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ResponseResult> handleAccessDeniedException(AccessDeniedException e, HttpServletRequest request) {
         log.warn("访问被拒绝：{}", e.getMessage());
         return ResponseEntity.ok(new ResponseResult(403, "不允许访问"));
+    }
+
+    /**
+     * 请求缺参、类型转换、JSON 解析及表单校验失败属于客户端输入问题，不能进入未知异常的 500 兜底。
+     * 方法、媒体类型及上传大小分别保留 405、415、413 语义；仅返回明确业务文案，不泄漏解析堆栈。
+     * @param e Spring MVC 在绑定请求和解析上传内容时产生的已知异常
+     * @return 对应 HTTP 4xx 与一致的业务码、中文消息
+     */
+    @ExceptionHandler({org.springframework.web.bind.ServletRequestBindingException.class,
+            org.springframework.beans.TypeMismatchException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.bind.MethodArgumentNotValidException.class,
+            org.springframework.validation.BindException.class,
+            org.springframework.web.HttpRequestMethodNotSupportedException.class,
+            org.springframework.web.HttpMediaTypeNotSupportedException.class,
+            org.springframework.web.multipart.MaxUploadSizeExceededException.class})
+    public ResponseEntity<ResponseResult> handleInvalidRequest(Exception e) {
+        int code = 400;
+        String message = "请求参数不合法，请检查后重试";
+        if (e instanceof org.springframework.web.multipart.MaxUploadSizeExceededException) {
+            code = 413; message = "上传文件超过大小限制";
+        } else if (e instanceof org.springframework.web.HttpRequestMethodNotSupportedException) {
+            code = 405; message = "不支持此请求方式";
+        } else if (e instanceof org.springframework.web.HttpMediaTypeNotSupportedException) {
+            code = 415; message = "不支持此请求内容格式";
+        } else if (e instanceof org.springframework.http.converter.HttpMessageNotReadableException) {
+            message = "请求内容格式不正确，请检查后重试";
+        }
+        log.warn("请求被拒绝：code={}, type={}", code, e.getClass().getSimpleName());
+        return ResponseEntity.status(code).body(new ResponseResult(code, message));
     }
 
     /**

@@ -1,6 +1,5 @@
 /.codex/
 /.agent/
-/AGENTS.md
 /.codex-template-work/
 
 # Local tools, dependencies and build output across all subprojects.

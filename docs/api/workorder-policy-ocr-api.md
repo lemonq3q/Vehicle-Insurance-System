@@ -47,6 +47,8 @@
 | 交强险 | `compulsoryInsurerName`, `compulsoryPolicyNo`, `compulsoryInsuranceStartTime`, `compulsoryInsuranceEndTime`, `compulsoryAmount`, `vehicleAndTaxAmount` | 同上；车船税只在明确单列时返回 |
 | 非车险 | `nonMotorInsurerName`, `nonMotorPolicyNo`, `nonMotorInsuranceStartTime`, `nonMotorInsuranceEndTime`, `nonMotorAmount`, `nonMotorInsuranceName`, `nonMotorCoverageAmount` | 同上；额外含险种名称和保额 |
 
+保费识别与整理均优先采用含税保费（价税合计），不得误取不含税保费或单独税额，也不得重复加税。例如保费合计 950.00 元、不含税保费 896.23 元、税额 53.77 元，应返回保费 `"950.00"`；保费增值税与代收车船税区分处理，车船税不并入保费。
+
 混合保单任务成功 mock 响应：
 
 ```json

@@ -2424,7 +2424,7 @@ const handleSubmit = async (formEl, type) => {
       if (type == 'acceptInsurance'){
         const data = buildAcceptInsuranceFrom();
         const error = validatePolicies(data, data.workorderFileList);
-        if (error) { Message.error(error); Loading.close(); return; }
+        if (error) { Message.warning(error); Loading.close(); return; }
         if (await handleAcceptInsuranceUpdate(data)) handleBack();
       }
       if (type == 'acceptInsuranceFailed'){
@@ -2996,7 +2996,7 @@ const handleAcceptInsuranceUpdate = async (data) => {
     markWorkorderChanged();
     return true;
   } catch (error) {
-    Message.error(error.message || '保存失败，请重试');
+    if (!error.notificationHandled) Message.error(error.message || '保存失败，请重试');
     return false;
   } finally { Loading.close(); }
 }

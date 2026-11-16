@@ -95,9 +95,9 @@ export default {
     /** 切换渠道后剔除已选但无法通过新渠道触达的数据，并重新查询系统候选。 */
     changeChannel() { const before = this.selectedItems.length; this.selectedItems = this.selectedItems.filter(this.hasChannel); this.selectedPageNo = 1; this.bulkSearchKeys = []; if (before !== this.selectedItems.length) this.notify('已移除当前渠道联系方式为空的已选目标'); this.load(); },
     /** 单行勾选与取消同时更新已选表；达到上限后拒绝新增，但始终允许取消。 */
-    toggleRow(item, checked) { const exists = this.selectedKeys.includes(item._key); if (!checked) { this.selectedItems = this.selectedItems.filter(row => row._key !== item._key); this.fixSelectedPage(); return; } if (exists) return; if (this.limitReached) { this.notify(`勾选数量已达 ${this.maxTargets} 条上限`, 'error'); return; } this.selectedItems.push(item); },
+    toggleRow(item, checked) { const exists = this.selectedKeys.includes(item._key); if (!checked) { this.selectedItems = this.selectedItems.filter(row => row._key !== item._key); this.fixSelectedPage(); return; } if (exists) return; if (this.limitReached) { this.notify(`勾选数量已达 ${this.maxTargets} 条上限`, 'warning'); return; } this.selectedItems.push(item); },
     /** 将一组候选按原有稳定顺序加入已选列表，并统一处理剩余额度和截断提示。 */
-    addRows(rows, total, actionLabel) { const additions = rows.filter(item => this.hasChannel(item) && !this.selectedKeys.includes(item._key)); const capacity = this.maxTargets - this.selectedItems.length; this.selectedItems.push(...additions.slice(0, capacity)); if (total > capacity) this.notify(`${actionLabel}共有 ${total} 条可推广信息，超出上限，本次只勾选前 ${capacity} 条`, 'error'); },
+    addRows(rows, total, actionLabel) { const additions = rows.filter(item => this.hasChannel(item) && !this.selectedKeys.includes(item._key)); const capacity = this.maxTargets - this.selectedItems.length; this.selectedItems.push(...additions.slice(0, capacity)); if (total > capacity) this.notify(`${actionLabel}共有 ${total} 条可推广信息，超出上限，本次只勾选前 ${capacity} 条`, 'warning'); },
     /** Excel 全选在浏览器内处理全部导入结果，不向后端创建任何临时名单。 */
     toggleExcelAll(event) { if (!event.target.checked) { const keys = new Set(this.excelEligibleRows.map(item => item._key)); this.selectedItems = this.selectedItems.filter(item => !keys.has(item._key)); this.fixSelectedPage(); return; } this.addRows(this.excelEligibleRows, this.excelEligibleRows.filter(item => !this.selectedKeys.includes(item._key)).length, '当前 Excel 名单'); },
     /** 搜索结果全选读取当前查询的全部候选，而非只处理当前分页。 */
@@ -114,7 +114,7 @@ export default {
     fixSelectedPage() { const pages = Math.max(1, Math.ceil(this.selectedItems.length / this.selectedPageSize)); this.selectedPageNo = Math.min(this.selectedPageNo, pages); },
     /** 发送请求只携带最终勾选的系统 ID 和浏览器暂存 Excel 行，不再依赖数量预览或临时令牌。 */
     payload() { return { channel: this.form.channel, content: this.form.content, selectionMode: 'MIXED', targetIds: this.selectedItems.filter(item => item._source === 'SYSTEM').map(item => item.id), importedTargets: this.selectedItems.filter(item => item._source === 'EXCEL').map(({ name, phone, email, remark }) => ({ name, phone, email, remark })) }; },
-    openConfirmation() { if (!this.selectedItems.length) { this.notify('请至少勾选一个推广目标', 'error'); return; } if (!this.form.content) { this.notify('请填写推广信息', 'error'); return; } this.confirmVisible = true; },
+    openConfirmation() { if (!this.selectedItems.length) { this.notify('请至少勾选一个推广目标', 'warning'); return; } if (!this.form.content) { this.notify('请填写推广信息', 'warning'); return; } this.confirmVisible = true; },
     /** 确认后调用 mock 渠道，成功结果明确标识没有真实消息发出。 */
     async send() { this.sending = true; try { this.sendResult = await promotionApi.send(this.payload()); this.confirmVisible = false; this.resultVisible = true; this.notify('模拟推广已完成'); } catch (e) { this.errorMessage(e); } finally { this.sending = false; } }
   }

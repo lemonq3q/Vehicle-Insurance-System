@@ -1463,7 +1463,7 @@ const handleSubmit = (formEl) => {
         + insuranceOptions.value.type2.length
         + insuranceOptions.value.type3.length;
       if (insuranceCount === 0) {
-        Message.error('当前企业尚未配置险种，无法创建工单，请先联系管理员完成险种配置');
+        Message.warning('当前企业尚未配置险种，无法创建工单，请先联系管理员完成险种配置');
         return;
       }
       Loading.open();

@@ -25,6 +25,7 @@ export function upload(file) {
 /**
  * 把文件名、后缀、大小和 MIME 类型提交给后端，申请受权限控制且短时有效的 OSS PUT 地址。
  * 后端同时预创建文件信息，前端不得自行拼接对象存储路径。
+ * 该请求属于多步上传流程，失败由上传组件处理一次，故显式关闭全局通知。
  */
 export function createOssUploadSign(fileMetadata) {
   return axios.post(`${rootUrl}/oss/sign`, null, {
@@ -33,7 +34,8 @@ export function createOssUploadSign(fileMetadata) {
       suffix: fileMetadata.suffix,
       size: fileMetadata.size,
       contentType: fileMetadata.mimeType
-    }
+    },
+    skipErrorNotification: true
   });
 }
 

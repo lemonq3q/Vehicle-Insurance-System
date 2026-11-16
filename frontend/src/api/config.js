@@ -43,7 +43,6 @@ axios.interceptors.request.use(function (config) {
   }
   return config;
 }, function (error) {
-  Message.error("请求出错！");
   return Promise.reject(error);
 });
 
@@ -51,15 +50,15 @@ axios.interceptors.request.use(function (config) {
  * 统一处理两种错误传输方式：业务code>=400或HTTP失败均拒绝Promise并保留code、data和response。
  * 401清理会话，4xx警告、5xx错误；业务错误不再作为成功响应进入页面后续流程。
  * 网络故障没有HTTP状态，按错误提示；调用方仍可在catch中处理自己的加载状态。
- * HTTP503优先按服务不可用处理并固定维护文案，避免错误body导致误清理登录态。
+ * HTTP 5xx 不被业务 4xx 掩盖；优先显示后端文案，缺少文案才使用兜底，避免错误body导致误清理登录态。
  */
 function rejectResponse(response, originalError) {
   const payload = response?.data;
   const businessCode = Number(payload?.code);
-  const code = response?.status === 503 ? 503 : businessCode >= 400 ? businessCode : Number(response?.status || 0);
+  const code = Number(response?.status) >= 500 ? Number(response.status) : businessCode >= 400 ? businessCode : Number(response?.status || 0);
   const error = originalError || new Error();
   error.message = payload?.msg || payload?.message || (code >= 500 || code === 0 ? '请求错误' : '请求异常');
-  if (code === 503 || response?.status === 503) error.message = '系统维护中，服务不可用';
+  if (code === 503 && !payload?.msg && !payload?.message) error.message = '系统维护中，服务不可用';
   Object.assign(error, { code, data: payload?.data, response });
   /* SSO 自动换票失败由回调页显示恢复入口，不重复弹全局警告；其他业务错误不静默。 */
   const config = response?.config || originalError?.config;
@@ -68,21 +67,35 @@ function rejectResponse(response, originalError) {
     Storage.remove('token');
     Storage.remove('userInfo');
     router.push('/login');
-  } else if (silentAuthFailure || config?.skipErrorNotification) {
-    return Promise.reject(error);
-  } else if (code >= 500 || code === 0) {
-    Message.error(error.message);
-  } else {
-    Message.warning(error.message);
+  }
+  /* 会话清理与通知互不替代；显式例外不弹窗，普通请求由本拦截器唯一负责。 */
+  if (!silentAuthFailure && !config?.skipErrorNotification && !error.notificationHandled) {
+    if (code >= 500 || code === 0) Message.error(error.message);
+    else Message.warning(error.message);
+    error.notificationHandled = true;
   }
   return Promise.reject(error);
+}
+
+/**
+ * 下载接口以 Blob 接收时也可能返回 JSON 错误，先还原错误外壳再交给统一通知。
+ * 仅解析 JSON 类型或 HTTP 失败响应，不读取正常二进制文件；解析失败使用标准错误兜底。
+ * @param {object} response Axios 原始响应，JSON Blob 成功解析时原地替换 data。
+ * @returns {Promise<void>} 解析完成，不触发通知或改变成功文件内容。
+ */
+async function decodeResponseError(response) {
+  if (typeof Blob === 'undefined' || !(response?.data instanceof Blob)) return;
+  const contentType = response.headers?.['content-type'] || response.headers?.get?.('content-type') || response.data.type;
+  if (!String(contentType || '').includes('json') && !(response.status >= 400)) return;
+  try { response.data = JSON.parse(await response.data.text()); } catch { /* 非 JSON 的失败响应使用状态码兜底。 */ }
 }
 
 /**
  * 成功响应继续保持Axios原始响应和Excel下载契约；先检查JSON业务错误，再判断是否需要下载，
  * 避免导出请求返回错误JSON时被误当成Excel保存；刷新令牌仍使用原有滚动会话规则。
  */
-axios.interceptors.response.use(function (response) {
+axios.interceptors.response.use(async function (response) {
+  await decodeResponseError(response);
   const refreshedToken = response.headers[REFRESHED_TOKEN_HEADER];
   if (refreshedToken) Storage.set('token', refreshedToken, 60 * 60 * 24);
   if (Number(response.data?.code) >= 400 || response.status >= 400) return rejectResponse(response);
@@ -93,7 +106,8 @@ axios.interceptors.response.use(function (response) {
     return Promise.resolve();
   }
   return response;
-}, function (error) {
+}, async function (error) {
+  await decodeResponseError(error.response);
   return rejectResponse(error.response, error);
 });
 

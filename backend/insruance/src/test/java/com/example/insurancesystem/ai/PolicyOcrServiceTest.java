@@ -25,6 +25,29 @@ import static org.mockito.Mockito.when;
  * 使用登录线程和 Mapper 替身，不访问 OSS、数据库或模型；缺失文件使流程在外部调用前结束。
  */
 class PolicyOcrServiceTest {
+    /**
+     * 新建、待报价及后续工单均可预识别已上传保单，识别不承担承保状态推进。
+     * 直接验证任务提交使用的同一校验入口，隔离 OSS 与模型调用，仅保留企业及文件校验。
+     */
+    @Test
+    void policyRecognitionDoesNotRequireUnderwritingStage() {
+        WorkorderMapper workorders = mock(WorkorderMapper.class);
+        SystemFileMapper files = mock(SystemFileMapper.class);
+        PolicyOcrService service = new PolicyOcrService(workorders, files, mock(OSSUtil.class),
+            mock(PolicyOcrCaller.class), mock(PolicyOcrWorkflow.class));
+        Workorder order = new Workorder(); order.setId(101L); order.setEnterpriseId(9L);
+        com.example.insurancesystem.domain.SystemFile file = new com.example.insurancesystem.domain.SystemFile();
+        file.setId(900L); file.setEnterpriseId(9L); file.setFileName("policy.pdf");
+        when(workorders.selectById(101L)).thenReturn(order);
+        when(files.selectById(900L)).thenReturn(file);
+        for (int status = 0; status <= 10; status++) {
+            order.setStatus(status);
+            org.junit.jupiter.api.Assertions.assertNull(
+                service.validateRequest(new PolicyOcrRequest(101L, 900L), 9L, false),
+                "识别不应受工单状态限制：" + status);
+        }
+    }
+
     @AfterEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();

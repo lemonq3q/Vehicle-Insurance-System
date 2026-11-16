@@ -196,19 +196,42 @@ class WorkorderPolicyServiceTest {
 
     /**
 
-     * 未进入承保的工单和不存在的工单不能更新；轻量入口不能直接将工单完成。
+     * 未接单或不存在的工单不能更新；轻量入口不能绕过完整资料校验直接完成。
 
      */
     @Test
     void rejectsInvalidStagesAndCompletionBypass() {
         WorkorderDTO request = WorkorderPolicyValidatorTest.request("COMMERCIAL");
-        current.setStatus(2);
+        current.setStatus(1);
         assertThrows(BusinessException.class, () -> service.acceptInsurance(request));
         request.setStatus(10);
         assertThrows(BusinessException.class, () -> service.updateNoCascade(request));
         when(aggregate.lockWorkorder(101L, 9L)).thenReturn(null);
         assertThrows(BusinessException.class, () -> service.updateQuotation(request));
         verify(aggregate, never()).updateMainStage(any());
+    }
+
+    /**
+     * 所有已接单流程阶段均可直接承保，不依赖报价单或既有金额记录。
+     * 承保成功补建金额行并置为完成状态；首次完成生成时间，不要求用户先推进报价流程。
+     */
+    @Test
+    void acceptsDirectUnderwritingWithoutQuotationFromEveryActiveStage() {
+        for (int status = 2; status <= 9; status++) {
+            clearInvocations(aggregate);
+            current.setStatus(status);
+            current.setFinishTime(null);
+            WorkorderDTO request = WorkorderPolicyValidatorTest.request("COMMERCIAL");
+            request.setWorkorderFileList(List.of());
+            assertEquals(200, service.acceptInsurance(request).getCode());
+            ArgumentCaptor<Workorder> capture = ArgumentCaptor.forClass(Workorder.class);
+            verify(aggregate).updateMainStage(capture.capture());
+            assertEquals(10, capture.getValue().getStatus());
+            assertNotNull(capture.getValue().getFinishTime());
+            verify(aggregate).insertQuote(any());
+            verify(aggregate).replacePolicies(any());
+            verify(aggregate).replaceFinancials(any());
+        }
     }
 }
 
