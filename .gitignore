@@ -43,10 +43,18 @@ Thumbs.db
 /outputs/
 /backups/
 
-# Full database exports contain business data; retain schema and migration SQL.
-/base_conf/database/*_full.sql
-/base_conf/database/*_full_*.sql
-/base_conf/database/*_backup.sql
-/docs/db/*_full.sql
-/docs/db/*_full_*.sql
-/docs/db/*_backup.sql
+# Database history, deployment samples and documentation are maintained project assets.
+!*.example
+!*.sample
+!*.template
+!/base_conf/
+!/base_conf/**/
+!/base_conf/**
+!/backend/db/
+!/backend/db/**/
+!/backend/db/**
+
+# Keep every file under docs versionable, including deployment configuration and exports.
+!/docs/
+!/docs/**/
+!/docs/**
