@@ -181,30 +181,35 @@
       </div>
     </div>
     <div class="table_container">
+      <!--
+        使用组件原生列最小宽度和固定布局，列宽总和超出容器时由表格内部横向滚动；
+        操作列固定右侧，保留原有单元格换行与业务按钮，不再压缩姓名、区域和时间列。
+      -->
       <el-table 
       v-loading="loading.table"
       :data="tableData" 
       stripe border 
       style="width: 100%;" 
-      table-layout="auto"
+      table-layout="fixed"
+      scrollbar-always-on
       :header-cell-style="{ textAlign: 'center' }"
       :cell-style="{ textAlign: 'center' }">
-        <el-table-column prop="code" label="工单号"/>
-        <el-table-column prop="vehicleId" label="车牌号/车架号"/>
-        <el-table-column prop="finialOwnerName" label="车主"/>
-        <el-table-column prop="createMerchant" label="提交店铺"/>
-        <el-table-column prop="createUser" label="提交人"/>
-        <el-table-column prop="areaCode" label="投保区域"/>
-        <el-table-column prop="insuranceCompany" label="保险公司"/>
-        <el-table-column prop="upstreamPolicyFeeDisplay" label="上游政策费用"/>
-        <el-table-column prop="downstreamPolicyFeeDisplay" label="下游政策费用"/>
+        <el-table-column prop="code" label="工单号" min-width="140"/>
+        <el-table-column prop="vehicleId" label="车牌号/车架号" min-width="220"/>
+        <el-table-column prop="finialOwnerName" label="车主" min-width="110"/>
+        <el-table-column prop="createMerchant" label="提交店铺" min-width="240"/>
+        <el-table-column prop="createUser" label="提交人" min-width="110"/>
+        <el-table-column prop="areaCode" label="投保区域" min-width="240"/>
+        <el-table-column prop="insuranceCompany" label="保险公司" min-width="220"/>
+        <el-table-column prop="upstreamPolicyFeeDisplay" label="上游政策费用" min-width="140"/>
+        <el-table-column prop="downstreamPolicyFeeDisplay" label="下游政策费用" min-width="140"/>
         <!-- <el-table-column prop="handleMerchant" label="处理机构"/> -->
-        <el-table-column prop="handleUserDisplay" label="处理人"/>
-        <el-table-column prop="workorderStatus" label="工单状态"/>
-        <el-table-column prop="createTime" label="创建时间"/>
-        <el-table-column prop="updateTime" label="最后跟进时间"/>
-        <el-table-column prop="finishTime" label="承保时间"/>
-        <el-table-column label="操作">
+        <el-table-column prop="handleUserDisplay" label="处理人" min-width="130"/>
+        <el-table-column prop="workorderStatus" label="工单状态" min-width="110"/>
+        <el-table-column prop="createTime" label="创建时间" min-width="180"/>
+        <el-table-column prop="updateTime" label="最后跟进时间" min-width="180"/>
+        <el-table-column prop="finishTime" label="承保时间" min-width="180"/>
+        <el-table-column label="操作" fixed="right" width="180">
           <template #default="scope">
             <div class="table_button_container">
               <el-button size="small" type="default" @click="handleDetail(scope.$index, scope.row)">详情</el-button>

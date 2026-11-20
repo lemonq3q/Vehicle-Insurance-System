@@ -97,7 +97,7 @@ public class SecurityConfig {
                         "/internal/session/logout-enterprise", "/internal/session/logout-user",
                         "/internal/maintenance/enterprise-data/purge",
                         "/internal/maintenance/**",
-                        "/internal/reminders/**",
+                        "/internal/reminders/**", "/internal/log-directory/**",
                         "/auth/sso/exchange", "/portal/finance/plans",
                         "/portal/visitor-leads", "/portal/payment/stripe/webhook"
                 ).permitAll()

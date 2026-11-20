@@ -24,15 +24,15 @@
               id="request-date-range"
               v-model="dateRange"
               class="monitor-date-range"
-              type="daterange"
+              type="datetimerange"
               unlink-panels
               range-separator="到"
               start-placeholder="开始日期"
               end-placeholder="结束日期"
-              format="YYYY/MM/DD"
-              value-format="YYYY-MM-DD"
+              format="YYYY/MM/DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
               :shortcuts="dateShortcuts"
-              :clearable="false"
+              :clearable="true"
               placement="bottom-end"
               popper-class="monitor-date-range-popper"
             />
@@ -65,44 +65,78 @@
           </select>
         </div>
         <div class="field">
-          <label for="request-httpStatus">HTTP 状态</label
-          ><input
-            id="request-httpStatus"
-            v-model="query.httpStatus"
-            class="layui-input"
-            type="number"
-            placeholder="如：500"
-          />
+          <label for="request-httpStatusClass">HTTP 状态</label
+          ><select
+            id="request-httpStatusClass"
+            v-model="query.httpStatusClass"
+            class="layui-select"
+          >
+            <option value="">全部分类</option>
+            <option
+              v-for="code in [100, 200, 300, 400, 500]"
+              :key="code"
+              :value="code"
+            >
+              {{ code }} 类（{{ code }}–{{ code + 99 }}）
+            </option>
+          </select>
         </div>
         <div class="field">
-          <label for="request-businessCode">业务返回码</label
-          ><input
-            id="request-businessCode"
-            v-model="query.businessCode"
-            class="layui-input"
-            type="text"
-            placeholder="如：500"
-          />
+          <label for="request-businessCodeClass">业务返回码</label
+          ><select
+            id="request-businessCodeClass"
+            v-model="query.businessCodeClass"
+            class="layui-select"
+          >
+            <option value="">全部分类</option>
+            <option
+              v-for="code in [100, 200, 300, 400, 500]"
+              :key="code"
+              :value="code"
+            >
+              {{ code }} 类（{{ code }}–{{ code + 99 }}）
+            </option>
+          </select>
         </div>
         <div class="field">
-          <label for="request-enterpriseId">企业 ID</label
-          ><input
+          <label for="request-enterpriseId">所属企业</label
+          ><el-select
             id="request-enterpriseId"
             v-model="query.enterpriseId"
-            class="layui-input"
-            type="number"
-            placeholder="输入企业 ID"
-          />
+            filterable
+            remote
+            clearable
+            :remote-method="searchEnterprises"
+            :loading="enterpriseLoading"
+            @change="enterpriseChanged"
+            placeholder="输入企业名称搜索"
+            ><el-option
+              v-for="item in enterpriseOptions"
+              :key="item.id"
+              :value="item.id"
+              :label="item.name"
+          /></el-select>
         </div>
         <div class="field">
-          <label for="request-userId">用户 ID</label
-          ><input
+          <label for="request-userId">所属用户</label
+          ><el-select
             id="request-userId"
             v-model="query.userId"
-            class="layui-input"
-            type="number"
-            placeholder="输入用户 ID"
-          />
+            filterable
+            remote
+            clearable
+            :remote-method="searchUsers"
+            :loading="userLoading"
+            :disabled="!query.enterpriseId"
+            placeholder="先选择企业，再输入姓名或邮箱"
+            ><el-option
+              v-for="item in userOptions"
+              :key="item.id"
+              :value="item.id"
+              :label="
+                (item.realName || '未命名') + ' / ' + (item.email || '无邮箱')
+              "
+          /></el-select>
         </div>
         <div class="field wide-field">
           <label for="request-uri">请求 URI</label
@@ -111,7 +145,7 @@
             v-model="query.uri"
             class="layui-input"
             type="text"
-            placeholder="输入完整请求路径，精确匹配"
+            placeholder="输入请求路径关键词，模糊匹配"
           />
         </div>
         <div class="field wide-field">
@@ -122,6 +156,30 @@
             class="layui-input"
             type="text"
             placeholder="输入完整日志 ID"
+          />
+        </div>
+        <div class="field">
+          <label for="min-duration">最短处理时间（ms）</label
+          ><input
+            id="min-duration"
+            v-model="query.minDurationMs"
+            class="layui-input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="留空表示无下限"
+          />
+        </div>
+        <div class="field">
+          <label for="max-duration">最长处理时间（ms）</label
+          ><input
+            id="max-duration"
+            v-model="query.maxDurationMs"
+            class="layui-input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="留空表示无上限"
           />
         </div>
         <div class="action-row filter-actions">
@@ -223,9 +281,16 @@
 </template>
 <script>
 import AppPagination from "@/components/AppPagination.vue";
-import { ElConfigProvider, ElDatePicker } from "element-plus";
+import {
+  ElConfigProvider,
+  ElDatePicker,
+  ElSelect,
+  ElOption,
+} from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import "element-plus/es/components/date-picker/style/css";
+import "element-plus/es/components/select/style/css";
+import "element-plus/es/components/option/style/css";
 import PageHeader from "@/components/PageHeader.vue";
 import { requestLogApi } from "@/api/requestLogs";
 /** 默认查询本地当天，防止无界扫描历史日志。 */
@@ -236,12 +301,14 @@ function initialQuery() {
     "0"
   )}-${String(d.getDate()).padStart(2, "0")}`;
   return {
-    startDate: today,
-    endDate: today,
+    startTime: today + " 00:00:00",
+    endTime: today + " 23:59:59",
     sourceSystem: "",
     hasException: "",
-    httpStatus: "",
-    businessCode: "",
+    httpStatusClass: "",
+    businessCodeClass: "",
+    minDurationMs: "",
+    maxDurationMs: "",
     uri: "",
     enterpriseId: "",
     userId: "",
@@ -255,11 +322,13 @@ function recentRange(days) {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - days + 1);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 0);
   return [start, end];
 }
 /** 管理员请求诊断页面；错误通知由现有请求层负责，页面只恢复状态。 */
 export default {
-  components: { PageHeader, AppPagination, ElConfigProvider, ElDatePicker },
+  components: { PageHeader, AppPagination, ElConfigProvider, ElDatePicker, ElSelect, ElOption },
   data: () => ({
     query: initialQuery(),
     result: { list: [], total: 0 },
@@ -275,18 +344,22 @@ export default {
     detailLoading: false,
     detail: "",
     sequence: 0,
+    enterpriseOptions: [],
+    userOptions: [],
+    enterpriseLoading: false,
+    userLoading: false,
+    enterpriseSequence: 0,
+    userSequence: 0,
   }),
   computed: {
     /** 日期组件映射既有起止字段，保持接口契约。 */
     dateRange: {
       get() {
-        return [this.query.startDate, this.query.endDate];
+        return this.query.startTime && this.query.endTime ? [this.query.startTime, this.query.endTime] : [];
       },
       set(value) {
-        if (value?.length === 2) {
-          this.query.startDate = value[0];
-          this.query.endDate = value[1];
-        }
+        this.query.startTime = value?.[0] || "";
+        this.query.endTime = value?.[1] || "";
       },
     },
   },
@@ -294,6 +367,52 @@ export default {
     this.load();
   },
   methods: {
+    /** 企业候选由监控转发SaaS查询，序号防止过期联想结果覆盖当前关键词。 */
+    async searchEnterprises(keyword) {
+      const seq = ++this.enterpriseSequence;
+      this.enterpriseLoading = true;
+      try {
+        const rows = keyword.trim()
+          ? await requestLogApi.enterprises(keyword)
+          : [];
+        if (seq === this.enterpriseSequence) this.enterpriseOptions = rows;
+      } catch {
+        if (seq === this.enterpriseSequence) this.enterpriseOptions = [];
+      } finally {
+        if (seq === this.enterpriseSequence) this.enterpriseLoading = false;
+      }
+    },
+    /** 企业变化必须清空用户及旧请求，避免跨企业身份条件残留。 */
+    enterpriseChanged() {
+      this.query.userId = "";
+      this.userOptions = [];
+      this.userSequence++;
+      this.userLoading = false;
+    },
+    /** 只检索当前企业成员的真实用户ID，不将成员ID当作账号ID。 */
+    async searchUsers(keyword) {
+      const seq = ++this.userSequence;
+      const enterpriseId = this.query.enterpriseId;
+      if (!enterpriseId) {
+        this.userOptions = [];
+        return;
+      }
+      this.userLoading = true;
+      try {
+        const rows = keyword.trim()
+          ? await requestLogApi.users(enterpriseId, keyword)
+          : [];
+        if (
+          seq === this.userSequence &&
+          enterpriseId === this.query.enterpriseId
+        )
+          this.userOptions = rows;
+      } catch {
+        if (seq === this.userSequence) this.userOptions = [];
+      } finally {
+        if (seq === this.userSequence) this.userLoading = false;
+      }
+    },
     /** 只应用最近一次查询，防止快速切换条件时旧响应覆盖新列表。 */
     async load() {
       const current = ++this.sequence;
@@ -301,7 +420,7 @@ export default {
       this.failed = false;
       this.expandedId = null;
       try {
-        const result = await requestLogApi.page(this.query);
+        const result = await requestLogApi.page(Object.fromEntries(Object.entries(this.query).filter(([,value]) => value !== "")));
         if (current === this.sequence) this.result = result;
       } catch {
         if (current === this.sequence) {
@@ -320,6 +439,12 @@ export default {
     /** 恢复当天条件。 */
     reset() {
       this.query = initialQuery();
+      this.userOptions = [];
+      this.enterpriseOptions = [];
+      this.userSequence++;
+      this.enterpriseSequence++;
+      this.enterpriseLoading = false;
+      this.userLoading = false;
       this.load();
     },
     /** 按稳定时间与ID排序翻页。 */
@@ -370,6 +495,15 @@ export default {
 };
 </script>
 <style scoped>
+.request-filters :deep(.el-select) {
+  width: 100%;
+  --el-color-primary: var(--primary);
+  --el-border-color: var(--border);
+}
+.request-filters :deep(.el-select__wrapper) {
+  min-height: 40px;
+}
+
 .request-filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
