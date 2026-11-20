@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 后续客服登录、提醒列表和处理接口均在该独立包体中扩展，避免与企业门户权限模型混用。
  */
 @SpringBootApplication(scanBasePackages = "com.example.insurancesystem")
+@org.springframework.scheduling.annotation.EnableScheduling
 @MapperScan("com.example.insurancesystem.monitor.mapper")
 public class MonitorApplication {
     public static void main(String[] args) {

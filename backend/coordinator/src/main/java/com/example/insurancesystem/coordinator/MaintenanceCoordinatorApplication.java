@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * JWT、请求过滤器和参与端状态机；common 在本模块中只提供维护协议模型。
  */
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, SecurityAutoConfiguration.class})
+@org.springframework.context.annotation.Import({com.example.insurancesystem.requestlog.RequestLogFilter.class, com.example.insurancesystem.requestlog.RequestLogTransport.class, com.example.insurancesystem.requestlog.RequestLogMvcConfiguration.class})
 @EnableScheduling
 public class MaintenanceCoordinatorApplication {
     public static void main(String[] args) {

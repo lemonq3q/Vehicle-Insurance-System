@@ -86,6 +86,11 @@ const routes = [
         meta: { title: "用户管理", roles: ["ADMIN"] },
       },
       {
+        path: "request-logs",
+        component: () => import("@/views/system/RequestLogPage.vue"),
+        meta: { title: "请求日志", roles: ["ADMIN"] },
+      },
+      {
         path: "system-logs",
         component: () => import("@/views/system/SystemLogPage.vue"),
         meta: { title: "审计日志", roles: ["ADMIN"] },

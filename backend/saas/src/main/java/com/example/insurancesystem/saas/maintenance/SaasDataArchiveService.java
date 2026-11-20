@@ -38,18 +38,31 @@ public class SaasDataArchiveService {
         String.class);
   }
 
+  /**
+   * 将源表逻辑删除记录完整复制后移除；生成列由归档表维护，不显式写入。
+   * @param sourceTable 从当前库元数据发现的源表名称
+   * @return 实际复制的记录数；普通字段无法完整写入时抛出异常，由入口事务回滚
+   */
   private int archiveTable(String sourceTable) {
     String archiveTable = sourceTable + "_archive";
-    List<String> columns =
-        jdbcTemplate.queryForList(
-            "SELECT source.column_name FROM information_schema.columns source "
-                + "JOIN information_schema.columns archive_column ON archive_column.table_schema=source.table_schema "
-                + "AND archive_column.table_name=? AND archive_column.column_name=source.column_name "
-                + "WHERE source.table_schema=DATABASE() AND source.table_name=? ORDER BY source.ordinal_position",
-            String.class,
-            archiveTable,
-            sourceTable);
-    if (columns.isEmpty()) return 0;
+    List<String> columns = jdbcTemplate.queryForList(
+        "SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() "
+            + "AND table_name=? AND COALESCE(generation_expression,'')='' ORDER BY ordinal_position",
+        String.class, sourceTable);
+    List<String> writableColumns = jdbcTemplate.queryForList(
+        "SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() "
+            + "AND table_name=? AND COALESCE(generation_expression,'')='' ORDER BY ordinal_position",
+        String.class, archiveTable);
+    List<String> missingColumns = columns.stream()
+        .filter(column -> !writableColumns.contains(column)).collect(Collectors.toList());
+    /*
+     * 普通字段必须完整写入，目标同名生成列无法承接原值也视为不兼容。
+     * 在复制和删除前报错，交由入口事务回滚，避免静默丢失历史字段。
+     */
+    if (columns.isEmpty() || !missingColumns.isEmpty()) {
+      throw new IllegalStateException("归档表结构不兼容：" + sourceTable + " -> " + archiveTable
+          + "，缺少可写字段：" + missingColumns);
+    }
     String columnSql =
         columns.stream().map(column -> "`" + column + "`").collect(Collectors.joining(","));
     int inserted =

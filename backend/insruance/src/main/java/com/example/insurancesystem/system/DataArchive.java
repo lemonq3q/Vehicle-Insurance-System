@@ -15,15 +15,6 @@ import java.util.stream.Collectors;
  * 已逻辑删除的数据先复制到结构匹配的归档表，再从在线表移除，以控制业务表体量并保留历史记录。
  */
 public class DataArchive {
-    private static final List<String> ARCHIVE_TABLES = List.of(
-            "tenant_user", "tenant_enterprise", "tenant_member",
-            "auth_role", "auth_permission", "auth_role_permission",
-            "biz_merchant", "biz_merchant_area",
-            "biz_insurance_product", "biz_ocr_record", "sys_file", "biz_workorder", "biz_workorder_quote",
-            "biz_workorder_logistics", "biz_vehicle_license", "biz_vehicle_invoice",
-            "biz_vehicle_certificate", "biz_workorder_insurance", "biz_workorder_file"
-    );
-
     private final JdbcTemplate jdbcTemplate;
 
     /**
@@ -35,11 +26,11 @@ public class DataArchive {
 
     @Transactional
     /**
-     * 先清理超过保留期且未关联业务的 OSS 文件，再依次归档所有配置表中的逻辑删除记录。
+     * 先清理超过保留期且未关联业务的 OSS 文件，再依次归档所有符合条件表中的逻辑删除记录。
      */
     public void archive() {
         expiredFileClean();
-        ARCHIVE_TABLES.forEach(this::archiveTable);
+        archiveSources().forEach(this::archiveTable);
     }
 
     /**
@@ -60,22 +51,59 @@ public class DataArchive {
     }
 
     /**
-     * 根据源表和归档表共有的可写列迁移记录，兼容字段差异并排除有效名称等生成列。
-     * 生成列由归档表按行重新计算，不能显式INSERT，否则会使删除主体的定时归档失败。
+     * 查找当前库中含逻辑删除字段且存在对应归档表的源表，不扫描归档表本身。
+     * 使用字面后缀判断，避免 Java/MySQL 双重反斜杠转义及 SQL 模式影响查询。
+     * @return 按表名排序的待归档源表名称；本步骤仅查询元数据，不搬移数据
      */
-    private void archiveTable(String sourceTable) {
-        String archiveTable = sourceTable + "_archive";
-        List<String> columns = jdbcTemplate.queryForList(
-                "SELECT s.column_name FROM information_schema.columns s " +
-                        "JOIN information_schema.columns a ON a.table_schema=s.table_schema " +
-                        "AND a.table_name=? AND a.column_name=s.column_name " +
-                        "WHERE s.table_schema=DATABASE() AND s.table_name=? " +
-                        "AND COALESCE(s.generation_expression,'')='' AND COALESCE(a.generation_expression,'')='' ORDER BY s.ordinal_position",
-                String.class, archiveTable, sourceTable);
-        if (columns.isEmpty()) return;
-        String columnSql = columns.stream().map(column -> "`" + column + "`").collect(Collectors.joining(","));
-        jdbcTemplate.update("INSERT INTO `" + archiveTable + "`(" + columnSql + ") SELECT " + columnSql +
-                " FROM `" + sourceTable + "` WHERE deleted=1");
-        jdbcTemplate.update("DELETE FROM `" + sourceTable + "` WHERE deleted=1");
+    private List<String> archiveSources() {
+      return jdbcTemplate.queryForList(
+          "SELECT DISTINCT source.table_name FROM information_schema.columns source "
+              + "JOIN information_schema.tables archive_table ON archive_table.table_schema=source.table_schema "
+              + "AND archive_table.table_name=CONCAT(source.table_name,'_archive') "
+              + "WHERE source.table_schema=DATABASE() AND source.column_name='deleted' "
+              + "AND RIGHT(source.table_name,8)<>'_archive' ORDER BY source.table_name",
+          String.class);
+    }
+
+    /**
+     * 将源表逻辑删除记录完整复制后移除；生成列由归档表维护，不显式写入。
+     * @param sourceTable 从当前库元数据发现的源表名称
+     * @return 实际复制的记录数；普通字段无法完整写入时抛出异常，由入口事务回滚
+     */
+    private int archiveTable(String sourceTable) {
+      String archiveTable = sourceTable + "_archive";
+      List<String> columns = jdbcTemplate.queryForList(
+          "SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() "
+              + "AND table_name=? AND COALESCE(generation_expression,'')='' ORDER BY ordinal_position",
+          String.class, sourceTable);
+      List<String> writableColumns = jdbcTemplate.queryForList(
+          "SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() "
+              + "AND table_name=? AND COALESCE(generation_expression,'')='' ORDER BY ordinal_position",
+          String.class, archiveTable);
+      List<String> missingColumns = columns.stream()
+          .filter(column -> !writableColumns.contains(column)).collect(Collectors.toList());
+      /*
+       * 普通字段必须完整写入，目标同名生成列无法承接原值也视为不兼容。
+       * 在复制和删除前报错，交由入口事务回滚，避免静默丢失历史字段。
+       */
+      if (columns.isEmpty() || !missingColumns.isEmpty()) {
+        throw new IllegalStateException("归档表结构不兼容：" + sourceTable + " -> " + archiveTable
+            + "，缺少可写字段：" + missingColumns);
+      }
+      String columnSql =
+          columns.stream().map(column -> "`" + column + "`").collect(Collectors.joining(","));
+      int inserted =
+          jdbcTemplate.update(
+              "INSERT INTO `"
+                  + archiveTable
+                  + "` ("
+                  + columnSql
+                  + ") SELECT "
+                  + columnSql
+                  + " FROM `"
+                  + sourceTable
+                  + "` WHERE deleted=1");
+      jdbcTemplate.update("DELETE FROM `" + sourceTable + "` WHERE deleted=1");
+      return inserted;
     }
 }
