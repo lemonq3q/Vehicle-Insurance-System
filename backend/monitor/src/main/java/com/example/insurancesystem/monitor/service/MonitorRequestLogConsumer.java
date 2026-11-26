@@ -25,8 +25,10 @@ public class MonitorRequestLogConsumer {
     private final TransactionTemplate transaction;
     private volatile boolean running=true;
     private Thread thread;
+    private final RequestLogWriteGate gate;
     /** 使用专用字符串Redis客户端，不改变现有业务缓存序列化。 */
-    public MonitorRequestLogConsumer(RedisConnectionFactory factory,JdbcTemplate jdbc,ObjectMapper mapper,org.springframework.transaction.PlatformTransactionManager manager) {
+    public MonitorRequestLogConsumer(RedisConnectionFactory factory,JdbcTemplate jdbc,ObjectMapper mapper,org.springframework.transaction.PlatformTransactionManager manager,RequestLogWriteGate gate) {
+        this.gate=gate;
         this.redis=new StringRedisTemplate(factory); this.jdbc=jdbc; this.mapper=mapper; transaction=new TransactionTemplate(manager);
     }
     /** 独立后台线程，不在调度线程或HTTP请求中等待消息。 */
@@ -35,6 +37,7 @@ public class MonitorRequestLogConsumer {
     private void consume() {
         while(running) {
             try {
+                if(gate.paused()){Thread.sleep(200);continue;}
                 try { redis.execute((org.springframework.data.redis.core.RedisCallback<Object>) c -> c.execute("XGROUP","CREATE".getBytes(),RequestLogTransport.STREAM.getBytes(),GROUP.getBytes(),"0".getBytes(),"MKSTREAM".getBytes())); }
                 catch(Exception e) { if(!Objects.toString(e.getMessage(),"").contains("BUSYGROUP")) throw e; }
                 List<MapRecord<String,Object,Object>> records=redis.opsForStream().read(Consumer.from(GROUP,"writer"),StreamReadOptions.empty().count(50),StreamOffset.create(RequestLogTransport.STREAM,ReadOffset.from("0")));
@@ -47,13 +50,19 @@ public class MonitorRequestLogConsumer {
                 for(MapRecord<String,Object,Object> record:records) {
                     String payload=String.valueOf(record.getValue().get("payload"));
                     Map<String,Object> d=mapper.readValue(payload,new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
+                    /* 旧版本队列和本地补投没有身份类型，按同一规则推断并写入详情。 */
+                    d.putIfAbsent("identityType",com.example.insurancesystem.requestlog.RequestLogIdentity.resolve(String.valueOf(d.get("sourceSystem")),d.get("userId"),(String)d.get("uri")));
+                    String normalizedPayload=mapper.writeValueAsString(d);
+                    if(!gate.enter())continue;
+                    try {
                     transaction.execute(status -> {
-                        jdbc.update("INSERT INTO monitor_request_log(log_id,source_system,started_at,duration_ms,method,uri,http_status,business_code,content_type,has_exception,enterprise_id,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE log_id=VALUES(log_id)",
-                            d.get("logId"),d.get("sourceSystem"),new Timestamp(((Number)d.get("startedAt")).longValue()),d.get("durationMs"),d.get("method"),d.get("uri"),d.get("httpStatus"),d.get("businessCode"),d.get("contentType"),Boolean.TRUE.equals(d.get("hasException"))?1:0,d.get("enterpriseId"),d.get("userId"));
-                        jdbc.update("INSERT INTO monitor_request_log_detail(log_id,payload) VALUES(?,?) ON DUPLICATE KEY UPDATE log_id=VALUES(log_id)",d.get("logId"),payload); return null;
+                        jdbc.update("INSERT INTO monitor_request_log(log_id,source_system,started_at,duration_ms,method,uri,http_status,business_code,content_type,has_exception,enterprise_id,user_id,identity_type) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE log_id=VALUES(log_id)",
+                            d.get("logId"),d.get("sourceSystem"),new Timestamp(((Number)d.get("startedAt")).longValue()),d.get("durationMs"),d.get("method"),d.get("uri"),d.get("httpStatus"),d.get("businessCode"),d.get("contentType"),Boolean.TRUE.equals(d.get("hasException"))?1:0,d.get("enterpriseId"),d.get("userId"),d.get("identityType"));
+                        jdbc.update("INSERT INTO monitor_request_log_detail(log_id,payload) VALUES(?,?) ON DUPLICATE KEY UPDATE log_id=VALUES(log_id)",d.get("logId"),normalizedPayload); return null;
                     });
                     redis.opsForStream().acknowledge(RequestLogTransport.STREAM,GROUP,record.getId());
                     redis.opsForStream().delete(RequestLogTransport.STREAM,record.getId());
+                    } finally {gate.leave();}
                 }
             } catch(Exception e) { log.warn("请求日志消费失败，保留消息重试",e); try { Thread.sleep(3000); } catch(InterruptedException interrupted) { Thread.currentThread().interrupt(); return; } }
         }

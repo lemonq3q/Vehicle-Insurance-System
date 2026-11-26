@@ -1,3 +1,4 @@
+import { acquireMessage } from './messageLock';
 const listeners = new Set();
 
 /**
@@ -7,11 +8,12 @@ const listeners = new Set();
  */
 function publish(type, message) {
   const content = String(message || '').trim();
-  listeners.forEach(listener => listener({
-    id: `${Date.now()}-${Math.random()}`,
-    type,
-    message: content
-  }));
+  if (!listeners.size) return;
+  const release = acquireMessage(type, content);
+  if (!release) return;
+  try {
+    listeners.forEach(listener => listener({ id: String(Date.now()) + Math.random(), type, message: content, release }));
+  } catch (error) { release(); throw error; }
 }
 
 /**

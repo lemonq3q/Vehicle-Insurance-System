@@ -1,9 +1,10 @@
 <template>
   <div class="notification-center" aria-live="polite" aria-atomic="false">
-    <TransitionGroup name="notification-list">
+    <TransitionGroup name="notification-list" @after-leave="releaseNotification">
       <div
         v-for="item in notifications"
         :key="item.id"
+        :data-notification-id="item.id"
         class="notification-item"
         :class="`notification-item--${item.type}`"
         :role="item.type === 'error' ? 'alert' : 'status'"
@@ -30,7 +31,8 @@ export default {
     return {
       notifications: [],
       unsubscribe: null,
-      timers: new Map()
+      timers: new Map(),
+      releases: new Map()
     };
   },
   /**
@@ -38,6 +40,7 @@ export default {
    */
   created() {
     this.unsubscribe = subscribeNotifications(notification => {
+      this.releases.set(notification.id, notification.release);
       this.notifications.push(notification);
       const timer = window.setTimeout(() => this.remove(notification.id), 4200);
       this.timers.set(notification.id, timer);
@@ -50,8 +53,16 @@ export default {
     if (this.unsubscribe) this.unsubscribe();
     this.timers.forEach(timer => window.clearTimeout(timer));
     this.timers.clear();
+    this.releases.forEach(release => release());
+    this.releases.clear();
   },
   methods: {
+    /** 离场动画结束释放占用；释放记录独立保存，使卸载也可清理离场中的通知。 */
+    releaseNotification(element) {
+      const id = element.dataset.notificationId;
+      this.releases.get(id)?.();
+      this.releases.delete(id);
+    },
     /**
      * 将通知级别映射到 layui 图标；普通成功信息使用确认图标，错误和警告显示各自的风险标识。
      */

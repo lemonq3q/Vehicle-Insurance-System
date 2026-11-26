@@ -174,6 +174,11 @@ export default {
               icon: "layui-icon layui-icon-user",
             },
             {
+              label: "数据库备份",
+              path: "/database-backups",
+              icon: "layui-icon layui-icon-download-circle",
+            },
+            {
               label: "请求日志",
               path: "/request-logs",
               icon: "layui-icon layui-icon-log",

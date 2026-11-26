@@ -75,6 +75,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.idCardBack"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('身份证头像面', 1)"
           :on-change="handleIdCardBackChange"
           :class="file.idCardBack.length>0?'disabled':''"
           style="margin-right: 40px;">
@@ -118,6 +120,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.idCardFront"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('身份证国徽面', 1)"
           :on-change="handleIdCardFrontChange"
           :class="file.idCardFront.length>0?'disabled':''">
             <div>
@@ -196,6 +200,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.businessLicense"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('营业执照', 1)"
           :on-change="handleBusinessLicenseChange"
           :class="file.businessLicense.length>0?'disabled':''"
           style="margin-right: 40px;">
@@ -275,6 +281,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.licenseBack"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('行驶证副页', 1)"
           :on-change="handleLicenseBackChange"
           :class="file.licenseBack.length>0?'disabled':''"
           style="margin-right: 40px;">
@@ -318,6 +326,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.licenseFront"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('行驶证主页', 1)"
           :on-change="handleLicenseFrontChange"
           :class="file.licenseFront.length>0?'disabled':''">
             <div>
@@ -533,6 +543,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.certificate"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('合格证', 1)"
           :on-change="handleCertificateChange"
           :class="file.certificate.length>0?'disabled':''"
           style="margin-right: 40px;">
@@ -688,6 +700,8 @@
           :auto-upload="false" 
           :multiple=false
           :file-list="file.invoice"
+          :limit="1"
+          :on-exceed="() => warnUploadLimit('购车发票', 1)"
           :on-change="handleInvoiceChange"
           :class="file.invoice.length>0?'disabled':''"
           style="margin-right: 40px;">
@@ -994,6 +1008,7 @@ import { computed, nextTick, reactive, ref, onMounted, watch, defineProps, defin
 import { validatePhoneNumber, validFileSize } from '@/utils/validate';
 import { insertWorkorder, selectWorkorderById, updateWorkorderBaseInfo } from '@/api/workorder';
 import Message from '@/utils/message';
+import { warnUploadLimit } from '@/utils/uploadFeedback';
 import { imgRecognition } from '@/api/ocr';
 import { selectAllInsurance } from '@/api/insurance';
 import { jsonStrToObj, transNumStrToNum } from '@/utils/convert';

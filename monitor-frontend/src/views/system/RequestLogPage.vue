@@ -65,7 +65,7 @@
           </select>
         </div>
         <div class="field">
-          <label for="request-httpStatusClass">HTTP 状态</label
+          <label for="request-httpStatusClass">HTTP 状态分类</label
           ><select
             id="request-httpStatusClass"
             v-model="query.httpStatusClass"
@@ -81,6 +81,7 @@
             </option>
           </select>
         </div>
+        <div class="field"><label for="request-http-status">HTTP 具体状态码</label><input id="request-http-status" v-model="query.httpStatus" class="layui-input" type="number" min="100" max="599" step="1" placeholder="如：404，留空不限" /></div>
         <div class="field">
           <label for="request-businessCodeClass">业务返回码</label
           ><select
@@ -212,7 +213,6 @@
                 <th>接收时间</th>
                 <th>所属后端</th>
                 <th>请求</th>
-                <th>企业 / 用户</th>
                 <th>HTTP / 业务码</th>
                 <th>处理耗时</th>
                 <th>异常情况</th>
@@ -226,9 +226,6 @@
                 <td class="request-uri">
                   <span class="request-method">{{ row.method }}</span
                   ><span :title="row.uri">{{ row.uri }}</span>
-                </td>
-                <td class="number">
-                  {{ row.enterprise_id ?? "—" }} / {{ row.user_id ?? "—" }}
                 </td>
                 <td class="number">
                   {{ row.http_status }} / {{ row.business_code || "—" }}
@@ -251,7 +248,7 @@
                 </td>
               </tr>
               <tr v-if="expandedId === row.log_id">
-                <td colspan="8">
+                <td colspan="7">
                   <div class="request-detail">
                     <h3>请求详情</h3>
                     <p class="helper">日志 ID：{{ row.log_id }}</p>
@@ -306,6 +303,7 @@ function initialQuery() {
     sourceSystem: "",
     hasException: "",
     httpStatusClass: "",
+    httpStatus: "",
     businessCodeClass: "",
     minDurationMs: "",
     maxDurationMs: "",

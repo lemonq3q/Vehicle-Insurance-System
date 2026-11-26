@@ -49,4 +49,14 @@ class MonitorRequestLogControllerTest {
         verify(jdbc).queryForList(sql.capture(),any(SqlParameterSource.class));
         assertFalse(sql.getValue().contains("started_at>=:start"));assertFalse(sql.getValue().contains("started_at<:end"));
     }
+    /** 精确HTTP值与分类取交集，租户用户不得匹配监控账号。 */
+    @Test void exactHttpAndTenantIdentityAreApplied() {
+        NamedParameterJdbcTemplate jdbc=mock(NamedParameterJdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),any(SqlParameterSource.class),eq(Long.class))).thenReturn(0L);
+        when(jdbc.queryForList(anyString(),any(SqlParameterSource.class))).thenReturn(List.of());
+        new MonitorRequestLogController(jdbc,mock(SaasLogDirectoryClient.class)).page(Map.of("httpStatus","404","httpStatusClass","400","enterpriseId","1","userId","1"));
+        ArgumentCaptor<String> sql=ArgumentCaptor.forClass(String.class);ArgumentCaptor<SqlParameterSource> args=ArgumentCaptor.forClass(SqlParameterSource.class);
+        verify(jdbc).queryForList(sql.capture(),args.capture());assertTrue(sql.getValue().contains("http_status=:httpExact"));
+        assertTrue(sql.getValue().contains("identity_type='TENANT_USER'"));assertEquals(404,args.getValue().getValue("httpExact"));
+    }
 }

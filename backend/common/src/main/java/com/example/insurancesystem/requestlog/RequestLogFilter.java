@@ -52,6 +52,7 @@ public class RequestLogFilter extends OncePerRequestFilter {
                     if(json!=null) RequestLogContext.put("message",json.path("msg").asText(json.path("message").asText(null)));
                 } catch(Exception ignored) { /* 非JSON或截断响应只保存原始文本。 */ } }
                 Map<String,Object> snapshot=context.snapshot();
+                snapshot.put("identityType",RequestLogIdentity.resolve(service,snapshot.get("userId"),request.getRequestURI()));
                 if(request.isAsyncStarted()) {
                     snapshot.put("async",true);
                     request.getAsyncContext().addListener(new AsyncListener() {

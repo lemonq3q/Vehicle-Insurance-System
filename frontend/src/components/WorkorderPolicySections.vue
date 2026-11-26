@@ -7,6 +7,7 @@
       <div class="policy-upload-row">
         <el-upload class="policy-upload" drag action="#" :auto-upload="false" accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff" :limit="group.maxFiles || 1" :multiple="!!group.maxFiles" :file-list="files[group.fileType + 'File'] || []"
           :disabled="!!loading[group.loading]" v-loading="!!loading[group.loading]"
+          :on-exceed="() => warnUploadLimit(group.title, group.maxFiles || 1)"
           :on-change="(file, list) => emit('upload', group, file, list)"
           :on-remove="(file, list) => emit('remove', group, file, list)">
           <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
@@ -51,6 +52,7 @@
 <script setup>
 /* global defineProps, defineEmits */
 import { computed } from 'vue';
+import { warnUploadLimit } from '@/utils/uploadFeedback';
 import { Loading, UploadFilled } from '@element-plus/icons-vue';
 import OcrCandidate from './OcrCandidate.vue';
 import OcrApplyButton from './OcrApplyButton.vue';

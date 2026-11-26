@@ -1,0 +1,10 @@
+# 存放服务器/etc/vehicle-insurance/mysql-backup.cnf；仅MySQL工具使用，不提交真实密码。
+# 文件权限600，仅协调器运行用户可读。四个工具的连接必须指向同一实例。
+[client]
+host=127.0.0.1
+port=3306
+user=insurance_backup
+password=REPLACE_ON_SERVER
+# 远程生产连接按环境启用TLS校验，例如：
+# ssl-mode=VERIFY_IDENTITY
+# ssl-ca=/etc/vehicle-insurance/mysql-ca.pem

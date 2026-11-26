@@ -48,6 +48,13 @@ public class MonitorRequestLogController {
                 }
             }
             String uri=query.get("uri");if(uri!=null&&!uri.isBlank()){where.append(" AND uri LIKE :uri ESCAPE '!'");args.addValue("uri","%"+uri.replace("!","!!").replace("%","!%").replace("_","!_")+"%");}
+            String exactStatus=query.get("httpStatus");
+            if(exactStatus!=null&&!exactStatus.isBlank()) {
+                int code=Integer.parseInt(exactStatus);if(code<100||code>599)throw new IllegalArgumentException();
+                where.append(" AND http_status=:httpExact");args.addValue("httpExact",code);
+            }
+            /* 级联选择仅针对租户账号，不能与同ID监控账号交叉匹配。 */
+            if(query.get("userId")!=null&&!query.get("userId").isBlank())where.append(" AND identity_type='TENANT_USER'");
             Long min=duration(query.get("minDurationMs")),max=duration(query.get("maxDurationMs"));
             if(min!=null&&max!=null&&min>max)throw new IllegalArgumentException();
             if(min!=null){where.append(" AND duration_ms>=:durationMin");args.addValue("durationMin",min);}

@@ -68,3 +68,14 @@ monitor.request-log.saas-base-url 默认 http://localhost:8081，可通过MONITO
 
 ### 时间范围清除语义
 前端日期范围支持组件原生清除按钮。初次进入及重置仍选当天；清除后省略startTime/endTime，后端不添加时间条件，查询全部历史范围。单边传值仅约束该边界；空字符串同省略。分页上限与其他筛选保持不变。mock同步支持无时间条件。
+
+
+## 2026-11-21 HTTP精确值与身份类型
+
+新增可选query httpStatus（整数100至599），精确筛选；与httpStatusClass同时填写时取交集，如400类+404只查404，非法状态返回400。企业、用户级联逻辑不变，列表移除企业/用户列。
+
+主表新增identity_type，详情新增identityType。TENANT_USER为车险/SaaS账号，MONITOR_USER为监控账号，SYSTEM为无账号的/internal/请求，ANONYMOUS为其他无账号请求；未知来源账号标记UNKNOWN。类型仅用于诊断，SYSTEM不表示鉴权成功。按用户筛选时服务端限定TENANT_USER，避免同ID监控账号混入。
+
+迁移脚本 backend/db/migration/V20261121_01_request_log_identity.sql 按最新要求先DELETE两张请求日志表的全部历史记录，再增加身份类型列及组合索引，不回填历史数据。重复执行会再次清空日志；不影响monitor_system_log审计表。脚本未自动执行。
+
+上线时先暂停四个后端日志生产及消费，处理Redis和本地待投旧日志，审阅执行脚本后部署四个后端和监控前端。数据库SQL不会清理Redis或本地文件，未处理旧消息仍可能重新入库；消费端保留旧消息字段缺失兼容，避免历史消息阻断队列。

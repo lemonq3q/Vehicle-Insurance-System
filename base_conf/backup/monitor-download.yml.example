@@ -1,0 +1,7 @@
+# 合并到monitor配置，须与协调器maintenance.backup的OSS位置保持一致。
+monitor:
+  backup:
+    bucket: lemonqwq
+    prefix: database-backup
+    instance: prod
+# 此页面仅列举与获取文件，RAM仅需配置备份前缀的List/Get权限。

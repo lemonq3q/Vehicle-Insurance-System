@@ -13,13 +13,15 @@ export default {
   data: () => ({ notification: null, unsubscribe: null, notificationTimer: null }),
   mounted() {
     this.unsubscribe = subscribeNotifications(notification => {
+      this.notification?.release();
       this.notification = notification;
       clearTimeout(this.notificationTimer);
-      this.notificationTimer = setTimeout(() => { this.notification = null; }, 3200);
+      this.notificationTimer = setTimeout(() => { this.notification?.release(); this.notification = null; }, 3200);
     });
   },
   beforeUnmount() {
     this.unsubscribe?.();
+    this.notification?.release();
     clearTimeout(this.notificationTimer);
   }
 };

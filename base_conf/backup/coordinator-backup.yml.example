@@ -1,0 +1,18 @@
+# 合并到协调器配置文件。默认关闭；部署并验证工具、权限、OSS及暂停接口后手工启用。
+maintenance:
+  backup:
+    enabled: false
+    root: /var/data/MaintenanceCoordinator/mysql-backup
+    database: insurance_saas
+    instance: prod
+    bucket: lemonqwq
+    prefix: database-backup
+    defaults-file: /etc/vehicle-insurance/mysql-backup.cnf
+    mysql: /usr/bin/mysql
+    mysqldump: /usr/bin/mysqldump
+    mysqlbinlog: /usr/bin/mysqlbinlog
+    source-data-option: --source-data=2
+    monitor-url: http://localhost:8083
+    timeout-seconds: 1800
+    retention-days: 30
+    binlog-interval-ms: 300000

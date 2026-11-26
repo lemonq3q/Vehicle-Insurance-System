@@ -676,6 +676,7 @@
               :auto-upload="false"
               :multiple=false
               :limit="1"
+              :on-exceed="() => warnUploadLimit('保司报价单', 1)"
               :on-change="handleQuotationChange"
               :on-remove="(file, files)=>{fileStore.quotationFile = files; workorderFileIds.quotationFile = undefined;}"
             >
@@ -816,6 +817,7 @@
           <h3>其他单证</h3>
           <el-form-item>
             <el-upload class="workorder-document-upload" drag action="#" :auto-upload="false" :limit="6" multiple
+              :on-exceed="() => warnUploadLimit('其他单证', 6)"
               :file-list="fileStore.acceptInsuranceMiscFile" :disabled="loadingFlag.misc > 0"
               v-loading="loadingFlag.misc > 0" :on-change="handleAcceptInsuranceMiscChange"
               :on-remove="handleAcceptInsuranceMiscRemove">
@@ -1195,6 +1197,7 @@ import { policyRecognition, policyRecognitionStatus } from '@/api/ocr';
 import { validateAmount, validFileSize } from '@/utils/validate';
 import { updateQuotation, updateNoCascade, updateAcceptInsurance } from '@/api/workorder';
 import Message from '@/utils/message';
+import { warnUploadLimit } from '@/utils/uploadFeedback';
 import { Back, Document, UploadFilled } from '@element-plus/icons-vue';
 import EditBaseWorkorder from './EditBaseWorkorder.vue';
 import { workorderPolicyInsuranceMock } from '@/mock/workorderPolicyMock';

@@ -86,6 +86,11 @@ const routes = [
         meta: { title: "用户管理", roles: ["ADMIN"] },
       },
       {
+        path: "database-backups",
+        component: () => import("@/views/system/DatabaseBackupPage.vue"),
+        meta: { title: "数据库备份", roles: ["ADMIN"] },
+      },
+      {
         path: "request-logs",
         component: () => import("@/views/system/RequestLogPage.vue"),
         meta: { title: "请求日志", roles: ["ADMIN"] },

@@ -116,8 +116,8 @@ public class PolicyOcrModelClient implements PolicyOcrModel {
      */
     private String invokePdfModel(ChatCompletionCreateParams params) {
         long started = System.nanoTime();
-        /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
-        // log.info("大模型开始调用 stage=保单OCR, provider={}, model={}", provider, ocrModel);
+        /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
+        log.info("大模型开始调用 stage=保单OCR, provider={}, model={}, endpoint={}/chat/completions", provider, ocrModel, diagnosticText(baseUrl));
         try {
             ChatCompletion completion = getClient().chat().completions().create(params);
             String output = completion.choices().isEmpty() ? "" : completion.choices().get(0)
@@ -126,21 +126,23 @@ public class PolicyOcrModelClient implements PolicyOcrModel {
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
             String preview = output.length() > MAX_LOG_OUTPUT_CHARS
                 ? output.substring(0, MAX_LOG_OUTPUT_CHARS) : output;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
+            /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
             // log.info("大模型调用完成 stage=保单OCR, provider={}, model={}, elapsedMs={}, outputChars={}, truncated={}, outputPreview={}",
             //     provider, ocrModel, elapsedMs, output.length(), output.length() > MAX_LOG_OUTPUT_CHARS,
             //     preview.replace("\r", "\\r").replace("\n", "\\n"));
             return output;
         } catch (RuntimeException error) {
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
+            /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
             // log.warn("大模型调用失败 stage=保单OCR, provider={}, model={}, elapsedMs={}, errorType={}, message={}",
             //     provider, ocrModel, elapsedMs, error.getClass().getSimpleName(), error.getMessage());
+            log.warn("大模型调用失败 provider={}, endpoint={}, elapsedMs={}, details={}", provider, diagnosticText(baseUrl), elapsedMs, diagnosticText(error.toString()));
             throw error;
         } catch (LinkageError error) {
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
+            /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
             // log.error("大模型依赖链接失败 stage=保单OCR, provider={}, model={}, elapsedMs={}", provider, ocrModel, elapsedMs, error);
+            log.warn("大模型调用失败 provider={}, endpoint={}, elapsedMs={}, details={}", provider, diagnosticText(baseUrl), elapsedMs, diagnosticText(error.toString()));
             throw error;
         }
     }
@@ -181,30 +183,44 @@ public class PolicyOcrModelClient implements PolicyOcrModel {
      */
     private String invokeModel(String stage, String model, ResponseCreateParams params) {
         long started = System.nanoTime();
-        /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
-        // log.info("大模型开始调用 stage={}, provider={}, model={}", stage, provider, model);
+        /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
+        log.info("大模型开始调用 stage={}, provider={}, model={}, endpoint={}/responses", stage, provider, model, diagnosticText(baseUrl));
         try {
             String output = outputText(getClient().responses().create(params));
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
             String preview = output.length() > MAX_LOG_OUTPUT_CHARS
                 ? output.substring(0, MAX_LOG_OUTPUT_CHARS) : output;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
+            /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
             // log.info("大模型调用完成 stage={}, provider={}, model={}, elapsedMs={}, outputChars={}, truncated={}, outputPreview={}",
             //     stage, provider, model, elapsedMs, output.length(), output.length() > MAX_LOG_OUTPUT_CHARS,
             //     preview.replace("\r", "\\r").replace("\n", "\\n"));
             return output;
         } catch (RuntimeException error) {
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
+            /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
             // log.warn("大模型调用失败 stage={}, provider={}, model={}, elapsedMs={}, errorType={}, message={}",
             //     stage, provider, model, elapsedMs, error.getClass().getSimpleName(), error.getMessage());
+            log.warn("大模型调用失败 provider={}, endpoint={}, elapsedMs={}, details={}", provider, diagnosticText(baseUrl), elapsedMs, diagnosticText(error.toString()));
             throw error;
         } catch (LinkageError error) {
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
+            /* 请求与失败诊断已启用，保单输出正文仍不写入日志。 */
             // log.error("大模型依赖链接失败 stage={}, provider={}, model={}, elapsedMs={}", stage, provider, model, elapsedMs, error);
+            log.warn("大模型调用失败 provider={}, endpoint={}, elapsedMs={}, details={}", provider, diagnosticText(baseUrl), elapsedMs, diagnosticText(error.toString()));
             throw error;
         }
+    }
+
+    /**
+     * 对配置和 SDK 错误中的密钥及 URL 查询凭证脱敏，保留供应商状态和错误详情供排查。
+     * 空输入返回空串；日志限长并转义换行，不改变实际请求和异常传播。
+     */
+    private String diagnosticText(String value) {
+        if (value == null) return "";
+        String safe = apiKey == null || apiKey.isBlank() ? value : value.replace(apiKey, "[REDACTED]");
+        safe = safe.replaceAll("(https?://[^\\s?]+)\\?[^\\s\"<>]*", "$1?[REDACTED]")
+            .replace("\r", "\\r").replace("\n", "\\n");
+        return safe.length() > MAX_LOG_OUTPUT_CHARS ? safe.substring(0, MAX_LOG_OUTPUT_CHARS) + "[truncated]" : safe;
     }
 
     /**

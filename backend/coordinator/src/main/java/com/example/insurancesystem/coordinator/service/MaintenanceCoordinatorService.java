@@ -36,6 +36,8 @@ public class MaintenanceCoordinatorService {
     private final Map<String, Instant> serviceLeaseDeadlines = new ConcurrentHashMap<>();
     private volatile String activeRunId;
     private volatile String phase = "IDLE";
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.example.insurancesystem.coordinator.backup.DatabaseBackupService databaseBackup;
 
     public MaintenanceCoordinatorService(CoordinatorProperties properties, ParticipantClient client) {
         this.properties = properties;
