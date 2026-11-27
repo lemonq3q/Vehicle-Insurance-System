@@ -67,7 +67,11 @@ public class PolicyOcrService {
              */
             String raw = caller.recognize(url, pdf, enterpriseId);
             PolicyOcrValidator.ValidationResult result = workflow.validateAndOrganize(raw);
-            if (result.values().isEmpty()) {
+            /*
+             * 合法全空结果正常返回空候选，由页面按上传类别提示；仅校验未通过且没有可用字段
+             * 才视为识别失败。部分有效字段继续保留原有容错回填行为，不修改工单数据。
+             */
+            if (!result.valid() && result.values().isEmpty()) {
                 return new ResponseResult<>(502, "保单识别结果无法解析，请重试或手动填写");
             }
             Map<String, Object> data = new LinkedHashMap<>();

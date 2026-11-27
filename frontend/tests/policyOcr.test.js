@@ -57,3 +57,28 @@ test('policy OCR mock follows asynchronous task contract', async () => {
   assert.equal(outcome.status, 'FAILED');
   assert.equal(outcome.result.code, 502);
 });
+
+
+/**
+ * 全null和空候选不产生任何回填，但零金额仍为有效资料，避免误报没有内容。
+ */
+test('empty OCR candidates remain empty while zero is recognized', async () => {
+  const { normalizePolicyOcrCandidates } = await loadPolicyOcr();
+  assert.equal(Object.keys(normalizePolicyOcrCandidates({})).length, 0);
+  assert.equal(Object.keys(normalizePolicyOcrCandidates({ commercialPolicyNo: null, compulsoryAmount: null })).length, 0);
+  assert.equal(normalizePolicyOcrCandidates({ compulsoryAmount: '0.00' }).compulsoryAmount, '0.00');
+});
+
+/**
+ * 合法空结果通过成功终态返回，由页面负责显示类别提示，而不是进入失败通知链路。
+ */
+test('policy OCR mock returns empty successful recognition', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../src/mock/policyOcrMock.js'), 'utf8');
+  const mock = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  const jobId = (await mock.mockPolicyRecognition('102', 'MOCK-POLICY-4')).data.data.jobId;
+  await mock.mockPolicyRecognitionStatus(jobId);
+  const task = (await mock.mockPolicyRecognitionStatus(jobId)).data.data;
+  assert.equal(task.status, 'SUCCEEDED');
+  assert.equal(task.result.code, 200);
+  assert.deepEqual(task.result.data.recognitionData, {});
+});

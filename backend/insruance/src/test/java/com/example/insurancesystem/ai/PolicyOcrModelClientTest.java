@@ -185,20 +185,20 @@ class PolicyOcrModelClientTest {
         ObjectMapper mapper = new ObjectMapper();
         PolicyOcrModel qwen = configuration.policyOcrModelClient("qwen", "", "", "qwen3.8-flash",
             "qwen3.8-flash", "ark-key", "https://ark.example.test/api/v3", "doubao-lite", "doubao-lite",
-            "gemini-key", "https://gemini.example.test/v1beta", "gemini-3.8-flash", "gemini-3.8-flash", mapper);
+            "gemini-key", "https://gemini.example.test/v1beta", "gemini-3.8-flash", "gemini-3.8-flash", false, mapper);
         assertEquals("请配置 DASHSCOPE_API_KEY 和 DASHSCOPE_BASE_URL",
             assertThrows(IllegalStateException.class, () -> qwen.recognize("https://example.test/a.png", false)).getMessage());
         PolicyOcrModel doubao = configuration.policyOcrModelClient("doubao", "qwen-key",
             "https://qwen.example.test/v1", "qwen3.8-flash", "qwen3.8-flash", "", "", "doubao-lite", "doubao-lite",
-            "gemini-key", "https://gemini.example.test/v1beta", "gemini-3.8-flash", "gemini-3.8-flash", mapper);
+            "gemini-key", "https://gemini.example.test/v1beta", "gemini-3.8-flash", "gemini-3.8-flash", false, mapper);
         assertEquals("请配置 ARK_API_KEY 和 ARK_BASE_URL",
             assertThrows(IllegalStateException.class, () -> doubao.recognize("https://example.test/a.png", false)).getMessage());
         PolicyOcrModel gemini = configuration.policyOcrModelClient("gemini", "qwen-key", "", "qwen3.8-flash",
             "qwen3.8-flash", "ark-key", "", "doubao-lite", "doubao-lite", "",
-            "https://gemini.example.test/v1beta", "gemini-3.8-flash", "gemini-3.8-flash", mapper);
+            "https://gemini.example.test/v1beta", "gemini-3.8-flash", "gemini-3.8-flash", false, mapper);
         assertEquals("请配置 GEMINI_API_KEY 和 GEMINI_BASE_URL",
             assertThrows(IllegalStateException.class, () -> gemini.recognize("https://example.test/a.png", false)).getMessage());
         assertThrows(IllegalArgumentException.class, () -> configuration.policyOcrModelClient("unknown", "", "", "",
-            "", "", "", "", "", "", "", "", "", mapper));
+            "", "", "", "", "", "", "", "", "", false, mapper));
     }
 }

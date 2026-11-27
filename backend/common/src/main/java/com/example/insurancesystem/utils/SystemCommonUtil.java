@@ -86,14 +86,24 @@ public class SystemCommonUtil {
      * 读取必填配置并清理两端空白；.env 优先于系统环境变量，两处均为空时抛出带配置名的启动异常。
      */
     private static String getRequiredConfig(String key) {
-        String value = ENV_PROPERTIES.getProperty(key);
-        if (value == null || value.isBlank()) {
-            value = System.getenv(key);
-        }
-        if (value == null || value.isBlank()) {
+        String value = getOptionalConfig(key);
+        if (value == null) {
             throw new IllegalStateException("缺少配置项: " + key + "，请在 .env 文件或系统环境变量中配置");
         }
-        return value.trim();
+        return value;
+    }
+
+    /**
+     * 复用系统已加载的.env读取可选部署配置，文件优先，空值回退进程环境变量。
+     * 返回清理空白后的值；两处均未设置时返回null，由调用模块保留自身默认配置。
+     * 不记录配置内容，也不要求调用方导出环境变量或另行解析.env。
+     * @param key .env或环境变量中的配置名
+     * @return 已配置文本，未配置时为null
+     */
+    public static String getOptionalConfig(String key) {
+        String value = ENV_PROPERTIES.getProperty(key);
+        if (value == null || value.isBlank()) value = System.getenv(key);
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     /**

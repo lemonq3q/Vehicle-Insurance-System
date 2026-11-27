@@ -2549,6 +2549,15 @@ const recognizeUploadedPolicy = async (fileInfo, groupLoading) => {
       (fileStore[group.fileType + 'File'] || []).some(file => String(file.id) === source));
     if (!stillAttached || generation !== policyOcrGeneration) return;
     const values = normalizePolicyOcrCandidates(result.data?.recognitionData);
+    /*
+     * 完整识别结果可合法地没有任何字段。按本次上传区域说明保单类别，提醒人工填写；
+     * 判断使用模型候选而非表单实际回填数，避免已有值导致误报，迟到结果已在上方排除。
+     */
+    if (Object.keys(values).length === 0) {
+      const category = POLICY_GROUPS.find(group => group.loading === groupLoading)?.title || '保单';
+      Message.warning(`${category}：本次未识别到可回填内容，请确认文件清晰且包含保单资料，或手动填写。`);
+      return;
+    }
     detectedPolicyGroups(values).forEach(group => { showFlag[group.flag] = true; });
     policyOcrSources[source] = fileInfo.fileName || '保单附件';
     policyOcrResults[source] = fillEmptyOcrFields(info, values);

@@ -81,7 +81,10 @@ public class PolicyOcrValidator {
             }
             validateGroup(group, node, values, errors, warnings);
         }
-        if (values.isEmpty() && errors.isEmpty()) errors.add("三类保单均未识别到可回填字段");
+        /*
+         * 非保单、空白或无法辨识的附件允许返回完整全null结构。没有可回填值不是格式错误，
+         * 保持校验通过即可直接结束，避免整理模型为不存在的事实反复尝试或编造字段。
+         */
         return new ValidationResult(values, errors, warnings);
     }
 

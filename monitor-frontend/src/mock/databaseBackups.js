@@ -1,35 +1,64 @@
-/** 目录与单文件下载响应契约；mock下载JSON样例，不连接OSS。 */
+/**
+ * 按统一索引组织目录、所属日期和原文件下载的联调样例，不连接真实OSS。
+ * 数据形状与监控接口保持一致，开关仍由databaseBackups API封装控制。
+ */
 export const databaseBackupMock = {
-  async files({ path = "" }) {
+  async files({ path = "", startDate, endDate }) {
+    const day = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Shanghai",
+    }).format(new Date());
+    const matches =
+      (!startDate || startDate <= day) && (!endDate || endDate >= day);
+    const folder = (name, target) => ({
+      name,
+      path: target,
+      backupDate: day,
+      dataRangeKnown: true,
+      dataStartDate: day,
+      dataEndDate: day,
+    });
+    const branches = {
+      "": [folder("full", "full/"), folder("binlog", "binlog/")],
+      "full/": [folder(day, `full/${day}/`)],
+      [`full/${day}/`]: [
+        folder("example-backup", `full/${day}/example-backup/`),
+      ],
+      "binlog/": [folder("example-server", "binlog/example-server/")],
+      "binlog/example-server/": [folder(day, `binlog/example-server/${day}/`)],
+    };
+    const name =
+      path === `full/${day}/example-backup/`
+        ? "database.sql.gz"
+        : path === `binlog/example-server/${day}/`
+        ? "mysql-bin.000001"
+        : "";
     return {
       path,
-      folders: path
-        ? []
-        : [
-            { path: "full/", name: "full" },
-            { path: "binlog/", name: "binlog" },
-            { path: "catalog/", name: "catalog" },
-          ],
+      folders: matches ? branches[path] || [] : [],
       files:
-        path === "catalog/"
+        matches && name
           ? [
               {
-                key: "database-backup/prod/catalog/latest.json",
-                name: "latest.json",
-                sizeBytes: 240,
-                modifiedAt: "2026-11-26T04:00:00Z",
+                key: `database-backup/prod/${path}${name}`,
+                name,
+                sizeBytes: 1024,
+                backupDate: day,
+                dataRangeKnown: true,
+                dataStartDate: day,
+                dataEndDate: day,
+                modifiedAt: new Date().toISOString(),
               },
             ]
           : [],
       nextMarker: "",
     };
   },
-  async download() {
+  async download(key) {
     return {
-      name: "latest.json",
+      name: key.split("/").pop(),
       downloadUrl:
         "data:application/json;charset=utf-8,%7B%22mock%22%3Atrue%7D",
-      expiresAt: "2026-11-26T04:10:00Z",
+      expiresAt: new Date(Date.now() + 600000).toISOString(),
     };
   },
 };

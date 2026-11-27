@@ -78,4 +78,25 @@ class PolicyOcrServiceTest {
         assertEquals(404, service.recognize(new PolicyOcrRequest(101L, 900L)).getCode());
         verify(files, never()).selectById(900L);
     }
+    /**
+     * 合法空结果返回200及空候选，格式无效且无可用值仍失败；此测试仅跳过已独立测试的文件权限检查。
+     * 工作流使用真实校验器和假模型，不访问OSS或数据库，也不写入工单。
+     */
+    @Test void succeedsForValidEmptyResultButRejectsInvalidEmptyResult() {
+        WorkorderMapper workorders=mock(WorkorderMapper.class);SystemFileMapper files=mock(SystemFileMapper.class);
+        OSSUtil oss=mock(OSSUtil.class);PolicyOcrCaller caller=mock(PolicyOcrCaller.class);PolicyOcrModel model=mock(PolicyOcrModel.class);
+        var workflow=new PolicyOcrWorkflow(model,new PolicyOcrValidator(new com.fasterxml.jackson.databind.ObjectMapper()),2);
+        PolicyOcrService service=org.mockito.Mockito.spy(new PolicyOcrService(workorders,files,oss,caller,workflow));
+        var request=new PolicyOcrRequest(101L,900L);org.mockito.Mockito.doReturn(null).when(service).validateRequest(request,9L,true);
+        var file=new com.example.insurancesystem.domain.SystemFile();file.setId(900L);file.setFileName("policy.pdf");file.setPath("test/policy.pdf");
+        when(files.selectById(900L)).thenReturn(file);when(oss.getTmpUrl("test/policy.pdf")).thenReturn("https://example.test/policy.pdf");
+        when(caller.recognize("https://example.test/policy.pdf",true,9L)).thenReturn(PolicyOcrPrompt.SHAPE);
+        var response=service.recognize(request,9L);assertEquals(200,response.getCode());
+        var data=(java.util.Map<?,?>)response.getData();assertEquals(java.util.Map.of(),data.get("recognitionData"));
+        org.mockito.Mockito.verifyNoInteractions(model);verify(workorders,never()).updateById(org.mockito.ArgumentMatchers.any());
+        when(caller.recognize("https://example.test/policy.pdf",true,9L)).thenReturn("not json");
+        when(model.organize(org.mockito.ArgumentMatchers.eq("not json"),org.mockito.ArgumentMatchers.anyList())).thenReturn("not json");
+        assertEquals(502,service.recognize(request,9L).getCode());
+    }
+
 }

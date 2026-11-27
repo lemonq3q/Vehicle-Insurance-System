@@ -62,4 +62,14 @@ class PolicyOcrWorkflowTest {
         assertTrue(!result.values().containsKey("commercialAmount"));
         verify(client, times(3)).organize(eq(raw), anyList());
     }
+    /**
+     * 非保单等输入按提示词返回完整全null时，直接给出合法空结果，不调用整理模型浪费次数。
+     */
+    @Test void skipsOrganizerForAllNullResult() {
+        PolicyOcrModel client=mock(PolicyOcrModel.class);
+        var result=new PolicyOcrWorkflow(client,validator,2).validateAndOrganize(PolicyOcrPrompt.SHAPE);
+        assertTrue(result.valid());assertTrue(result.values().isEmpty());
+        org.mockito.Mockito.verifyNoInteractions(client);
+    }
+
 }

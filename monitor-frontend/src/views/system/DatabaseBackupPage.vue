@@ -3,7 +3,7 @@
     <PageHeader
       eyebrow="System Governance"
       title="数据库备份"
-      description="按目录查看全量备份、binlog 和恢复清单，选择需要的文件下载。"
+      description="按数据所属日期和目录查看全量备份、binlog，选择需要的文件下载。"
     >
       <button
         class="layui-btn monitor-secondary"
@@ -14,6 +14,34 @@
       </button>
     </PageHeader>
     <section class="panel query-panel">
+      <form class="backup-date-filter" @submit.prevent="search">
+        <label for="backup-data-dates">数据所属日期</label
+        ><el-config-provider :locale="elementLocale"
+          ><el-date-picker
+            id="backup-data-dates"
+            v-model="dateRange"
+            class="monitor-date-range"
+            type="daterange"
+            range-separator="到"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY/MM/DD"
+            value-format="YYYY-MM-DD"
+            :clearable="false"
+            :disabled-date="disabledDate"
+            placement="bottom-end"
+            popper-class="monitor-date-range-popper" /></el-config-provider
+        ><button class="layui-btn monitor-primary" :disabled="loading">
+          查询</button
+        ><button
+          class="layui-btn monitor-secondary"
+          type="button"
+          :disabled="loading"
+          @click="resetDates"
+        >
+          近30天
+        </button>
+      </form>
       <div class="query-toolbar">
         <h2>备份文件</h2>
         <nav class="backup-path" aria-label="备份目录">
@@ -34,8 +62,7 @@
         v-else-if="!listing.folders.length && !listing.files.length"
         class="empty-state"
       >
-        当前目录没有备份文件。请确认备份功能已启用且任务成功，监控 OSS
-        配置与协调器一致。
+        当前日期范围内没有可确认所属日期的备份文件，可调整日期或返回上级目录。
       </div>
       <div v-else class="table-wrap">
         <table class="layui-table monitor-table">
@@ -44,6 +71,7 @@
               <th>名称</th>
               <th>类型</th>
               <th>大小</th>
+              <th>数据所属日期</th>
               <th>最后修改时间</th>
               <th>操作</th>
             </tr>
@@ -61,6 +89,7 @@
               </td>
               <td><span class="tag muted">目录</span></td>
               <td>—</td>
+              <td>{{ dataDates(folder) }}</td>
               <td>—</td>
               <td>—</td>
             </tr>
@@ -68,6 +97,7 @@
               <td class="backup-filename">{{ file.name }}</td>
               <td>文件</td>
               <td class="number">{{ size(file.sizeBytes) }}</td>
+              <td>{{ dataDates(file) }}</td>
               <td class="number">{{ file.modifiedAt }}</td>
               <td>
                 <button
@@ -92,19 +122,36 @@
         </button>
       </div>
       <p class="helper">
-        进入对应目录后，点击文件右侧“下载”。下载原始文件，不生成压缩包。
+        按北京时间最近30天的数据所属日期检索，不按上传时间筛选。binlog
+        按每日轮转确定的所属日期查询；缺少所属日期的旧文件不参与筛选。进入目录后可下载原文件。
       </p>
     </section>
   </div>
 </template>
 <script>
+import { ElConfigProvider, ElDatePicker } from "element-plus";
+import zhCn from "element-plus/es/locale/lang/zh-cn";
+import "element-plus/es/components/date-picker/style/css";
 import PageHeader from "@/components/PageHeader.vue";
 import { databaseBackupApi } from "@/api/databaseBackups";
+/**
+ * 按北京时间计算查询窗口，与服务端所属日期一致；日期运算使用UTC避免浏览器时区偏移。
+ */
+function localDay(offset = 0) {
+  const day = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Shanghai",
+  }).format(new Date());
+  const date = new Date(day + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
 /** 复用监控管理样式，目录只读；手动下载原文件，不创建打包任务。 */
 export default {
-  components: { PageHeader },
+  components: { PageHeader, ElConfigProvider, ElDatePicker },
   data: () => ({
     path: "",
+    dateRange: [localDay(-29), localDay()],
+    elementLocale: zhCn,
     listing: { folders: [], files: [], nextMarker: "" },
     loading: false,
     failed: false,
@@ -128,13 +175,45 @@ export default {
     this.load();
   },
   methods: {
-    /** 目录翻页复用OSS标记，旧响应不得覆盖新路径。 */
+    /** UI只允许最近30个自然日，服务端仍独立校验避免绕过。 */
+    disabledDate(date) {
+      const day = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
+      return day < localDay(-29) || day > localDay();
+    },
+    /** 新日期查询清空分页标记，不把旧范围的数据追加到新结果。 */
+    search() {
+      this.listing = { folders: [], files: [], nextMarker: "" };
+      this.load();
+    },
+    /** 恢复业务允许的完整30天窗口，保留当前目录。 */
+    resetDates() {
+      this.dateRange = [localDay(-29), localDay()];
+      this.search();
+    },
+    /** 日期来自清单，不能用最后修改时间补齐未知数据归属。 */
+    dataDates(item) {
+      return item.dataRangeKnown
+        ? item.dataStartDate === item.dataEndDate
+          ? item.dataStartDate
+          : item.dataStartDate + " 至 " + item.dataEndDate
+        : "—";
+    },
+    /** 目录翻页复用索引游标，旧响应不得覆盖新路径。 */
     async load(marker = "") {
       const seq = ++this.sequence;
       this.loading = true;
       this.failed = false;
       try {
-        const data = await databaseBackupApi.files({ path: this.path, marker });
+        const data = await databaseBackupApi.files({
+          path: this.path,
+          marker,
+          startDate: this.dateRange[0],
+          endDate: this.dateRange[1],
+        });
         if (seq === this.sequence)
           this.listing = marker
             ? {
@@ -187,6 +266,18 @@ export default {
 };
 </script>
 <style scoped>
+.backup-date-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.backup-date-filter label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 .backup-path {
   display: flex;
   align-items: center;

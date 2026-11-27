@@ -29,6 +29,7 @@ public class PolicyOcrModelConfiguration {
      * @param geminiBaseUrl Gemini Interactions API 基础地址
      * @param geminiOcrModel Gemini 文件识别模型
      * @param geminiOrganizerModel Gemini 文本整理模型
+     * @param logModelOutput 是否打印两阶段完整模型返回正文，默认关闭
      * @param mapper 应用统一的 JSON 处理器
      * @return 本进程使用的模型客户端
      */
@@ -47,17 +48,18 @@ public class PolicyOcrModelConfiguration {
         @Value("${insurance.ai.gemini-base-url:https://generativelanguage.googleapis.com/v1beta}") String geminiBaseUrl,
         @Value("${insurance.ai.gemini-ocr-model:gemini-3.8-flash}") String geminiOcrModel,
         @Value("${insurance.ai.gemini-organizer-model:gemini-3.8-flash}") String geminiOrganizerModel,
+        @Value("${insurance.ai.log-model-output:false}") boolean logModelOutput,
         ObjectMapper mapper) {
         if ("qwen".equals(provider)) {
-            return new PolicyOcrModelClient(provider, qwenApiKey, qwenBaseUrl, qwenOcrModel, qwenOrganizerModel);
+            return new PolicyOcrModelClient(provider, qwenApiKey, qwenBaseUrl, qwenOcrModel, qwenOrganizerModel, logModelOutput);
         }
         if ("doubao".equals(provider)) {
             return new PolicyOcrModelClient(provider, doubaoApiKey, doubaoBaseUrl,
-                doubaoOcrModel, doubaoOrganizerModel);
+                doubaoOcrModel, doubaoOrganizerModel, logModelOutput);
         }
         if ("gemini".equals(provider)) {
             return new GeminiPolicyOcrClient(geminiApiKey, geminiBaseUrl,
-                geminiOcrModel, geminiOrganizerModel, mapper);
+                geminiOcrModel, geminiOrganizerModel, mapper, logModelOutput);
         }
         throw new IllegalArgumentException("POLICY_OCR_PROVIDER 只支持 qwen、doubao 或 gemini");
     }

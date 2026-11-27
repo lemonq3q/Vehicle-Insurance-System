@@ -109,6 +109,14 @@ public class MaintenanceCoordinatorService {
             for (CoordinatorProperties.Stage stage : sortedStages()) {
                 executeStage(stage, businessDate);
             }
+            /*
+             * 业务维护全部执行后才进行数据库备份；此时参与方仍处于维护期，
+             * 心跳继续续租。备份模块自行记录失败，退出仍统一走原有FINISH协议。
+             */
+            if (databaseBackup != null) {
+                phase = "BACKING_UP";
+                databaseBackup.afterMaintenance(activeRunId);
+            }
         } catch (Exception exception) {
             log.error("Maintenance run {} failed unexpectedly", activeRunId, exception);
         } finally {

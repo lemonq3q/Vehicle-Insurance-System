@@ -24,13 +24,13 @@ import java.util.Map;
  */
 public class GeminiPolicyOcrClient implements PolicyOcrModel {
     private static final Logger log = LoggerFactory.getLogger(GeminiPolicyOcrClient.class);
-    private static final int MAX_LOG_OUTPUT_CHARS = 3000;
     private final String apiKey;
     private final String baseUrl;
     private final String ocrModel;
     private final String organizerModel;
     private final ObjectMapper mapper;
     private final HttpClient httpClient;
+    private final boolean logModelOutput;
 
     /**
      * 固定 Gemini 密钥、地址和两阶段模型，避免异步任务中途切换供应商。
@@ -44,6 +44,23 @@ public class GeminiPolicyOcrClient implements PolicyOcrModel {
      */
     public GeminiPolicyOcrClient(String apiKey, String baseUrl, String ocrModel,
                                  String organizerModel, ObjectMapper mapper) {
+        this(apiKey, baseUrl, ocrModel, organizerModel, mapper, false);
+    }
+
+    /**
+     * 固定Gemini两阶段模型及完整返回正文日志开关，未配置密钥仍延迟到实际调用时报错。
+     * 开关仅影响日志，不改变模型请求、原始返回、校验和业务重试。
+     *
+     * @param apiKey Gemini密钥
+     * @param baseUrl Interactions API基础地址
+     * @param ocrModel 文件识别模型
+     * @param organizerModel 文本整理模型
+     * @param mapper 应用JSON处理器
+     * @param logModelOutput 是否打印完整模型返回正文
+     */
+    public GeminiPolicyOcrClient(String apiKey, String baseUrl, String ocrModel,
+                                 String organizerModel, ObjectMapper mapper, boolean logModelOutput) {
+        this.logModelOutput = logModelOutput;
         this.apiKey = apiKey;
         this.baseUrl = baseUrl;
         this.ocrModel = ocrModel;
@@ -84,7 +101,7 @@ public class GeminiPolicyOcrClient implements PolicyOcrModel {
     /**
      * 构造 Gemini 的 JSON Schema 请求并提取最后一段模型输出；每次只发送一个独立请求。
      * 临时 HTTP 或网络错误保留状态供现有文件识别调用器重试，整理次数仍由工作流控制。
-     * 日志只包含模型、耗时和限长输出摘要，不记录密钥及 OSS 签名地址。
+     * 日志包含模型和耗时，完整返回正文由统一开关控制，不记录请求密钥及OSS签名地址。
      *
      * @param stage 文件识别或结构整理阶段
      * @param model 本阶段使用的 Gemini 模型 ID
@@ -126,11 +143,13 @@ public class GeminiPolicyOcrClient implements PolicyOcrModel {
             String output = outputText(document);
             if (output.isBlank()) throw new IllegalStateException("Gemini 模型未返回识别内容");
             long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-            String preview = output.length() > MAX_LOG_OUTPUT_CHARS ? output.substring(0, MAX_LOG_OUTPUT_CHARS) : output;
-            /* 暂停大模型调用及校验日志，保留原语句便于恢复。 */
-            // log.info("大模型调用完成 stage={}, provider=gemini, model={}, elapsedMs={}, outputChars={}, truncated={}, outputPreview={}",
-            //     stage, model, elapsedMs, output.length(), output.length() > MAX_LOG_OUTPUT_CHARS,
-            //     preview.replace("\r", "\\r").replace("\n", "\\n"));
+            if (logModelOutput) {
+                log.info("大模型调用完成 stage={}, provider=gemini, model={}, elapsedMs={}, outputChars={}, output={}",
+                    stage, model, elapsedMs, output.length(), output);
+            } else {
+                log.info("大模型调用完成 stage={}, provider=gemini, model={}, elapsedMs={}, outputChars={}",
+                    stage, model, elapsedMs, output.length());
+            }
             return output;
         } catch (IOException error) {
             throw new PolicyOcrModelException(0, "Gemini 接口连接失败", error);

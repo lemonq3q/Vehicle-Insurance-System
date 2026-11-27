@@ -99,4 +99,15 @@ class PolicyOcrValidatorTest {
         assertFalse(invalid.values().containsKey("commercialAmount"));
         assertTrue(validator.validate(root + " {}").values().isEmpty());
     }
+    /**
+     * 完整全null表示没有可回填资料，可正常结束；缺组、缺键及不可解析JSON仍然不合法。
+     */
+    @Test void acceptsCompleteAllNullWithoutAcceptingMalformedEmptyObjects() {
+        var result=validator.validate(PolicyOcrPrompt.SHAPE);
+        assertTrue(result.valid());assertTrue(result.values().isEmpty());
+        assertFalse(validator.validate("{}").valid());
+        assertFalse(validator.validate("not json").valid());
+        assertFalse(validator.validate("{\"commercial\":null,\"compulsory\":null,\"nonMotor\":null}").valid());
+    }
+
 }

@@ -1,45 +1,45 @@
-# 维护数据库备份
+# 数据库备份部署与恢复说明
 
-## 行为与部署
+架构、目录、状态流程和保留规则统一见[数据库备份架构](../system-architecture/database-backup.md)。备份仅由coordinator写入，监控提供按目录、日期浏览和单文件下载，无数据库表变更。
 
-备份在coordinator现有阶段执行完毕、FINISH释放参与服务之前运行；原任务顺序不变。maintenance.backup.enabled默认false，未开启时不运行工具、不创建目录、不连接OSS。启用后的首次作业会递归创建root及full、binlog、state目录，运行用户需有父目录写权限。无需新增数据库表或前端。
+## 部署
 
-本地目录默认/var/data/MaintenanceCoordinator/mysql-backup，仅作暂存：全量.gz上传并验证后删除，留下小清单；失败的有效压缩备份保留并每5分钟重试。导出中断的.sql和无manifest目录不会被误发布，需运维检查后清理，不能当作可恢复备份。MySQL原始binlog与本地采集副本不是同一目录；本功能不会PURGE MySQL原始日志。
+部署coordinator、monitor及monitor-frontend。`maintenance.backup.enabled`默认false；未启用时不运行工具、不创建备份目录、不连接OSS。启用后自动建立`/var/data/MaintenanceCoordinator/mysql-backup`及子目录，运行用户须有父目录写权限。本地仅暂存待处理大文件，COMPLETED后可删；状态在窗口内保留，每日清理过期信息及孤立文件，不额外保留30天大文件副本。
 
-配置样例：base_conf/backup/coordinator-backup.yml.example、mysql-backup.cnf.example。启用前安装mysql、mysqldump、mysqlbinlog官方工具（匹配服务器版本），准备权限600的独立client配置文件；工具必须能访问同一实例。默认使用MySQL8.0.26+支持的--source-data=2；旧客户端显式改为--master-data=2。当前仅支持InnoDB一致性全量，发现非InnoDB表会拒绝备份。不要在导出期间执行DDL。
+配置样例在`base_conf/backup/coordinator-backup.yml.example`、`mysql-backup.cnf.example`和`monitor-download.yml.example`。安装与服务端匹配的mysql、mysqldump、mysqlbinlog工具，准备权限600的独立client配置文件。默认`--source-data=2`，旧客户端按版本改用`--master-data=2`。密码只在受限client文件，不出现在命令行和索引。
 
-备份账号需要insurance_saas的SELECT、SHOW VIEW、TRIGGER、EVENT及导出存储程序所需权限（MySQL版本要求不同），以及读取binlog/坐标的复制相关权限、FLUSH BINARY LOGS和mysqldump启动短暂全局读锁所需权限。由DBA按版本审阅配置，不自动创建用户、授权或修改MySQL参数。不能使用无权限的纯业务账号直接替代。密码只放受限client文件，不出现在命令行和备份清单。
+备份账号需目标库SELECT、SHOW VIEW、TRIGGER、EVENT及导出存储程序所需权限，还需读取binlog/坐标、FLUSH BINARY LOGS及mysqldump短暂全局读锁相关权限，由DBA按版本审阅配置。本功能不自动创建账号、授权或修改MySQL参数。
 
-部署coordinator及monitor后端；其他后端和前端无需调整。协调器、监控的maintenance内部密钥保持一致，monitor-url指向实际监控实例。初期仅支持单协调器、单监控消费实例；多实例必须扩展为分布式锁和逐实例暂停确认后才能启用。
+当前导出只支持InnoDB一致性快照，非InnoDB拒绝备份；导出期间不能执行DDL。协调器和监控内部维护密钥必须一致，monitor-url指向实际监控实例。限单协调器写入同一OSS实例前缀、单监控日志消费实例，同本地目录有文件锁避免多进程写入，多机不得共用前缀。
 
-## 全量与暂停
+## 维护与上传
 
-业务维护结束 -> MySQL预检 -> 暂停日志入库并等待当前事务/ACK结束 -> mysqldump一致性导出（同时--flush-logs并记录快照坐标） -> FLUSH BINARY LOGS按用户要求在导出后再轮转 -> finally恢复日志 -> 压缩/上传binlog及全量 -> 发布清单 -> 过期清理。
+业务维护末尾、FINISH之前暂停监控请求日志消费者并等待在途事务/ACK结束，执行一致性导出并记录真实binlog快照坐标；导出后再轮转，finally恢复消费。上传和压缩不延长暂停。默认工具超时1800秒、暂停租约1920秒；恢复请求失败租约自动到期。暂停期间Redis仍接收消息，不能裁剪未消费Stream。维护心跳继续续租，其他业务任务并未被强制禁写，一致性依赖InnoDB快照。
 
-暂停仅针对监控请求日志消费者，不停止JVM或业务线程。Redis仍接收消息，消费者不开始新事务，不提前ACK。暂停有runId归属和有限租约，默认工具超时1800秒，暂停租约1920秒；恢复请求丢失时自动到期。原业务后台任务未全部被禁写，一致性依赖InnoDB快照和正确binlog坐标，不能把导出后轮转位置当作恢复起点。
+每五分钟读取SHOW BINARY LOGS，对比本地统一状态：新增/增长采集稳定副本，关闭变化更新索引，不变跳过。工具通过mysqlbinlog远程raw读取和checksum验证，不直接复制MySQL活动数据文件。未完成版本先按状态处理，完成后才采集下一版本。上传失败按原所属日期及固定key重试，不在上传前删除旧对象。
 
-暂停期间积压可能占用Redis内存，需保证Redis保留消息，不在备份期间裁剪Stream。维护心跳依旧通过原多线程调度器续租，binlog上传使用独立执行器。全量等待现有binlog作业最多60秒，超时明确记录本次未备份；导出/工具/上传失败报警并释放维护流程，不无限阻塞。
+所有文件统一走待上传、待更新云端索引、已完成三个状态。索引更新按objectKey幂等覆盖；没有针对不同宕机位置的恢复分支。文件已生成但没有登记状态的情况不补救，归入每日孤立文件清理。状态无法读取时任务报错停止，不能用空状态覆盖。
 
-## OSS与校验
+OSS使用系统OSSClientSingleton及现有Bucket配置，独立`database-backup/prod/`前缀；协调器RAM需该前缀Put/Get/Delete，监控只需Get。远端只使用`full/index.json`、`binlog/index.json`两份统一信息文件，不再创建单文件manifest、binlog附属JSON或latest.json。索引保存大小、SHA256、所属日、版本及恢复坐标，完整字段见架构文档。旧对象不由本次升级直接删除或改名。
 
-复用OSSClientSingleton（现有Endpoint、区域、凭证），默认现有Bucket lemonqwq，可显式配置备份Bucket。独立前缀database-backup/prod/，不写sys_file，不生成业务预签名URL。RAM需要此前缀的Put/Get/List/Delete权限。
-
-full/{backupId}/database.sql.gz与manifest.json保留每日版本。binlog/{serverUuid}/{原文件名}同名覆盖，不预删除；每5分钟先查询文件列表，没变化的副本跳过，已关闭文件不重复发送。通过mysqlbinlog远程raw读取完整事件，校验事件checksum后上传；不直接读取正在写入的MySQL数据文件。可恢复到最后完整提交事务，活动文件尾部未提交事务不代表已完成备份。不要重置同一serverUuid下binlog编号或改文件名前缀；若重装必须新UUID或新instance前缀。
-
-SDK上传后检查远端长度及sha256自定义元数据，清单记录本地SHA256供恢复下载后再次核验。manifest包含数据库/版本/serverUuid、维护runId、导出开始/完成时间、上传完成时间、文件大小/摘要、快照binlog文件与位置、导出后轮转文件。startedAt是备份作业开始时间，不假定为精确快照时间，真实恢复边界以dump内文件/位置为准。catalog/latest.json只指向最近发布成功清单；恢复不依赖本地服务器。
-
-全量发布前检查OSS从快照文件开始的binlog序号连续；缺失起点或日志缺口拒绝发布。发现失败要检查MySQL保留期和采集状态，不删除旧有效备份。
-
-OSS未开启版本控制时同名覆盖替换旧副本；开启版本控制时会产生历史版本。必须另行在备份前缀配置非当前版本及删除标记生命周期，否则仅删除当前对象不代表释放历史版本空间。本模块不擅自更改共享Bucket生命周期。LastModified会随覆盖更新，不能用它代替数据库数据时间。
+OSS启用版本控制时，同名覆盖和删除会保留旧版本或删除标记，需另外配置相应生命周期。本模块不修改共享Bucket策略。MySQL源binlog自动过期设置与OSS保留独立，必须监控源端保留期和待上传积压，不可因OSS计划保留30天而让MySQL过早清除未采集日志。
 
 ## 保留与恢复
 
-每次成功全量后清理超过30天的全量版本；为覆盖30天边界保留必要的前一份快照（可能31份），按每个serverUuid最早保留快照的恢复起点保护binlog。仅删除超过窗口、已关闭且无保留备份依赖的binlog；没有有效备份的首次故障不能靠清理掩盖。OSS不可用或新全量失败时不执行清理，旧备份可暂时超过30天。
+默认保留北京时间最近30个自然日。索引保存固定backupDate用于检索，binlog周期结束日作为保守清理参考。漏维护时沿用前一周期，直到下次成功划分才闭合，允许延后删除。未知日期、未闭合周期和仍被全量恢复依赖的文件不会提前删除。保留窗口前最近全量作为恢复锚点及其后依赖binlog，实际保留可能超过30天。
 
-本地已上传binlog副本立即清理，state小JSON保留用于避免重复上传，不长期保存30天大文件。MySQL本地过期设置与OSS保留独立；自动过期不检查上传成功，必须监控源文件保留期与积压。
+全量发布前检查从快照起点开始的binlog连续且覆盖导出后轮转文件，缺口保持待更新索引，下周期继续处理。完整索引不能证明未来不会出现源日志缺口，仍需服务器告警和隔离恢复演练。
 
-恢复只在隔离实例手动演练：下载manifest与全量并校验SHA256 -> 导入 -> 从快照坐标重放连续binlog到目标完整事务。binlog属于整个MySQL实例，若同时有其他数据库，不能盲目向线上实例重放或用简单文本过滤；需DBA审阅库范围和跨库事务。本功能不自动恢复/覆盖线上库；OSS附件本体不包含在数据库备份中。
+恢复只在隔离实例操作：下载full/index.json、所选全量及binlog/index.json，按索引SHA256校验，导入全量，从binlogStartFile/binlogStartPosition依次重放至目标完整事务。日期不能替代恢复坐标。binlog属于整个MySQL实例，涉及其他库或跨库事务应由DBA审阅恢复范围。OSS附件本体不在数据库导出中。本功能不自动恢复、覆盖线上库或PURGE MySQL原始日志。
 
-## 验证边界
+上线先保持enabled=false，完成测试环境全量+binlog恢复、同名覆盖、失败续传、30天边界及暂停恢复验证后再启用。单元测试仅模拟数据库工具与OSS；五分钟是调度周期，实际异地恢复延迟还包含采集、上传及失败重试。
 
-单元测试不连接线上数据库/OSS。上线先保持enabled=false，配置工具/账号/权限后在测试环境做全量+binlog恢复演练、OSS同名覆盖、失败重试、30天边界清理、暂停超时恢复测试；确认可恢复后再启用生产。备份错误及成功ID输出协调器日志，需接入现有服务器日志告警。五分钟是调度周期而非零丢失保证，实际异地可恢复延迟还含采集/上传及故障重试。
+
+## 维护后端.env配置
+
+维护后端通过启动环境处理器复用SystemCommonUtil现有.env读取方式，在Bean绑定及定时任务注册前应用备份变量，无需source、导出环境变量或修改YAML。样例见`base_conf/backup/coordinator-backup.env.example`。最少设置`MAINTENANCE_BACKUP_ENABLED=true`和`MAINTENANCE_BACKUP_DEFAULTS_FILE=/etc/vehicle-insurance/mysql-backup.cnf`，连接文件仍需存在。修改.env后重启维护后端。
+
+沿用现有查找规则：优先当前工作目录.env，再尝试代码所在目录旁.env；同名配置.env优先于进程变量。备份变量使用MAINTENANCE_BACKUP_前缀，defaults-file等复合名称支持DEFAULTS_FILE和DEFAULTSFILE两种拼写，优先前者。所有已提供的备份变量覆盖原Spring配置；未提供的保留原配置及默认值。扫描间隔BINLOG_INTERVAL_MS也通过同一环境生效。仅作用于维护后端备份，无接口、前端、数据库结构变化。
+
+
+无法确认日期归属的binlog现在直接跳过，不采集、不上传、不新增本地文件记录。首次成功完成每日备份并建立边界后，才保存有明确归属的文件。扫描INFO日志的skippedUnknown显示跳过数量。旧版已有未知记录停止补传和索引更新，已存在的本地/OSS文件不自动删除。此变更只影响维护后端，无数据库或前端接口变更。

@@ -33,6 +33,8 @@ renewal:
 insurance:
   ai:
     provider: ${POLICY_OCR_PROVIDER:qwen}
+    # 开启后打印保单识别及结构整理的完整模型返回正文；修改后重启车险后端。
+    log-model-output: ${POLICY_OCR_LOG_MODEL_OUTPUT:false}
     api-key: ${DASHSCOPE_API_KEY:}
     base-url: ${DASHSCOPE_BASE_URL:}
     ocr-model: ${POLICY_OCR_MODEL:qwen3.8-flash}

@@ -35,6 +35,16 @@ export function mockPolicyRecognitionStatus(jobId) {
       code: 502, msg: '保单识别结果无法解析，请重试或手动填写'
     } }
   } });
+  /*
+   * 第四份附件模拟有效但全空的模型结果，任务成功结束，由页面按上传类别提示一次。
+   */
+  if (String(fileId).endsWith('4')) return Promise.resolve({ data: {
+    code: 200, msg: '查询成功', data: { jobId, workorderId: String(task.workorderId), fileId: String(fileId), status: 'SUCCEEDED', result: {
+      code: 200, msg: '识别成功', data: {
+        fileInfo: { id: fileId, fileName: '未识别到内容的附件.pdf' }, recognitionData: {}, warnings: []
+      }
+    } }
+  } });
   const nonMotor = String(fileId).endsWith('2');
   return Promise.resolve({ data: {
     code: 200, msg: '查询成功', data: { jobId, workorderId: String(task.workorderId), fileId: String(fileId), status: 'SUCCEEDED', result: {
